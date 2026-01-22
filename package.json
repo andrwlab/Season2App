@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "homepage": "https://andrwlab.github.io/TorneoApp",
+
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,6 +13,7 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+
   "dependencies": {
     "chart.js": "^4.4.9",
     "firebase": "^11.6.0",
