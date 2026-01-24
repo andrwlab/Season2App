@@ -18,10 +18,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (no submodules)
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: false
+          fetch-depth: 1
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -29,19 +30,16 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install
+      - name: Install deps
         run: npm ci
 
       - name: Build
         run: npm run build
 
-      - name: Disable Jekyll
-        run: touch dist/.nojekyll
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: dist
 
   deploy:
     needs: build
