@@ -20,9 +20,8 @@ function App() {
     <Router basename="/Season2App">
       <Navbar />
       <Routes>
-        <Route path="/" element={<Schedule />} />
-        {/* <Route path="/" element={<Home />} />
-        <Route path="/teams" element={<Teams />} /> */}
+        <Route path="/" element={<Home />} />
+        <Route path="/teams" element={<Teams />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/players" element={<Players />} />

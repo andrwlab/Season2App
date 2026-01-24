@@ -21,8 +21,8 @@ const Navbar = () => {
         <h1 className="text-xl sm:text-2xl font-bold text-center sm:text-left">Torneo de Vóley</h1>
 
         <ul className="flex flex-wrap justify-center sm:justify-start gap-3 text-sm sm:text-base">
-          {/* <li><Link to="/" className="hover:underline">Inicio</Link></li>
-          <li><Link to="/teams" className="hover:underline">Equipos</Link></li> */}
+          <li><Link to="/" className="hover:underline">Inicio</Link></li>
+          <li><Link to="/teams" className="hover:underline">Equipos</Link></li>
           <li><Link to="/schedule" className="hover:underline">Calendario</Link></li>
           <li><Link to="/leaderboard" className="hover:underline">Posiciones</Link></li>
           <li><Link to="/players" className="hover:underline">Jugadores</Link></li>
