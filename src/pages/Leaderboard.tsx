@@ -86,8 +86,9 @@ const Leaderboard = () => {
       {/* Tabla de Posiciones */}
       <section>
         <h2 className="text-2xl font-bold mb-4">Tabla de Posiciones</h2>
-        <table className="table-auto w-full border text-sm text-left">
-          <thead className="bg-gray-100">
+        <div className="table-wrap overflow-x-auto">
+          <table className="table-base table-auto text-sm text-left">
+          <thead>
             <tr>
               <th className="px-3 py-2">#</th>
               <th className="px-3 py-2">Equipo</th>
@@ -100,8 +101,10 @@ const Leaderboard = () => {
           </thead>
           <tbody>
             {standings.map((s, i) => (
-              <tr key={s.team} className="border-t">
-                <td className="px-3 py-2">{i + 1}</td>
+              <tr key={s.team}>
+                <td className="px-3 py-2">
+                  {i === 0 ? <span className="badge">#{i + 1}</span> : i + 1}
+                </td>
                 <td className="px-3 py-2">{s.team}</td>
                 <td className="px-3 py-2">{s.w}</td>
                 <td className="px-3 py-2">{s.l}</td>
@@ -112,6 +115,7 @@ const Leaderboard = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
 
       {/* Fase Eliminatoria */}
@@ -127,9 +131,9 @@ const Leaderboard = () => {
               {semiFinals.map(m => {
                 const d = new Date(m.date);
                 return (
-                  <li key={m.id} className="border p-3 rounded-md flex justify-between">
+                  <li key={m.id} className="list-card p-3 flex justify-between">
                     <span>{m.teamA} vs {m.teamB}</span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted">
                       {d.toLocaleDateString('es-ES',{day:'numeric',month:'long'})} •{' '}
                       {d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
                     </span>
@@ -145,9 +149,9 @@ const Leaderboard = () => {
             {thirdPlace.map(m => {
               const d = new Date(m.date);
               return (
-                <div key={m.id} className="border p-3 rounded-md flex justify-between">
+                <div key={m.id} className="list-card p-3 flex justify-between">
                   <span>Perdedor SF1 vs Perdedor SF2</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted">
                     {d.toLocaleDateString('es-ES',{day:'numeric',month:'long'})} •{' '}
                     {d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
                   </span>
@@ -162,9 +166,9 @@ const Leaderboard = () => {
             {finalMatch.map(m => {
               const d = new Date(m.date);
               return (
-                <div key={m.id} className="border p-3 rounded-md flex justify-between">
+                <div key={m.id} className="list-card p-3 flex justify-between">
                   <span>Ganador SF1 vs Ganador SF2</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted">
                     {d.toLocaleDateString('es-ES',{day:'numeric',month:'long'})} •{' '}
                     {d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
                   </span>
@@ -178,7 +182,7 @@ const Leaderboard = () => {
 
       {/* Enlace al calendario */}
       <div className="text-center">
-        <Link to="/schedule" className="text-primary underline">
+        <Link to="/schedule" className="link-primary underline">
           Ver calendario completo
         </Link>
       </div>

@@ -40,7 +40,7 @@ const MatchDetail = () => {
     fetchMatch();
   }, [id]);
 
-  if (!match) return <p className="text-center mt-10">Cargando partido...</p>;
+  if (!match) return <p className="text-center mt-10 text-muted">Cargando partido...</p>;
 
   const date = new Date(match.date).toLocaleDateString('es-ES', {
     day: 'numeric',
@@ -49,25 +49,25 @@ const MatchDetail = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold text-center text-primary mb-4">Detalles del Partido</h2>
-      <div className="bg-white p-4 shadow rounded">
+      <h2 className="text-2xl font-bold text-center mb-4">Detalles del Partido</h2>
+      <div className="card p-4">
         <div className="text-center font-semibold text-lg mb-1">
           {match.teamA} vs {match.teamB}
         </div>
-        <div className="text-center text-gray-500 text-sm mb-4">{date} • {match.format}</div>
+        <div className="text-center text-muted text-sm mb-4">{date} • {match.format}</div>
 
         {match.scoreA != null && match.scoreB != null ? (
-          <div className="text-center text-xl font-bold text-green-700 mb-4">
+          <div className="text-center text-xl font-bold text-success mb-4">
             Resultado: {match.scoreA} - {match.scoreB}
           </div>
         ) : (
-          <div className="text-center text-sm text-gray-400 italic mb-4">Aún sin resultado</div>
+          <div className="text-center text-sm text-muted italic mb-4">Aún sin resultado</div>
         )}
 
         {role === 'admin' || role === 'scorekeeper' ? (
           <div className="text-center mb-4">
             <Link to={`/admin-match/${id}`}>
-              <button className="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+              <button className="btn-primary px-4 py-2">
                 Editar Partido
               </button>
             </Link>
@@ -76,8 +76,9 @@ const MatchDetail = () => {
 
         <h3 className="text-md font-bold mb-2">Estadísticas por jugador:</h3>
         {match.playersStats && Object.keys(match.playersStats).length > 0 ? (
-          <table className="table-auto w-full border text-sm text-left">
-            <thead className="bg-gray-100">
+          <div className="table-wrap overflow-x-auto">
+            <table className="table-base table-auto text-sm text-left">
+            <thead>
               <tr>
                 <th className="px-4 py-2">Jugador</th>
                 <th className="px-4 py-2">Ataques</th>
@@ -87,7 +88,7 @@ const MatchDetail = () => {
             </thead>
             <tbody>
               {Object.entries(match.playersStats).map(([name, stats]) => (
-                <tr key={name} className="border-t">
+                <tr key={name}>
                   <td className="px-4 py-2">{name}</td>
                   <td className="px-4 py-2">{stats?.attack ?? 0}</td>
                   <td className="px-4 py-2">{stats?.blocks ?? 0}</td>
@@ -96,8 +97,9 @@ const MatchDetail = () => {
               ))}
             </tbody>
           </table>
+          </div>
         ) : (
-          <p className="text-gray-500 text-sm">No hay estadísticas registradas.</p>
+          <p className="text-muted text-sm">No hay estadísticas registradas.</p>
         )}
       </div>
     </div>

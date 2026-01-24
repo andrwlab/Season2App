@@ -80,7 +80,7 @@ const AdminMatch = () => {
     }
   };
 
-  if (!match || role !== 'admin') return <p className="text-center mt-10">Cargando o sin permiso...</p>;
+  if (!match || role !== 'admin') return <p className="text-center mt-10 text-muted">Cargando o sin permiso...</p>;
 
   const uniquePlayers = players.reduce((acc, player) => {
     if (!acc.find((p) => p.name === player.name)) acc.push(player);
@@ -92,17 +92,17 @@ const AdminMatch = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-center text-primary mb-4">Registrar Resultado</h2>
-      <div className="bg-white p-4 shadow rounded">
+      <h2 className="text-2xl font-bold text-center mb-4">Registrar Resultado</h2>
+      <div className="card p-4">
         <p className="text-center font-medium mb-2">{match.teamA} vs {match.teamB}</p>
 
-        {error && <p className="text-red-600 text-center mb-4">{error}</p>}
+        {error && <p className="text-danger text-center mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit}>
           <div className="flex gap-4 justify-center mb-6">
             <input
               type="number"
-              className="border px-3 py-2 rounded w-24 text-center"
+              className="input-field w-24 text-center"
               placeholder={match.teamA}
               value={scoreA}
               onChange={(e) => setScoreA(e.target.value)}
@@ -111,7 +111,7 @@ const AdminMatch = () => {
             <span className="text-xl font-bold">-</span>
             <input
               type="number"
-              className="border px-3 py-2 rounded w-24 text-center"
+              className="input-field w-24 text-center"
               placeholder={match.teamB}
               value={scoreB}
               onChange={(e) => setScoreB(e.target.value)}
@@ -130,21 +130,21 @@ const AdminMatch = () => {
                       <input
                         type="number"
                         placeholder="🏐"
-                        className="border px-2 py-1 w-1/3"
+                        className="input-field w-1/3 px-2 py-1"
                         value={formData[player.name]?.attack || ''}
                         onChange={(e) => handleStatChange(player.name, 'attack', e.target.value)}
                       />
                       <input
                         type="number"
                         placeholder="🛡️"
-                        className="border px-2 py-1 w-1/3"
+                        className="input-field w-1/3 px-2 py-1"
                         value={formData[player.name]?.blocks || ''}
                         onChange={(e) => handleStatChange(player.name, 'blocks', e.target.value)}
                       />
                       <input
                         type="number"
                         placeholder="🎯"
-                        className="border px-2 py-1 w-1/3"
+                        className="input-field w-1/3 px-2 py-1"
                         value={formData[player.name]?.service || ''}
                         onChange={(e) => handleStatChange(player.name, 'service', e.target.value)}
                       />
@@ -155,7 +155,7 @@ const AdminMatch = () => {
             ))}
           </div>
 
-          <button type="submit" className="mt-6 bg-primary text-white px-6 py-2 rounded hover:bg-blue-700">
+          <button type="submit" className="btn-primary mt-6 px-6 py-2">
             Guardar Resultado
           </button>
         </form>

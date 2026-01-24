@@ -54,15 +54,15 @@ const Matches = () => {
           <h3 className="text-xl font-semibold mb-2">Registrar nuevo partido</h3>
           <form onSubmit={handleSubmit} className="space-y-4 max-w-xl mb-6">
             <div className="flex gap-4">
-              <input type="text" name="teamA" value={formData.teamA} onChange={handleChange} placeholder="Equipo A" className="w-1/2 border px-3 py-2 rounded" required />
-              <input type="text" name="teamB" value={formData.teamB} onChange={handleChange} placeholder="Equipo B" className="w-1/2 border px-3 py-2 rounded" required />
+              <input type="text" name="teamA" value={formData.teamA} onChange={handleChange} placeholder="Equipo A" className="input-field w-1/2" required />
+              <input type="text" name="teamB" value={formData.teamB} onChange={handleChange} placeholder="Equipo B" className="input-field w-1/2" required />
             </div>
             <div className="flex gap-4">
-              <input type="number" name="scoreA" value={formData.scoreA} onChange={handleChange} placeholder="Puntos A" className="w-1/2 border px-3 py-2 rounded" required />
-              <input type="number" name="scoreB" value={formData.scoreB} onChange={handleChange} placeholder="Puntos B" className="w-1/2 border px-3 py-2 rounded" required />
+              <input type="number" name="scoreA" value={formData.scoreA} onChange={handleChange} placeholder="Puntos A" className="input-field w-1/2" required />
+              <input type="number" name="scoreB" value={formData.scoreB} onChange={handleChange} placeholder="Puntos B" className="input-field w-1/2" required />
             </div>
-            <input type="text" name="date" value={formData.date} onChange={handleChange} placeholder="Fecha (ej. 2 de mayo)" className="w-full border px-3 py-2 rounded" required />
-            <button type="submit" className="bg-primary text-white px-4 py-2 rounded">Guardar</button>
+            <input type="text" name="date" value={formData.date} onChange={handleChange} placeholder="Fecha (ej. 2 de mayo)" className="input-field w-full" required />
+            <button type="submit" className="btn-primary px-4 py-2">Guardar</button>
           </form>
         </>
       )}
@@ -70,14 +70,14 @@ const Matches = () => {
       <h3 className="text-xl font-semibold mb-2">Partidos registrados</h3>
       <ul className="space-y-2">
         {games.map((match) => (
-            <li key={match.id} className="border px-4 py-2 rounded shadow-sm flex justify-between items-center">
+            <li key={match.id} className="list-card px-4 py-2 flex justify-between items-center">
             <span>
                 <strong>{match.date}</strong>: {match.teamA} {match.scoreA} - {match.scoreB} {match.teamB}
             </span>
             {(role === 'admin' || role === 'scorekeeper') && (
                 <a
                 href={`/admin-match/${match.id}`}
-                className="text-sm text-blue-600 hover:underline ml-4"
+                className="link-primary text-sm underline ml-4"
                 >
                 Editar
                 </a>

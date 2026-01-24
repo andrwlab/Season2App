@@ -22,7 +22,7 @@ const Schedule = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-3xl font-bold mb-6 text-center text-primary">Calendario de Partidos</h2>
+      <h2 className="text-3xl font-bold mb-6 text-center">Calendario de Partidos</h2>
       <ul className="space-y-4">
         {matches.map((item) => {
           const dateObj = new Date(item.date);
@@ -33,11 +33,11 @@ const Schedule = () => {
           return (
             <li
               key={item.id}
-              className="bg-white shadow-sm border rounded-lg p-4 text-gray-800"
+              className="list-card p-4"
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 {/* Fecha */}
-                <span className="text-sm text-gray-500 sm:w-1/4">{date}</span>
+                <span className="text-sm text-muted sm:w-1/4">{date}</span>
 
                 {/* Partido + resultado */}
                 <div className="sm:w-2/4 text-center">
@@ -45,22 +45,22 @@ const Schedule = () => {
                     <div className="font-semibold hover:underline">
                     {item.teamA} vs {item.teamB}
                     {isPlayed && (
-                        <span className="text-primary ml-2">
+                        <span className="link-primary ml-2">
                         ({item.scoreA} - {item.scoreB})
                         </span>
                     )}
                     </div>
                 </Link>
-                <div className="text-xs text-gray-500 mt-1">{item.format}</div>
+                <div className="text-xs text-muted mt-1">{item.format}</div>
                 </div>
 
                 {/* Hora + botón */}
                 <div className="sm:w-1/4 text-right mt-2 sm:mt-0 flex justify-end gap-3">
-                <span className="text-sm text-gray-500">{time}</span>
+                <span className="text-sm text-muted">{time}</span>
                 {(!isPlayed && (role === 'admin' || role === 'scorekeeper')) && (
                     <Link
                     to={`/admin-match/${item.id}`}
-                    className="text-xs text-blue-600 underline"
+                    className="link-primary text-xs underline"
                     >
                     Editar
                     </Link>

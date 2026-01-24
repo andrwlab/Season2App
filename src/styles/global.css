@@ -1,0 +1,244 @@
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-2);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text);
+}
+
+a {
+  color: var(--text-2);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--brand-2);
+}
+
+.hero {
+  background: var(--grad-hero);
+  border-radius: var(--radius);
+  padding: 2.5rem 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+@media (min-width: 640px) {
+  .hero {
+    padding: 3rem 2.5rem;
+  }
+}
+
+.hero-subtitle {
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+}
+
+.section-link {
+  color: var(--text);
+  transition: color 0.2s ease;
+}
+
+.section-link:hover {
+  color: var(--brand-2);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+
+.team-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  color: var(--text);
+}
+
+.stat-title {
+  color: var(--brand);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.stat-number {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+
+.table-base {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-2);
+}
+
+.table-base thead {
+  background: var(--surface-2);
+}
+
+.table-base tbody tr {
+  border-top: 1px solid var(--divider);
+}
+
+.table-base th {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--brand);
+  color: var(--text);
+  border-radius: 9999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.navbar {
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--divider);
+  color: var(--text);
+}
+
+.navbar-link {
+  color: var(--text-2);
+  transition: color 0.2s ease;
+}
+
+.navbar-link:hover {
+  color: var(--brand-2);
+  text-decoration: underline;
+}
+
+.navbar-cta {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.navbar-cta:hover {
+  background: color-mix(in srgb, var(--brand-2) 12%, transparent);
+  border-color: var(--brand-2);
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: var(--brand-2);
+}
+
+.btn-danger {
+  background: color-mix(in srgb, var(--danger) 85%, transparent);
+  color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease;
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+}
+
+.link-primary {
+  color: var(--brand-2);
+  transition: color 0.2s ease;
+}
+
+.link-primary:hover {
+  color: var(--text);
+}
+
+.list-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-soft);
+  color: var(--text-2);
+}
+
+.input-field {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  color: var(--text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-field::placeholder {
+  color: var(--muted);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--brand-2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-2) 30%, transparent);
+}
+
+.tab-button {
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.tab-button:hover {
+  background: color-mix(in srgb, var(--brand-2) 15%, transparent);
+  border-color: var(--brand-2);
+  color: var(--text);
+}
+
+.tab-button--active {
+  background: var(--brand);
+  color: var(--text);
+  border-color: var(--brand);
+}
+
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
