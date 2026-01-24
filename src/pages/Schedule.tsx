@@ -1,77 +1,110 @@
-import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
-import { Link } from 'react-router-dom';
-import useUserRole from '../hooks/useUserRole';
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import useUserRole from "../hooks/useUserRole";
+import { useSeason } from "../hooks/useSeason";
+import { Match, Team, subscribeMatches, subscribeTeams } from "../firebase/queries";
 
+const toDate = (dateISO?: string, timeHHmm?: string) =>
+  dateISO ? new Date(`${dateISO}T${timeHHmm || "00:00"}:00`) : null;
 
 const Schedule = () => {
-  const [matches, setMatches] = useState([]);
+  const { selectedSeasonId } = useSeason();
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const role = useUserRole();
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'matches'), (snapshot) => {
-      const matchData = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-      setMatches(matchData);
-    });
+  useEffect(() => subscribeMatches(selectedSeasonId, setMatches), [selectedSeasonId]);
+  useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
 
-    return () => unsubscribe();
-  }, []);
+  const teamMap = useMemo(
+    () => Object.fromEntries(teams.map((t) => [t.id, t.name])),
+    [teams]
+  );
+
+  const matchesByDate = useMemo(() => {
+    const grouped: Record<string, Match[]> = {};
+    matches.forEach((m) => {
+      const key = m.dateISO || "Sin fecha";
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(m);
+    });
+    Object.values(grouped).forEach((group) => {
+      group.sort((a, b) => {
+        const da = toDate(a.dateISO, a.timeHHmm);
+        const db = toDate(b.dateISO, b.timeHHmm);
+        return (da?.getTime() || 0) - (db?.getTime() || 0);
+      });
+    });
+    return Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [matches]);
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h2 className="text-3xl font-bold mb-6 text-center text-primary">Calendario de Partidos</h2>
-      <ul className="space-y-4">
-        {matches.map((item) => {
-          const dateObj = new Date(item.date);
-          const date = dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
-          const time = dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-          const isPlayed = item.scoreA != null && item.scoreB != null;
-
+      <div className="space-y-6">
+        {matchesByDate.length === 0 && (
+          <p className="text-center text-gray-500">No hay partidos para esta temporada.</p>
+        )}
+        {matchesByDate.map(([dateISO, list]) => {
+          const dateObj = toDate(dateISO);
+          const dateLabel = dateObj
+            ? dateObj.toLocaleDateString("es-ES", { day: "numeric", month: "long" })
+            : "Sin fecha";
           return (
-            <li
-              key={item.id}
-              className="bg-white shadow-sm border rounded-lg p-4 text-gray-800"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                {/* Fecha */}
-                <span className="text-sm text-gray-500 sm:w-1/4">{date}</span>
+            <div key={dateISO}>
+              <h3 className="text-lg font-semibold mb-2">{dateLabel}</h3>
+              <ul className="space-y-3">
+                {list.map((item) => {
+                  const dateObjItem = toDate(item.dateISO, item.timeHHmm);
+                  const time = dateObjItem?.toLocaleTimeString("es-ES", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  const homeScore = item.scores?.home;
+                  const awayScore = item.scores?.away;
+                  const isPlayed = homeScore != null && awayScore != null;
 
-                {/* Partido + resultado */}
-                <div className="sm:w-2/4 text-center">
-                <Link to={`/matches/${item.id}`}>
-                    <div className="font-semibold hover:underline">
-                    {item.teamA} vs {item.teamB}
-                    {isPlayed && (
-                        <span className="text-primary ml-2">
-                        ({item.scoreA} - {item.scoreB})
-                        </span>
-                    )}
-                    </div>
-                </Link>
-                <div className="text-xs text-gray-500 mt-1">{item.format}</div>
-                </div>
-
-                {/* Hora + botón */}
-                <div className="sm:w-1/4 text-right mt-2 sm:mt-0 flex justify-end gap-3">
-                <span className="text-sm text-gray-500">{time}</span>
-                {(!isPlayed && (role === 'admin' || role === 'scorekeeper')) && (
-                    <Link
-                    to={`/admin-match/${item.id}`}
-                    className="text-xs text-blue-600 underline"
+                  return (
+                    <li
+                      key={item.id}
+                      className="bg-white shadow-sm border rounded-lg p-4 text-gray-800"
                     >
-                    Editar
-                    </Link>
-                )}
-                </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                        <span className="text-sm text-gray-500 sm:w-1/4">{time || "--:--"}</span>
 
-              </div>
-            </li>
+                        <div className="sm:w-2/4 text-center">
+                          <Link to={`/matches/${item.id}`}>
+                            <div className="font-semibold hover:underline">
+                              {teamMap[item.homeTeamId] || item.homeTeamId} vs{" "}
+                              {teamMap[item.awayTeamId] || item.awayTeamId}
+                              {isPlayed && (
+                                <span className="text-primary ml-2">
+                                  ({homeScore} - {awayScore})
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {item.status || "scheduled"}
+                          </div>
+                        </div>
+
+                        <div className="sm:w-1/4 text-right mt-2 sm:mt-0 flex justify-end gap-3">
+                          {(!isPlayed && (role === "admin" || role === "scorekeeper")) && (
+                            <Link to={`/admin-match/${item.id}`} className="text-xs text-blue-600 underline">
+                              Editar
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 };

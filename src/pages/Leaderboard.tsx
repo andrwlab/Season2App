@@ -1,89 +1,76 @@
-// src/pages/Leaderboard.tsx
-import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Match, Team, subscribeMatches, subscribeTeams } from "../firebase/queries";
+import { useSeason } from "../hooks/useSeason";
 
-interface Match {
-  id: string;
-  teamA: string;
-  teamB: string;
-  scoreA: number;
-  scoreB: number;
-  date: string;
-  format: string;
-  phase: 'group' | 'semifinal' | 'third' | 'final';
-}
-
-interface Standing {
-  team: string;
+type Standing = {
+  teamId: string;
   w: number;
   l: number;
-  pf: number;  // puntos a favor
-  pc: number;  // puntos en contra
-}
+  pf: number;
+  pc: number;
+};
+
+const toDate = (m: any) =>
+  m.dateISO ? new Date(`${m.dateISO}T${m.timeHHmm || "00:00"}:00`) : new Date(m.date || "");
 
 const Leaderboard = () => {
+  const { selectedSeasonId } = useSeason();
   const [matches, setMatches] = useState<Match[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
 
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'matches'), snap => {
-      const data = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-      setMatches(data);
+  useEffect(() => subscribeMatches(selectedSeasonId, setMatches), [selectedSeasonId]);
+  useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
+
+  const teamMap = useMemo(
+    () => Object.fromEntries(teams.map((t) => [t.id, t.name])),
+    [teams]
+  );
+
+  const standings = useMemo(() => {
+    const map: Record<string, Standing> = {};
+    matches.forEach((m: any) => {
+      const homeId = m.homeTeamId || m.teamA;
+      const awayId = m.awayTeamId || m.teamB;
+      const homeScore = m.scores?.home ?? m.scoreA;
+      const awayScore = m.scores?.away ?? m.scoreB;
+      if (homeScore == null || awayScore == null) return;
+      if (!map[homeId]) map[homeId] = { teamId: homeId, w: 0, l: 0, pf: 0, pc: 0 };
+      if (!map[awayId]) map[awayId] = { teamId: awayId, w: 0, l: 0, pf: 0, pc: 0 };
+      map[homeId].pf += homeScore;
+      map[homeId].pc += awayScore;
+      map[awayId].pf += awayScore;
+      map[awayId].pc += homeScore;
+      if (homeScore > awayScore) {
+        map[homeId].w += 1;
+        map[awayId].l += 1;
+      } else if (awayScore > homeScore) {
+        map[awayId].w += 1;
+        map[homeId].l += 1;
+      }
     });
-    return () => unsub();
-  }, []);
+    return Object.values(map).sort((a, b) => {
+      if (b.w !== a.w) return b.w - a.w;
+      const diffA = a.pf - a.pc;
+      const diffB = b.pf - b.pc;
+      if (diffB !== diffA) return diffB - diffA;
+      return b.pf - a.pf;
+    });
+  }, [matches]);
 
-  // 1) Filtrar solo fase de grupos
-  const groupMatches = matches.filter(m => m.phase === 'group');
-
-  // 2) Calcular standings usando solo esos partidos
-  const standingsMap: Record<string, Standing> = {};
-  groupMatches.forEach(({ teamA, teamB, scoreA, scoreB }) => {
-    if (!standingsMap[teamA]) standingsMap[teamA] = { team: teamA, w: 0, l: 0, pf: 0, pc: 0 };
-    if (!standingsMap[teamB]) standingsMap[teamB] = { team: teamB, w: 0, l: 0, pf: 0, pc: 0 };
-
-    // Acumular puntos a favor/en contra
-    standingsMap[teamA].pf += scoreA;
-    standingsMap[teamA].pc += scoreB;
-    standingsMap[teamB].pf += scoreB;
-    standingsMap[teamB].pc += scoreA;
-
-    // Asignar victoria/derrota
-    if (scoreA > scoreB) {
-      standingsMap[teamA].w++;
-      standingsMap[teamB].l++;          // <–– aquí incrementas derrotas a B
-    }
-    else if (scoreB > scoreA) {
-      standingsMap[teamB].w++;
-      standingsMap[teamA].l++;          // <–– y aquí derrotas a A
-    }
-  });
-
-  // 3) Pasar a array y ordenar: G desc, diff desc, PF desc
-  const standings = Object.values(standingsMap).sort((a, b) => {
-    if (b.w !== a.w) return b.w - a.w;
-    const diffA = a.pf - a.pc;
-    const diffB = b.pf - b.pc;
-    if (diffB !== diffA) return diffB - diffA;
-    return b.pf - a.pf;
-  });
-
-  // 4) Fase eliminatoria
-  const semiFinals = matches
-    .filter(m => m.phase === 'semifinal')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const thirdPlace = matches
-    .filter(m => m.phase === 'third')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const finalMatch = matches
-    .filter(m => m.phase === 'final')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const phaseMatches = useMemo(() => {
+    const byPhase: Record<string, Match[]> = { semifinal: [], third: [], final: [] };
+    (matches as any[]).forEach((m) => {
+      if (m.phase && byPhase[m.phase]) byPhase[m.phase].push(m as any);
+    });
+    Object.values(byPhase).forEach((group) =>
+      group.sort((a: any, b: any) => toDate(a).getTime() - toDate(b).getTime())
+    );
+    return byPhase;
+  }, [matches]);
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-10">
-
-      {/* Tabla de Posiciones */}
       <section>
         <h2 className="text-2xl font-bold mb-4">Tabla de Posiciones</h2>
         <table className="table-auto w-full border text-sm text-left">
@@ -100,9 +87,9 @@ const Leaderboard = () => {
           </thead>
           <tbody>
             {standings.map((s, i) => (
-              <tr key={s.team} className="border-t">
+              <tr key={s.teamId} className="border-t">
                 <td className="px-3 py-2">{i + 1}</td>
-                <td className="px-3 py-2">{s.team}</td>
+                <td className="px-3 py-2">{teamMap[s.teamId] || s.teamId}</td>
                 <td className="px-3 py-2">{s.w}</td>
                 <td className="px-3 py-2">{s.l}</td>
                 <td className="px-3 py-2">{s.pf}</td>
@@ -114,69 +101,65 @@ const Leaderboard = () => {
         </table>
       </section>
 
-      {/* Fase Eliminatoria */}
-      <section>
-        <h2 className="text-2xl font-bold mb-4">Fase Eliminatoria</h2>
-
-        <div className="space-y-6">
-
-          {/* Semifinales */}
-          <div>
-            <h3 className="font-semibold mb-2">Semifinales</h3>
-            <ul className="space-y-2">
-              {semiFinals.map(m => {
-                const d = new Date(m.date);
+      {(phaseMatches.semifinal.length ||
+        phaseMatches.third.length ||
+        phaseMatches.final.length) && (
+        <section>
+          <h2 className="text-2xl font-bold mb-4">Fase Eliminatoria</h2>
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold mb-2">Semifinales</h3>
+              <ul className="space-y-2">
+                {phaseMatches.semifinal.map((m: any) => {
+                  const d = toDate(m);
+                  return (
+                    <li key={m.id} className="border p-3 rounded-md flex justify-between">
+                      <span>
+                        {teamMap[m.homeTeamId] || m.teamA} vs {teamMap[m.awayTeamId] || m.teamB}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {d.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
+                        {d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">Tercer Puesto</h3>
+              {phaseMatches.third.map((m: any) => {
+                const d = toDate(m);
                 return (
-                  <li key={m.id} className="border p-3 rounded-md flex justify-between">
-                    <span>{m.teamA} vs {m.teamB}</span>
+                  <div key={m.id} className="border p-3 rounded-md flex justify-between">
+                    <span>Perdedor SF1 vs Perdedor SF2</span>
                     <span className="text-sm text-gray-500">
-                      {d.toLocaleDateString('es-ES',{day:'numeric',month:'long'})} •{' '}
-                      {d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
+                      {d.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
+                      {d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                     </span>
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">Final</h3>
+              {phaseMatches.final.map((m: any) => {
+                const d = toDate(m);
+                return (
+                  <div key={m.id} className="border p-3 rounded-md flex justify-between">
+                    <span>Ganador SF1 vs Ganador SF2</span>
+                    <span className="text-sm text-gray-500">
+                      {d.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
+                      {d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        </section>
+      )}
 
-          {/* Tercer Puesto */}
-          <div>
-            <h3 className="font-semibold mb-2">Tercer Puesto</h3>
-            {thirdPlace.map(m => {
-              const d = new Date(m.date);
-              return (
-                <div key={m.id} className="border p-3 rounded-md flex justify-between">
-                  <span>Perdedor SF1 vs Perdedor SF2</span>
-                  <span className="text-sm text-gray-500">
-                    {d.toLocaleDateString('es-ES',{day:'numeric',month:'long'})} •{' '}
-                    {d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Final */}
-          <div>
-            <h3 className="font-semibold mb-2">Final</h3>
-            {finalMatch.map(m => {
-              const d = new Date(m.date);
-              return (
-                <div key={m.id} className="border p-3 rounded-md flex justify-between">
-                  <span>Ganador SF1 vs Ganador SF2</span>
-                  <span className="text-sm text-gray-500">
-                    {d.toLocaleDateString('es-ES',{day:'numeric',month:'long'})} •{' '}
-                    {d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-        </div>
-      </section>
-
-      {/* Enlace al calendario */}
       <div className="text-center">
         <Link to="/schedule" className="text-primary underline">
           Ver calendario completo

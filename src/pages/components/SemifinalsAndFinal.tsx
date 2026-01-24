@@ -1,18 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebase';
+import React, { useEffect, useState } from "react";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "../../firebase";
+import { useSeason } from "../../hooks/useSeason";
 
 const SemifinalsAndFinal = ({ standings }) => {
+  const { selectedSeasonId } = useSeason();
   const [dates, setDates] = useState({});
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'matchDates'), (snapshot) => {
+    if (!selectedSeasonId) return;
+    const q = query(
+      collection(db, "matchDates"),
+      where("seasonId", "==", selectedSeasonId)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = {};
-      snapshot.forEach(doc => data[doc.id] = doc.data());
+      snapshot.forEach((doc) => (data[doc.id] = doc.data()));
       setDates(data);
     });
     return () => unsubscribe();
-  }, []);
+  }, [selectedSeasonId]);
 
   if (standings.length < 4) return null;
   const [s1, s2, s3, s4] = standings;

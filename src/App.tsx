@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 
 // Páginas principales
@@ -14,19 +14,29 @@ import Schedule from './pages/Schedule';
 import Home from './pages/Home';
 import MatchDetail from './pages/MatchDetail';
 import AdminMatch from './pages/AdminMatch';
+import TeamDetail from './pages/TeamDetail';
+import PlayerProfile from './pages/PlayerProfile';
+import AdminRosters from './pages/AdminRosters';
 
 function App() {
+  const baseName =
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/Season2App')
+      ? '/Season2App'
+      : '/';
   return (
-    <Router basename="/Season2App">
+    <Router basename={baseName}>
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/teams" element={<Teams />} />
+        <Route path="/teams/:id" element={<TeamDetail />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/players" element={<Players />} />
+        <Route path="/players/:id" element={<PlayerProfile />} />
         <Route path="/matches/:id" element={<MatchDetail />} />
         <Route path="/admin-match/:id" element={<AdminMatch />} />
+        <Route path="/admin/rosters" element={<AdminRosters />} />
         <Route
           path="/matches"
           element={

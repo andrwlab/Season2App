@@ -1,70 +1,91 @@
-// src/pages/MatchDetail.tsx
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import useUserRole from '../hooks/useUserRole';
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import useUserRole from "../hooks/useUserRole";
+import { Player, Team, subscribePlayers, subscribeTeams } from "../firebase/queries";
+import { useSeason } from "../hooks/useSeason";
 
-interface PlayerStats {
-  attack: number;
-  blocks: number;
-  service: number;
-}
-
-interface Match {
-  teamA: string;
-  teamB: string;
-  scoreA: number | null;
-  scoreB: number | null;
-  date: string;
-  format: string;
-  playersStats: { [playerName: string]: PlayerStats };
+interface MatchDoc {
+  homeTeamId?: string;
+  awayTeamId?: string;
+  teamA?: string;
+  teamB?: string;
+  scores?: { home: number | null; away: number | null };
+  scoreA?: number | null;
+  scoreB?: number | null;
+  dateISO?: string;
+  timeHHmm?: string;
+  date?: string;
+  status?: string;
+  playersStats?: Record<string, { attack?: number; blocks?: number; service?: number }>;
 }
 
 const MatchDetail = () => {
   const { id } = useParams();
-  const [match, setMatch] = useState<Match | null>(null);
+  const { selectedSeasonId } = useSeason();
+  const [match, setMatch] = useState<MatchDoc | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const role = useUserRole();
 
   useEffect(() => {
     const fetchMatch = async () => {
       if (!id) return;
-      const ref = doc(db, 'matches', id);
+      const ref = doc(db, "matches", id);
       const snap = await getDoc(ref);
       if (snap.exists()) {
         const data = snap.data();
-        setMatch(data as Match);
+        setMatch(data as MatchDoc);
       }
     };
-
     fetchMatch();
   }, [id]);
 
+  useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
+  useEffect(() => subscribePlayers(setPlayers), []);
+
   if (!match) return <p className="text-center mt-10">Cargando partido...</p>;
 
-  const date = new Date(match.date).toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'long',
-  });
+  const teamMap = useMemo(
+    () => Object.fromEntries(teams.map((t) => [t.id, t.name])),
+    [teams]
+  );
+  const playerMap = useMemo(
+    () => Object.fromEntries(players.map((p) => [p.id, p.fullName])),
+    [players]
+  );
+
+  const dateValue = match.dateISO
+    ? new Date(`${match.dateISO}T${match.timeHHmm || "00:00"}:00`)
+    : new Date(match.date || "");
+  const date = dateValue.toLocaleDateString("es-ES", { day: "numeric", month: "long" });
+
+  const homeName = teamMap[match.homeTeamId || ""] || match.teamA || "Equipo A";
+  const awayName = teamMap[match.awayTeamId || ""] || match.teamB || "Equipo B";
+  const scoreHome = match.scores?.home ?? match.scoreA;
+  const scoreAway = match.scores?.away ?? match.scoreB;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h2 className="text-2xl font-bold text-center text-primary mb-4">Detalles del Partido</h2>
       <div className="bg-white p-4 shadow rounded">
         <div className="text-center font-semibold text-lg mb-1">
-          {match.teamA} vs {match.teamB}
+          {homeName} vs {awayName}
         </div>
-        <div className="text-center text-gray-500 text-sm mb-4">{date} • {match.format}</div>
+        <div className="text-center text-gray-500 text-sm mb-4">
+          {date} • {match.status || "scheduled"}
+        </div>
 
-        {match.scoreA != null && match.scoreB != null ? (
+        {scoreHome != null && scoreAway != null ? (
           <div className="text-center text-xl font-bold text-green-700 mb-4">
-            Resultado: {match.scoreA} - {match.scoreB}
+            Resultado: {scoreHome} - {scoreAway}
           </div>
         ) : (
           <div className="text-center text-sm text-gray-400 italic mb-4">Aún sin resultado</div>
         )}
 
-        {role === 'admin' || role === 'scorekeeper' ? (
+        {role === "admin" || role === "scorekeeper" ? (
           <div className="text-center mb-4">
             <Link to={`/admin-match/${id}`}>
               <button className="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700 transition">
@@ -86,9 +107,9 @@ const MatchDetail = () => {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(match.playersStats).map(([name, stats]) => (
-                <tr key={name} className="border-t">
-                  <td className="px-4 py-2">{name}</td>
+              {Object.entries(match.playersStats).map(([playerId, stats]) => (
+                <tr key={playerId} className="border-t">
+                  <td className="px-4 py-2">{playerMap[playerId] || playerId}</td>
                   <td className="px-4 py-2">{stats?.attack ?? 0}</td>
                   <td className="px-4 py-2">{stats?.blocks ?? 0}</td>
                   <td className="px-4 py-2">{stats?.service ?? 0}</td>
