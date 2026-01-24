@@ -49,7 +49,7 @@ const Players = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h2 className="text-3xl font-bold mb-6 text-center text-primary">
+      <h2 className="text-3xl font-bold mb-6 text-center">
         Estadísticas de Jugadores
       </h2>
 
@@ -58,9 +58,7 @@ const Players = () => {
         {(['all','student','teacher'] as const).map(f => (
           <button
             key={f}
-            className={`px-4 py-2 rounded ${
-              filter === f ? 'bg-primary text-white' : 'bg-gray-200'
-            }`}
+            className={`tab-button px-4 py-2 ${filter === f ? 'tab-button--active' : ''}`}
             onClick={() => setFilter(f)}
           >
             {f === 'all' ? 'Todos' : f === 'student' ? 'Estudiantes' : 'Profesores'}
@@ -69,8 +67,9 @@ const Players = () => {
       </div>
 
       {/* ▶️ TABLA */}
-      <table className="table-auto w-full border text-sm text-left">
-        <thead className="bg-gray-100">
+      <div className="table-wrap overflow-x-auto">
+        <table className="table-base table-auto text-sm text-left">
+        <thead>
           <tr>
             <th className="px-4 py-2">Jugador</th>
             <th className="px-4 py-2">Equipo</th>
@@ -104,7 +103,7 @@ const Players = () => {
           {sorted.map(player => {
             const total = player.attack + player.blocks + player.service;
             return (
-              <tr key={player.name} className="border-t">
+              <tr key={player.name}>
                 <td className="px-4 py-2">{player.name}</td>
                 <td className="px-4 py-2">{player.team}</td>
                 <td className="px-4 py-2">{player.attack}</td>
@@ -116,6 +115,7 @@ const Players = () => {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 };

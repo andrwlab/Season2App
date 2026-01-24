@@ -2,10 +2,10 @@ import React from 'react';
 
 const Teams = () => {
   const teams = [
-    { name: 'Equipo A', color: 'bg-blue-600', players: 9, logo: '🅰️' },
-    { name: 'Equipo B', color: 'bg-black', players: 9, logo: '🅱️' },
-    { name: 'Equipo C', color: 'bg-red-500', players: 9, logo: '🅾️' },
-    { name: 'Equipo D', color: 'bg-orange-500', players: 9, logo: '🆎' },
+    { name: 'Equipo A', players: 9, logo: '🅰️' },
+    { name: 'Equipo B', players: 9, logo: '🅱️' },
+    { name: 'Equipo C', players: 9, logo: '🅾️' },
+    { name: 'Equipo D', players: 9, logo: '🆎' },
   ];
 
   return (
@@ -13,11 +13,11 @@ const Teams = () => {
       {teams.map((team, index) => (
         <div
           key={index}
-          className={`rounded-xl text-white shadow-md ${team.color} p-4 flex flex-col items-center`}
+          className="team-card p-4 flex flex-col items-center"
         >
           <div className="text-5xl mb-2">{team.logo}</div>
           <h2 className="text-xl font-bold mb-1">{team.name}</h2>
-          <p>{team.players} jugadores</p>
+          <p className="text-muted">{team.players} jugadores</p>
         </div>
       ))}
     </div>

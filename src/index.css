@@ -3,15 +3,8 @@
 @tailwind utilities;
 
 /* Estilos globales opcionales */
-body {
-  margin: 0;
-  background-color: #ffffff;
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  color: #071D49;
-}
-
 a {
-  @apply text-accent font-medium hover:underline;
+  font-weight: 500;
 }
 
 @keyframes fadeIn {

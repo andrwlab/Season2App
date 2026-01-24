@@ -91,37 +91,37 @@ const Home = () => {
   return (
     <div className="p-6 space-y-10">
       {/* Bloque 1: título de bienvenida */}
-        <section className="text-center">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2">
+        <section className="hero text-center">
+        <h1 className="text-4xl sm:text-5xl font-extrabold mb-2">
             ¡Bienvenido al Torneo!
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="text-lg hero-subtitle">
             Sigue las estadísticas, el calendario y el avance en tiempo real.
         </p>
         </section>
          {/* 🔽 Bloque 2: Calendario */}
          <section>
         <Link to="/schedule">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4 hover:underline hover:text-primary transition-colors">
+            <h2 className="section-link text-xl font-semibold mb-4">
             Próximos Partidos
             </h2>
         </Link>
         {upcomingMatches.length === 0 ? (
-            <p className="text-gray-500 text-sm">No hay partidos programados.</p>
+            <p className="text-muted text-sm">No hay partidos programados.</p>
             ) : (
-            <ul className="space-y-2 text-sm text-gray-800">
+            <ul className="space-y-2 text-sm">
                 {upcomingMatches.map((match, idx) => {
                 const dateObj = new Date(match.date);
                 const dateStr = dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
                 const timeStr = dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
                 return (
-                    <li key={idx} className="border p-3 rounded-md shadow-sm bg-white flex justify-between items-center">
+                    <li key={idx} className="list-card p-3 flex justify-between items-center">
                     <div>
                         <div className="font-medium">{match.match}</div>
-                        <div className="text-xs text-gray-500">{dateStr} • {timeStr}</div>
+                        <div className="text-xs text-muted">{dateStr} • {timeStr}</div>
                     </div>
-                    <div className="text-xs text-gray-400 italic">{match.format}</div>
+                    <div className="text-xs text-muted italic">{match.format}</div>
                     </li>
                 );
                 })}
@@ -131,16 +131,16 @@ const Home = () => {
         </section>
         {/* 🔽 Bloque 3: tarjetas de equipos */}
         <section>
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Equipos Participantes</h2>
+        <h2 className="text-xl font-semibold mb-4">Equipos Participantes</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {teams.map((team, idx) => (
             <Link to="/teams" key={idx}>
                 <div
-                className={`rounded-xl ${team.color} text-white p-4 shadow hover:scale-[1.02] transition-transform`}
+                className="team-card p-4 hover:scale-[1.02] transition-transform"
                 >
                 <div className="text-4xl mb-2 text-center">{team.logo}</div>
                 <h3 className="text-center font-bold text-lg">{team.name}</h3>
-                <p className="text-center text-sm">{team.players} jugadores</p>
+                <p className="text-center text-sm text-muted">{team.players} jugadores</p>
                 </div>
             </Link>
             ))}
@@ -150,13 +150,13 @@ const Home = () => {
         {/* 🔽 Bloque 4: Líderes */}
         <section>
         <Link to="/leaderboard">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4 hover:underline hover:text-primary transition-colors">
+            <h2 className="section-link text-xl font-semibold mb-4">
             Tabla de Posiciones
             </h2>
         </Link>
-        <div className="overflow-x-auto">
-            <table className="table-auto w-full border text-sm text-left">
-            <thead className="bg-gray-100">
+        <div className="table-wrap overflow-x-auto">
+            <table className="table-base table-auto text-sm text-left">
+            <thead>
                 <tr>
                 <th className="px-4 py-2">#</th>
                 <th className="px-4 py-2">Equipo</th>
@@ -166,8 +166,10 @@ const Home = () => {
             </thead>
             <tbody>
                 {standings.slice(0, 4).map((team, idx) => (
-                <tr key={idx} className="border-t">
-                    <td className="px-4 py-2">{idx + 1}</td>
+                <tr key={idx}>
+                    <td className="px-4 py-2">
+                      {idx === 0 ? <span className="badge">#{idx + 1}</span> : idx + 1}
+                    </td>
                     <td className="px-4 py-2 font-medium">{team.team}</td>
                     <td className="px-4 py-2">{team.w}</td>
                     <td className="px-4 py-2">{team.l}</td>
@@ -180,7 +182,7 @@ const Home = () => {
        
         {/* 🔽 Bloque 5: Statpadders */}
         <section>
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">StatPadders MVP Race</h2>
+        <h2 className="text-xl font-semibold mb-4">StatPadders MVP Race</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
             { stat: 'Ataques', icon: '🏐', key: 'attack' },
@@ -192,16 +194,16 @@ const Home = () => {
                 : null;
 
             return (
-                <div key={stat} className="bg-white rounded-xl shadow p-4">
+                <div key={stat} className="card p-4">
                 <div className="text-center text-3xl mb-2">{icon}</div>
-                <div className="text-center font-bold">{stat}</div>
+                <div className="stat-title text-center">{stat}</div>
                 {leader ? (
                     <>
-                    <div className="text-center text-sm text-gray-500 mt-1">{leader.name}</div>
-                    <div className="text-center text-lg font-semibold">{leader[key]} pts</div>
+                    <div className="text-center text-sm text-muted mt-1">{leader.name}</div>
+                    <div className="stat-number text-center text-lg">{leader[key]} pts</div>
                     </>
                 ) : (
-                    <div className="text-center text-sm text-gray-400 italic">Sin datos</div>
+                    <div className="text-center text-sm text-muted italic">Sin datos</div>
                 )}
                 </div>
             );
@@ -211,33 +213,33 @@ const Home = () => {
         </section>
         {/* 🔽 Bloque 6: Team Stats */}
         <section>
-        <h3 className="text-xl font-bold mt-10 mb-4 ">Equipos Destacados</h3>
+        <h3 className="text-xl font-bold mt-10 mb-4">Equipos Destacados</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
+            <div className="card p-4 flex flex-col items-center">
                 <div className="text-3xl">🏐</div>
-                <h4 className="font-bold text-center text-blue-900 mt-1">Ataques</h4>
-                <p className="text-gray-700">{bestAttackTeam[0]}</p>
-                <p className="font-bold text-blue-900 text-lg">{bestAttackTeam[1].attack} pts</p>
+                <h4 className="stat-title text-center mt-1">Ataques</h4>
+                <p className="text-muted">{bestAttackTeam[0]}</p>
+                <p className="stat-number text-lg">{bestAttackTeam[1].attack} pts</p>
             </div>
-            <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
+            <div className="card p-4 flex flex-col items-center">
                 <div className="text-3xl">🛡️</div>
-                <h4 className="font-bold text-center text-blue-900 mt-1">Bloqueos</h4>
-                <p className="text-gray-700">{bestBlockTeam[0]}</p>
-                <p className="font-bold text-blue-900 text-lg">{bestBlockTeam[1].blocks} pts</p>
+                <h4 className="stat-title text-center mt-1">Bloqueos</h4>
+                <p className="text-muted">{bestBlockTeam[0]}</p>
+                <p className="stat-number text-lg">{bestBlockTeam[1].blocks} pts</p>
             </div>
-            <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
+            <div className="card p-4 flex flex-col items-center">
                 <div className="text-3xl">🎯</div>
-                <h4 className="font-bold text-center text-blue-900 mt-1">Servicios</h4>
-                <p className="text-gray-700">{bestServiceTeam[0]}</p>
-                <p className="font-bold text-blue-900 text-lg">{bestServiceTeam[1].service} pts</p>
+                <h4 className="stat-title text-center mt-1">Servicios</h4>
+                <p className="text-muted">{bestServiceTeam[0]}</p>
+                <p className="stat-number text-lg">{bestServiceTeam[1].service} pts</p>
             </div>
             </div>
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Estadísticas por Equipo</h2>
-        <div className="overflow-x-auto">
+        <h2 className="text-xl font-semibold mb-4">Estadísticas por Equipo</h2>
+        <div className="table-wrap overflow-x-auto">
         
 
-            <table className="table-auto w-full border text-sm text-left">
-            <thead className="bg-gray-100">
+            <table className="table-base table-auto text-sm text-left">
+            <thead>
                 <tr>
                     <th className="px-4 py-2">Equipo</th>
                     <th
@@ -267,7 +269,7 @@ const Home = () => {
                     return b[teamSortKey] - a[teamSortKey];
                   })
                 .map(([team, stats]) => (
-                <tr key={team} className="border-t">
+                <tr key={team}>
                     <td className="px-4 py-2 font-medium">{team}</td>
                     <td className="px-4 py-2">{stats.attack}</td>
                     <td className="px-4 py-2">{stats.blocks}</td>
