@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    <script>
+      (function () {
+        var l = window.location;
+        var base = "/Season2App";
+        var path = l.pathname.replace(base, "");
+        var newUrl = base + "/?/" + path.replace(/^\/+/, "");
+        if (l.search) newUrl += l.search.replace("?", "&");
+        if (l.hash) newUrl += l.hash;
+        l.replace(newUrl.replace(/&/g, "~and~"));
+      })();
+    </script>
+  </body>
+</html>

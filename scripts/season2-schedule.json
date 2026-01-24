@@ -1,0 +1,44 @@
+{
+  "dates": [
+    {
+      "dateISO": "2026-01-30",
+      "matches": [
+        { "time": "18:00", "home": "red-flame-dragons", "away": "black-wolves" },
+        { "time": "19:00", "home": "white-sharks", "away": "yellow-lions" },
+        { "time": "20:00", "home": "green-vipers", "away": "blue-raptors" }
+      ]
+    },
+    {
+      "dateISO": "2026-02-06",
+      "matches": [
+        { "time": "18:00", "home": "red-flame-dragons", "away": "white-sharks" },
+        { "time": "19:00", "home": "black-wolves", "away": "green-vipers" },
+        { "time": "20:00", "home": "yellow-lions", "away": "blue-raptors" }
+      ]
+    },
+    {
+      "dateISO": "2026-02-13",
+      "matches": [
+        { "time": "18:00", "home": "red-flame-dragons", "away": "yellow-lions" },
+        { "time": "19:00", "home": "white-sharks", "away": "green-vipers" },
+        { "time": "20:00", "home": "black-wolves", "away": "blue-raptors" }
+      ]
+    },
+    {
+      "dateISO": "2026-02-27",
+      "matches": [
+        { "time": "18:00", "home": "red-flame-dragons", "away": "green-vipers" },
+        { "time": "19:00", "home": "black-wolves", "away": "yellow-lions" },
+        { "time": "20:00", "home": "white-sharks", "away": "blue-raptors" }
+      ]
+    },
+    {
+      "dateISO": "2026-03-06",
+      "matches": [
+        { "time": "18:00", "home": "red-flame-dragons", "away": "blue-raptors" },
+        { "time": "19:00", "home": "black-wolves", "away": "white-sharks" },
+        { "time": "20:00", "home": "yellow-lions", "away": "green-vipers" }
+      ]
+    }
+  ]
+}
