@@ -25,7 +25,7 @@ const PlayerProfile = () => {
 
   if (!player) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center text-muted">
         Jugador no encontrado.
       </div>
     );
@@ -60,14 +60,14 @@ const PlayerProfile = () => {
             className="h-20 w-20 rounded-full object-cover"
           />
         ) : (
-          <div className="h-20 w-20 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-2xl">
+          <div className="avatar-fallback h-20 w-20 rounded-full flex items-center justify-center text-2xl">
             {initials}
           </div>
         )}
         <div>
           <h2 className="text-2xl font-bold">{displayName}</h2>
-          <p className="text-sm text-gray-500">{typeLabel}</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">{typeLabel}</p>
+          <p className="text-sm text-muted">
             {team ? `Equipo: ${team.name}` : "Sin equipo asignado"}
           </p>
         </div>

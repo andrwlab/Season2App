@@ -18,20 +18,20 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-primary text-white px-4 py-4 sm:px-6 shadow-md">
+    <nav className="nav-bar px-4 py-4 sm:px-6">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-center sm:text-left">Torneo de Vóley</h1>
+        <h1 className="nav-title text-xl sm:text-2xl font-bold text-center sm:text-left">Torneo de Vóley</h1>
 
         <ul className="flex flex-wrap justify-center sm:justify-start gap-3 text-sm sm:text-base">
-          <li><Link to="/" className="hover:underline">Inicio</Link></li>
-          <li><Link to="/teams" className="hover:underline">Equipos</Link></li>
-          <li><Link to="/schedule" className="hover:underline">Calendario</Link></li>
-          <li><Link to="/leaderboard" className="hover:underline">Posiciones</Link></li>
-          <li><Link to="/players" className="hover:underline">Jugadores</Link></li>
+          <li><Link to="/" className="nav-link">Inicio</Link></li>
+          <li><Link to="/teams" className="nav-link">Equipos</Link></li>
+          <li><Link to="/schedule" className="nav-link">Calendario</Link></li>
+          <li><Link to="/leaderboard" className="nav-link">Posiciones</Link></li>
+          <li><Link to="/players" className="nav-link">Jugadores</Link></li>
           {user && role === 'admin' && (
             <>
-              <li><Link to="/matches" className="hover:underline">Partidos</Link></li>
-              <li><Link to="/admin/rosters" className="hover:underline">Rosters</Link></li>
+              <li><Link to="/matches" className="nav-link">Partidos</Link></li>
+              <li><Link to="/admin/rosters" className="nav-link">Rosters</Link></li>
             </>
           )}
         </ul>
@@ -40,7 +40,7 @@ const Navbar = () => {
           <label className="text-xs sm:text-sm">
             Temporada
             <select
-              className="ml-2 px-2 py-1 rounded text-gray-800"
+              className="input-field ml-2 px-2 py-1 text-sm"
               value={selectedSeasonId || ''}
               onChange={(e) => setSelectedSeasonId(e.target.value)}
               disabled={isLoading || seasons.length === 0}
@@ -57,7 +57,7 @@ const Navbar = () => {
               <span className="text-sm text-center sm:text-left">Hola, {user.displayName}</span>
               <button
                 onClick={logout}
-                className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm"
+                className="btn btn-danger px-3 py-1 text-sm"
               >
                 Cerrar sesión
               </button>
@@ -65,7 +65,7 @@ const Navbar = () => {
           ) : (
             <button
               onClick={login}
-              className="bg-white text-primary px-3 py-1 rounded text-sm hover:bg-gray-100"
+              className="btn btn-outline px-3 py-1 text-sm"
             >
               Iniciar sesión
             </button>

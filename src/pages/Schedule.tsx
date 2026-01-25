@@ -40,10 +40,10 @@ const Schedule = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-3xl font-bold mb-6 text-center text-primary">Calendario de Partidos</h2>
+      <h2 className="text-3xl font-bold mb-6 text-center text-strong">Calendario de Partidos</h2>
       <div className="space-y-6">
         {matchesByDate.length === 0 && (
-          <p className="text-center text-gray-500">No hay partidos para esta temporada.</p>
+          <p className="text-center text-muted">No hay partidos para esta temporada.</p>
         )}
         {matchesByDate.map(([dateISO, list]) => {
           const dateObj = toDate(dateISO);
@@ -67,10 +67,10 @@ const Schedule = () => {
                   return (
                     <li
                       key={item.id}
-                      className="bg-white shadow-sm border rounded-lg p-4 text-gray-800"
+                      className="list-card p-4"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                        <span className="text-sm text-gray-500 sm:w-1/4">{time || "--:--"}</span>
+                        <span className="text-sm text-muted sm:w-1/4">{time || "--:--"}</span>
 
                         <div className="sm:w-2/4 text-center">
                           <Link to={`/matches/${item.id}`}>
@@ -78,20 +78,20 @@ const Schedule = () => {
                               {teamMap[item.homeTeamId] || item.homeTeamId} vs{" "}
                               {teamMap[item.awayTeamId] || item.awayTeamId}
                               {isPlayed && (
-                                <span className="text-primary ml-2">
+                                <span className="text-brand ml-2">
                                   ({homeScore} - {awayScore})
                                 </span>
                               )}
                             </div>
                           </Link>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-muted mt-1">
                             {item.status || "scheduled"}
                           </div>
                         </div>
 
                         <div className="sm:w-1/4 text-right mt-2 sm:mt-0 flex justify-end gap-3">
                           {(!isPlayed && (role === "admin" || role === "scorekeeper")) && (
-                            <Link to={`/admin-match/${item.id}`} className="text-xs text-blue-600 underline">
+                            <Link to={`/admin-match/${item.id}`} className="text-xs link-brand underline">
                               Editar
                             </Link>
                           )}

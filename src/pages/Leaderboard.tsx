@@ -73,8 +73,9 @@ const Leaderboard = () => {
     <div className="p-6 max-w-5xl mx-auto space-y-10">
       <section>
         <h2 className="text-2xl font-bold mb-4">Tabla de Posiciones</h2>
-        <table className="table-auto w-full border text-sm text-left">
-          <thead className="bg-gray-100">
+        <div className="table-wrap overflow-x-auto">
+        <table className="table table-auto w-full text-sm text-left">
+          <thead>
             <tr>
               <th className="px-3 py-2">#</th>
               <th className="px-3 py-2">Equipo</th>
@@ -87,9 +88,9 @@ const Leaderboard = () => {
           </thead>
           <tbody>
             {standings.map((s, i) => (
-              <tr key={s.teamId} className="border-t">
-                <td className="px-3 py-2">{i + 1}</td>
-                <td className="px-3 py-2">{teamMap[s.teamId] || s.teamId}</td>
+              <tr key={s.teamId}>
+                <td className="px-3 py-2"><span className="badge">{i + 1}</span></td>
+                <td className="px-3 py-2 text-strong">{teamMap[s.teamId] || s.teamId}</td>
                 <td className="px-3 py-2">{s.w}</td>
                 <td className="px-3 py-2">{s.l}</td>
                 <td className="px-3 py-2">{s.pf}</td>
@@ -99,6 +100,7 @@ const Leaderboard = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
 
       {(phaseMatches.semifinal.length ||
@@ -113,11 +115,11 @@ const Leaderboard = () => {
                 {phaseMatches.semifinal.map((m: any) => {
                   const d = toDate(m);
                   return (
-                    <li key={m.id} className="border p-3 rounded-md flex justify-between">
+                    <li key={m.id} className="list-card p-3 flex justify-between">
                       <span>
                         {teamMap[m.homeTeamId] || m.teamA} vs {teamMap[m.awayTeamId] || m.teamB}
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-muted">
                         {d.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
                         {d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                       </span>
@@ -131,9 +133,9 @@ const Leaderboard = () => {
               {phaseMatches.third.map((m: any) => {
                 const d = toDate(m);
                 return (
-                  <div key={m.id} className="border p-3 rounded-md flex justify-between">
+                  <div key={m.id} className="list-card p-3 flex justify-between">
                     <span>Perdedor SF1 vs Perdedor SF2</span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted">
                       {d.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
                       {d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                     </span>
@@ -146,9 +148,9 @@ const Leaderboard = () => {
               {phaseMatches.final.map((m: any) => {
                 const d = toDate(m);
                 return (
-                  <div key={m.id} className="border p-3 rounded-md flex justify-between">
+                  <div key={m.id} className="list-card p-3 flex justify-between">
                     <span>Ganador SF1 vs Ganador SF2</span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted">
                       {d.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
                       {d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                     </span>
@@ -161,7 +163,7 @@ const Leaderboard = () => {
       )}
 
       <div className="text-center">
-        <Link to="/schedule" className="text-primary underline">
+        <Link to="/schedule" className="link-brand underline">
           Ver calendario completo
         </Link>
       </div>

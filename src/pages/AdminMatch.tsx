@@ -115,17 +115,17 @@ const AdminMatch = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-center text-primary mb-4">Registrar Resultado</h2>
-      <div className="bg-white p-4 shadow rounded">
+      <h2 className="text-2xl font-bold text-center text-strong mb-4">Registrar Resultado</h2>
+      <div className="card p-4">
         <p className="text-center font-medium mb-2">{teamAName} vs {teamBName}</p>
 
-        {error && <p className="text-red-600 text-center mb-4">{error}</p>}
+        {error && <p className="text-danger text-center mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit}>
           <div className="flex gap-4 justify-center mb-6">
             <input
               type="number"
-              className="border px-3 py-2 rounded w-24 text-center"
+              className="input-field px-3 py-2 w-24 text-center"
               placeholder={teamAName}
               value={scoreA}
               onChange={(e) => setScoreA(e.target.value)}
@@ -134,7 +134,7 @@ const AdminMatch = () => {
             <span className="text-xl font-bold">-</span>
             <input
               type="number"
-              className="border px-3 py-2 rounded w-24 text-center"
+              className="input-field px-3 py-2 w-24 text-center"
               placeholder={teamBName}
               value={scoreB}
               onChange={(e) => setScoreB(e.target.value)}
@@ -156,21 +156,21 @@ const AdminMatch = () => {
                       <input
                         type="number"
                         placeholder="🏐"
-                        className="border px-2 py-1 w-1/3"
+                        className="input-field px-2 py-1 w-1/3"
                         value={formData[player.id]?.attack || ""}
                         onChange={(e) => handleStatChange(player.id, "attack", e.target.value)}
                       />
                       <input
                         type="number"
                         placeholder="🛡️"
-                        className="border px-2 py-1 w-1/3"
+                        className="input-field px-2 py-1 w-1/3"
                         value={formData[player.id]?.blocks || ""}
                         onChange={(e) => handleStatChange(player.id, "blocks", e.target.value)}
                       />
                       <input
                         type="number"
                         placeholder="🎯"
-                        className="border px-2 py-1 w-1/3"
+                        className="input-field px-2 py-1 w-1/3"
                         value={formData[player.id]?.service || ""}
                         onChange={(e) => handleStatChange(player.id, "service", e.target.value)}
                       />
@@ -181,7 +181,7 @@ const AdminMatch = () => {
             ))}
           </div>
 
-          <button type="submit" className="mt-6 bg-primary text-white px-6 py-2 rounded hover:bg-blue-700">
+          <button type="submit" className="btn btn-primary mt-6 px-6 py-2">
             Guardar Resultado
           </button>
         </form>

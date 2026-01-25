@@ -1,10 +1,10 @@
 // src/data.ts
 
 export const teams = [
-    { name: 'Equipo A', logo: '🅰️', color: 'bg-blue-600', players: 12 },
-    { name: 'Equipo B', logo: '🅱️', color: 'bg-black', players: 12 },
-    { name: 'Equipo C', logo: '🅾️', color: 'bg-red-600', players: 12 },
-    { name: 'Equipo D', logo: '🆎', color: 'bg-yellow-500', players: 12 },
+    { name: 'Equipo A', logo: '🅰️', color: 'team-card team-card--a', players: 12 },
+    { name: 'Equipo B', logo: '🅱️', color: 'team-card team-card--b', players: 12 },
+    { name: 'Equipo C', logo: '🅾️', color: 'team-card team-card--c', players: 12 },
+    { name: 'Equipo D', logo: '🆎', color: 'team-card team-card--d', players: 12 },
   ];
   
   export const players = [

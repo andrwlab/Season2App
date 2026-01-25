@@ -89,19 +89,19 @@ const AdminRosters = () => {
   };
 
   if (!user || role !== "admin") {
-    return <p className="p-6 text-center text-gray-500">Acceso restringido.</p>;
+    return <p className="p-6 text-center text-muted">Acceso restringido.</p>;
   }
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold">Rosters (Admin)</h2>
-      <div className="bg-white p-4 rounded shadow">
+      <div className="card p-4">
         <label className="block text-sm font-medium mb-2">Nota de trade (opcional)</label>
         <input
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          className="w-full border px-3 py-2 rounded"
+          className="input-field w-full px-3 py-2"
           placeholder="Ej: cambio por ausencia"
         />
       </div>
@@ -112,10 +112,10 @@ const AdminRosters = () => {
           const rosterPlayers =
             roster?.playerIds?.map((pid) => playerMap[pid]).filter(Boolean) || [];
           return (
-            <div key={team.id} className="bg-white rounded shadow p-4">
+            <div key={team.id} className="card p-4">
               <h3 className="text-lg font-semibold mb-3">{team.name}</h3>
               {rosterPlayers.length === 0 ? (
-                <p className="text-sm text-gray-500">Sin jugadores.</p>
+                <p className="text-sm text-muted">Sin jugadores.</p>
               ) : (
                 <ul className="space-y-3">
                   {rosterPlayers.map((player) => (
@@ -123,7 +123,7 @@ const AdminRosters = () => {
                       <span className="text-sm">{player.fullName || (player as any).name || player.id}</span>
                       <div className="flex items-center gap-2">
                         <select
-                          className="border px-2 py-1 rounded text-sm"
+                          className="input-field px-2 py-1 text-sm"
                           value={targetTeam[player.id] || ""}
                           onChange={(e) =>
                             setTargetTeam((prev) => ({ ...prev, [player.id]: e.target.value }))
@@ -139,7 +139,7 @@ const AdminRosters = () => {
                             ))}
                         </select>
                         <button
-                          className="bg-primary text-white px-2 py-1 rounded text-sm"
+                          className="btn btn-primary px-2 py-1 text-sm"
                           onClick={() => movePlayer(player.id, team.id)}
                           disabled={!targetTeam[player.id]}
                         >

@@ -57,7 +57,7 @@ const Matches = () => {
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">Partidos</h2>
       {!selectedSeasonId && (
-        <p className="text-sm text-gray-500 mb-4">Selecciona una temporada para ver los partidos.</p>
+        <p className="text-sm text-muted mb-4">Selecciona una temporada para ver los partidos.</p>
       )}
 
       {user && role === "admin" && (
@@ -69,7 +69,7 @@ const Matches = () => {
                 name="homeTeamId"
                 value={formData.homeTeamId}
                 onChange={handleChange}
-                className="w-1/2 border px-3 py-2 rounded"
+                className="input-field w-1/2 px-3 py-2"
                 required
               >
                 <option value="">Equipo local</option>
@@ -83,7 +83,7 @@ const Matches = () => {
                 name="awayTeamId"
                 value={formData.awayTeamId}
                 onChange={handleChange}
-                className="w-1/2 border px-3 py-2 rounded"
+                className="input-field w-1/2 px-3 py-2"
                 required
               >
                 <option value="">Equipo visitante</option>
@@ -100,7 +100,7 @@ const Matches = () => {
                 name="dateISO"
                 value={formData.dateISO}
                 onChange={handleChange}
-                className="w-1/2 border px-3 py-2 rounded"
+                className="input-field w-1/2 px-3 py-2"
                 required
               />
               <input
@@ -108,11 +108,11 @@ const Matches = () => {
                 name="timeHHmm"
                 value={formData.timeHHmm}
                 onChange={handleChange}
-                className="w-1/2 border px-3 py-2 rounded"
+                className="input-field w-1/2 px-3 py-2"
                 required
               />
             </div>
-            <button type="submit" className="bg-primary text-white px-4 py-2 rounded">
+            <button type="submit" className="btn btn-primary px-4 py-2">
               Guardar
             </button>
           </form>
@@ -122,13 +122,13 @@ const Matches = () => {
       <h3 className="text-xl font-semibold mb-2">Partidos registrados</h3>
       <ul className="space-y-2">
         {matches.map((match) => (
-          <li key={match.id} className="border px-4 py-2 rounded shadow-sm flex justify-between items-center">
+          <li key={match.id} className="list-card px-4 py-2 flex justify-between items-center">
             <span>
               <strong>{match.dateISO}</strong>: {teamMap[match.homeTeamId] || match.homeTeamId} vs{" "}
               {teamMap[match.awayTeamId] || match.awayTeamId}
             </span>
             {(role === "admin" || role === "scorekeeper") && (
-              <Link to={`/admin-match/${match.id}`} className="text-sm text-blue-600 hover:underline ml-4">
+              <Link to={`/admin-match/${match.id}`} className="text-sm link-brand hover:underline ml-4">
                 Editar
               </Link>
             )}

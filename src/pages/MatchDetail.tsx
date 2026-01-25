@@ -68,27 +68,27 @@ const MatchDetail = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold text-center text-primary mb-4">Detalles del Partido</h2>
-      <div className="bg-white p-4 shadow rounded">
+      <h2 className="text-2xl font-bold text-center text-strong mb-4">Detalles del Partido</h2>
+      <div className="card p-4">
         <div className="text-center font-semibold text-lg mb-1">
           {homeName} vs {awayName}
         </div>
-        <div className="text-center text-gray-500 text-sm mb-4">
+        <div className="text-center text-muted text-sm mb-4">
           {date} • {match.status || "scheduled"}
         </div>
 
         {scoreHome != null && scoreAway != null ? (
-          <div className="text-center text-xl font-bold text-green-700 mb-4">
+          <div className="text-center text-xl font-bold text-success mb-4">
             Resultado: {scoreHome} - {scoreAway}
           </div>
         ) : (
-          <div className="text-center text-sm text-gray-400 italic mb-4">Aún sin resultado</div>
+          <div className="text-center text-sm text-muted italic mb-4">Aún sin resultado</div>
         )}
 
         {role === "admin" || role === "scorekeeper" ? (
           <div className="text-center mb-4">
             <Link to={`/admin-match/${id}`}>
-              <button className="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+              <button className="btn btn-primary px-4 py-2">
                 Editar Partido
               </button>
             </Link>
@@ -97,28 +97,30 @@ const MatchDetail = () => {
 
         <h3 className="text-md font-bold mb-2">Estadísticas por jugador:</h3>
         {match.playersStats && Object.keys(match.playersStats).length > 0 ? (
-          <table className="table-auto w-full border text-sm text-left">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-4 py-2">Jugador</th>
-                <th className="px-4 py-2">Ataques</th>
-                <th className="px-4 py-2">Bloqueos</th>
-                <th className="px-4 py-2">Servicios</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(match.playersStats).map(([playerId, stats]) => (
-                <tr key={playerId} className="border-t">
-                  <td className="px-4 py-2">{playerMap[playerId] || playerId}</td>
-                  <td className="px-4 py-2">{stats?.attack ?? 0}</td>
-                  <td className="px-4 py-2">{stats?.blocks ?? 0}</td>
-                  <td className="px-4 py-2">{stats?.service ?? 0}</td>
+          <div className="table-wrap overflow-x-auto">
+            <table className="table table-auto w-full text-sm text-left">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2">Jugador</th>
+                  <th className="px-4 py-2">Ataques</th>
+                  <th className="px-4 py-2">Bloqueos</th>
+                  <th className="px-4 py-2">Servicios</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {Object.entries(match.playersStats).map(([playerId, stats]) => (
+                  <tr key={playerId}>
+                    <td className="px-4 py-2">{playerMap[playerId] || playerId}</td>
+                    <td className="px-4 py-2">{stats?.attack ?? 0}</td>
+                    <td className="px-4 py-2">{stats?.blocks ?? 0}</td>
+                    <td className="px-4 py-2">{stats?.service ?? 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <p className="text-gray-500 text-sm">No hay estadísticas registradas.</p>
+          <p className="text-muted text-sm">No hay estadísticas registradas.</p>
         )}
       </div>
     </div>

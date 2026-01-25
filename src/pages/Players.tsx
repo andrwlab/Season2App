@@ -84,15 +84,13 @@ const Players = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h2 className="text-3xl font-bold mb-6 text-center text-primary">Estadísticas de Jugadores</h2>
+      <h2 className="text-3xl font-bold mb-6 text-center text-strong">Estadísticas de Jugadores</h2>
 
       <div className="flex gap-4 justify-center mb-6">
         {(["all", "student", "teacher"] as const).map((f) => (
           <button
             key={f}
-            className={`px-4 py-2 rounded ${
-              filter === f ? "bg-primary text-white" : "bg-gray-200"
-            }`}
+            className={`tab px-4 py-2 ${filter === f ? "tab--active" : ""}`}
             onClick={() => setFilter(f)}
           >
             {f === "all" ? "Todos" : f === "student" ? "Estudiantes" : "Profesores"}
@@ -100,54 +98,56 @@ const Players = () => {
         ))}
       </div>
 
-      <table className="table-auto w-full border text-sm text-left">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="px-4 py-2">Jugador</th>
-            <th className="px-4 py-2">Equipo</th>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("attack")}>
-              Ataques{Arrow({ field: "attack" })}
-            </th>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("blocks")}>
-              Bloqueos{Arrow({ field: "blocks" })}
-            </th>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("service")}>
-              Servicios{Arrow({ field: "service" })}
-            </th>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("total")}>
-              Total{Arrow({ field: "total" })}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.length === 0 && (
+      <div className="table-wrap overflow-x-auto">
+        <table className="table table-auto w-full text-sm text-left">
+          <thead>
             <tr>
-              <td className="px-4 py-6 text-center text-gray-500" colSpan={6}>
-                No hay jugadores para mostrar.
-              </td>
+              <th className="px-4 py-2">Jugador</th>
+              <th className="px-4 py-2">Equipo</th>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("attack")}>
+                Ataques{Arrow({ field: "attack" })}
+              </th>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("blocks")}>
+                Bloqueos{Arrow({ field: "blocks" })}
+              </th>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("service")}>
+                Servicios{Arrow({ field: "service" })}
+              </th>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("total")}>
+                Total{Arrow({ field: "total" })}
+              </th>
             </tr>
-          )}
-          {sorted.map((player) => {
-            const stats = totals[player.id] || { attack: 0, blocks: 0, service: 0 };
-            const total = stats.attack + stats.blocks + stats.service;
-            const teamId = playerTeamMap[player.id];
-            return (
-              <tr key={player.id} className="border-t">
-                <td className="px-4 py-2">
-                  <Link to={`/players/${player.id}`} className="hover:underline text-primary">
-                    {player.fullName || (player as any).name || player.id}
-                  </Link>
+          </thead>
+          <tbody>
+            {sorted.length === 0 && (
+              <tr>
+                <td className="px-4 py-6 text-center text-muted" colSpan={6}>
+                  No hay jugadores para mostrar.
                 </td>
-                <td className="px-4 py-2">{teamId ? teamMap[teamId] || teamId : "Sin equipo"}</td>
-                <td className="px-4 py-2">{stats.attack}</td>
-                <td className="px-4 py-2">{stats.blocks}</td>
-                <td className="px-4 py-2">{stats.service}</td>
-                <td className="px-4 py-2 font-bold">{total}</td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            )}
+            {sorted.map((player) => {
+              const stats = totals[player.id] || { attack: 0, blocks: 0, service: 0 };
+              const total = stats.attack + stats.blocks + stats.service;
+              const teamId = playerTeamMap[player.id];
+              return (
+                <tr key={player.id}>
+                  <td className="px-4 py-2">
+                    <Link to={`/players/${player.id}`} className="hover:underline link-brand">
+                      {player.fullName || (player as any).name || player.id}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-2">{teamId ? teamMap[teamId] || teamId : "Sin equipo"}</td>
+                  <td className="px-4 py-2">{stats.attack}</td>
+                  <td className="px-4 py-2">{stats.blocks}</td>
+                  <td className="px-4 py-2">{stats.service}</td>
+                  <td className="px-4 py-2 font-bold text-strong">{total}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 type TeamLogoProps = {
   logoFile?: string;
-  name: string;
+  name?: string;
   className?: string;
 };
 
@@ -10,16 +10,17 @@ const TeamLogo: React.FC<TeamLogoProps> = ({ logoFile, name, className }) => {
   const [error, setError] = useState(false);
   const base = import.meta.env.BASE_URL || "/";
   const src = logoFile ? `${base}logos/${logoFile}` : "";
+  const safeName = (name || "").trim() || "??";
 
   if (!logoFile || error) {
     return (
       <div
-        className={`flex items-center justify-center rounded-full bg-gray-200 text-gray-600 ${
+        className={`avatar-fallback flex items-center justify-center rounded-full ${
           className || "h-12 w-12 text-sm"
         }`}
-        aria-label={name}
+        aria-label={safeName}
       >
-        {name.slice(0, 2).toUpperCase()}
+        {safeName.slice(0, 2).toUpperCase()}
       </div>
     );
   }
@@ -27,7 +28,7 @@ const TeamLogo: React.FC<TeamLogoProps> = ({ logoFile, name, className }) => {
   return (
     <img
       src={src}
-      alt={name}
+      alt={safeName}
       className={className || "h-12 w-12 rounded-full object-contain"}
       onError={() => setError(true)}
     />

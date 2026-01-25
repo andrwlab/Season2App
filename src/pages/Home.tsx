@@ -130,42 +130,42 @@ const Home = () => {
 
   return (
     <div className="p-6 space-y-10">
-      <section className="text-center">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-primary mb-2">
+      <section className="hero text-center px-6 py-8 sm:py-10">
+        <h1 className="hero-title text-4xl sm:text-5xl font-extrabold mb-2">
           ¡Bienvenido al Torneo!
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="hero-subtitle text-lg">
           Sigue las estadísticas, el calendario y el avance en tiempo real.
         </p>
       </section>
 
       <section>
         <Link to="/schedule">
-          <h2 className="text-xl font-semibold text-gray-700 mb-4 hover:underline hover:text-primary transition-colors">
+          <h2 className="section-title text-xl font-semibold mb-4 hover:underline transition-colors">
             Próximos Partidos
           </h2>
         </Link>
         {upcomingMatches.length === 0 ? (
-          <p className="text-gray-500 text-sm">No hay partidos programados.</p>
+          <p className="text-muted text-sm">No hay partidos programados.</p>
         ) : (
-          <ul className="space-y-2 text-sm text-gray-800">
+          <ul className="space-y-2 text-sm text-body">
             {upcomingMatches.map((match) => {
               const date = buildDate(match.dateISO, match.timeHHmm);
               return (
                 <li
                   key={match.id}
-                  className="border p-3 rounded-md shadow-sm bg-white flex justify-between items-center"
+                  className="list-card p-3 flex justify-between items-center"
                 >
                   <div>
-                    <div className="font-medium">
+                    <div className="font-medium text-strong">
                       {getTeamName(match.homeTeamId)} vs {getTeamName(match.awayTeamId)}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted">
                       {date?.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
                       {date?.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
-                  <div className="text-xs text-gray-400 italic">{match.status || "scheduled"}</div>
+                  <div className="text-xs text-muted italic">{match.status || "scheduled"}</div>
                 </li>
               );
             })}
@@ -174,11 +174,11 @@ const Home = () => {
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Equipos Participantes</h2>
+        <h2 className="section-title text-xl font-semibold mb-4">Equipos Participantes</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {teams.map((team) => (
             <Link to={`/teams/${team.id}`} key={team.id}>
-              <div className="rounded-xl bg-white p-4 shadow hover:scale-[1.02] transition-transform">
+              <div className="team-card p-4 hover:scale-[1.02] transition-transform">
                 <div className="flex items-center justify-center mb-2">
                   <TeamLogo logoFile={team.logoFile} name={team.name} className="h-14 w-14" />
                 </div>
@@ -191,13 +191,13 @@ const Home = () => {
 
       <section>
         <Link to="/leaderboard">
-          <h2 className="text-xl font-semibold text-gray-700 mb-4 hover:underline hover:text-primary transition-colors">
+          <h2 className="section-title text-xl font-semibold mb-4 hover:underline transition-colors">
             Tabla de Posiciones
           </h2>
         </Link>
-        <div className="overflow-x-auto">
-          <table className="table-auto w-full border text-sm text-left">
-            <thead className="bg-gray-100">
+        <div className="table-wrap overflow-x-auto">
+          <table className="table table-auto w-full text-sm text-left">
+            <thead>
               <tr>
                 <th className="px-4 py-2">#</th>
                 <th className="px-4 py-2">Equipo</th>
@@ -207,9 +207,9 @@ const Home = () => {
             </thead>
             <tbody>
               {standings.slice(0, 4).map((team, idx) => (
-                <tr key={team.teamId} className="border-t">
-                  <td className="px-4 py-2">{idx + 1}</td>
-                  <td className="px-4 py-2 font-medium">{getTeamName(team.teamId)}</td>
+                <tr key={team.teamId}>
+                  <td className="px-4 py-2"><span className="badge">{idx + 1}</span></td>
+                  <td className="px-4 py-2 font-medium text-strong">{getTeamName(team.teamId)}</td>
                   <td className="px-4 py-2">{team.w}</td>
                   <td className="px-4 py-2">{team.l}</td>
                 </tr>
@@ -220,7 +220,7 @@ const Home = () => {
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">StatPadders MVP Race</h2>
+        <h2 className="section-title text-xl font-semibold mb-4">StatPadders MVP Race</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
             { stat: "Ataques", icon: "🏐", key: "attack" as const },
@@ -231,20 +231,20 @@ const Home = () => {
             const leaderStats = leaderId ? playerTotals[leaderId] : null;
             const leader = leaderId ? playerMap[leaderId] : null;
             return (
-              <div key={stat} className="bg-white rounded-xl shadow p-4">
+              <div key={stat} className="card p-4">
                 <div className="text-center text-3xl mb-2">{icon}</div>
-                <div className="text-center font-bold">{stat}</div>
+                <div className="stat-title text-center">{stat}</div>
                 {leader && leaderStats ? (
                   <>
-                    <div className="text-center text-sm text-gray-500 mt-1">
+                    <div className="stat-muted text-center text-sm mt-1">
                       {leader.fullName || (leader as any).name || leaderId}
                     </div>
-                    <div className="text-center text-lg font-semibold">
+                    <div className="stat-value text-center text-lg">
                       {leaderStats[key]} pts
                     </div>
                   </>
                 ) : (
-                  <div className="text-center text-sm text-gray-400 italic">Sin datos</div>
+                  <div className="stat-muted text-center text-sm italic">Sin datos</div>
                 )}
               </div>
             );
@@ -258,22 +258,22 @@ const Home = () => {
           {(["attack", "blocks", "service"] as const).map((key) => {
             const best = bestTeam(key);
             return (
-              <div key={key} className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
+              <div key={key} className="card p-4 flex flex-col items-center">
                 <div className="text-3xl">{key === "attack" ? "🏐" : key === "blocks" ? "🛡️" : "🎯"}</div>
-                <h4 className="font-bold text-center text-blue-900 mt-1">
+                <h4 className="stat-title text-center mt-1">
                   {key === "attack" ? "Ataques" : key === "blocks" ? "Bloqueos" : "Servicios"}
                 </h4>
-                <p className="text-gray-700">{best ? getTeamName(best[0]) : "—"}</p>
-                <p className="font-bold text-blue-900 text-lg">{best ? best[1][key] : 0} pts</p>
+                <p className="text-body">{best ? getTeamName(best[0]) : "—"}</p>
+                <p className="stat-value text-lg">{best ? best[1][key] : 0} pts</p>
               </div>
             );
           })}
         </div>
 
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Estadísticas por Equipo</h2>
-        <div className="overflow-x-auto">
-          <table className="table-auto w-full border text-sm text-left">
-            <thead className="bg-gray-100">
+        <h2 className="section-title text-xl font-semibold mb-4">Estadísticas por Equipo</h2>
+        <div className="table-wrap overflow-x-auto">
+          <table className="table table-auto w-full text-sm text-left">
+            <thead>
               <tr>
                 <th className="px-4 py-2">Equipo</th>
                 <th className="px-4 py-2 cursor-pointer" onClick={() => setTeamSortKey("attack")}>
@@ -294,8 +294,8 @@ const Home = () => {
                   return b[teamSortKey] - a[teamSortKey];
                 })
                 .map(([teamId, stats]) => (
-                  <tr key={teamId} className="border-t">
-                    <td className="px-4 py-2 font-medium">{getTeamName(teamId)}</td>
+                  <tr key={teamId}>
+                    <td className="px-4 py-2 font-medium text-strong">{getTeamName(teamId)}</td>
                     <td className="px-4 py-2">{stats.attack}</td>
                     <td className="px-4 py-2">{stats.blocks}</td>
                     <td className="px-4 py-2">{stats.service}</td>

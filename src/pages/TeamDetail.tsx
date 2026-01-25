@@ -27,7 +27,7 @@ const TeamDetail = () => {
 
   if (!team) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center text-muted">
         Equipo no encontrado.
       </div>
     );
@@ -39,20 +39,20 @@ const TeamDetail = () => {
         <TeamLogo logoFile={team.logoFile} name={team.name} className="h-16 w-16" />
         <div>
           <h2 className="text-2xl font-bold">{team.name}</h2>
-          <p className="text-sm text-gray-500">Temporada actual</p>
+          <p className="text-sm text-muted">Temporada actual</p>
         </div>
       </div>
 
-      <section className="bg-white p-4 rounded shadow">
+      <section className="card p-4">
         <h3 className="text-lg font-semibold mb-3">Roster</h3>
         {rosterPlayers.length === 0 ? (
-          <p className="text-sm text-gray-500">No hay jugadores asignados todavía.</p>
+          <p className="text-sm text-muted">No hay jugadores asignados todavía.</p>
         ) : (
-          <ul className="divide-y">
+          <ul className="list-divider">
             {rosterPlayers.map((player) => (
               <li key={player.id} className="py-2 flex items-center justify-between">
                 <span>{player.fullName || (player as any).name || player.id}</span>
-                <Link to={`/players/${player.id}`} className="text-primary text-sm underline">
+                <Link to={`/players/${player.id}`} className="link-brand text-sm underline">
                   Ver perfil
                 </Link>
               </li>
