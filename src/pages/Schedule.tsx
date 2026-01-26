@@ -80,16 +80,17 @@ const Schedule = () => {
                         <div className="sm:w-2/4 text-center">
                           <Link to={`/matches/${item.id}`}>
                             <div className="font-semibold hover:underline flex items-center justify-center gap-3">
-                              <div className="flex items-center justify-center gap-6 sm:hidden w-full">
+                              <div className="flex items-center justify-between sm:hidden w-full px-2">
                                 <TeamLogo
                                   logoFile={homeTeam?.logoFile}
                                   name={homeName}
-                                  className="h-14 w-14 rounded-full object-contain"
+                                  className="h-16 w-16 rounded-full object-contain"
                                 />
+                                <span className="text-xs uppercase tracking-[0.2em] text-muted">VS</span>
                                 <TeamLogo
                                   logoFile={awayTeam?.logoFile}
                                   name={awayName}
-                                  className="h-14 w-14 rounded-full object-contain"
+                                  className="h-16 w-16 rounded-full object-contain"
                                 />
                               </div>
                               <div className="hidden sm:flex items-center gap-3">
@@ -124,7 +125,7 @@ const Schedule = () => {
                             </div>
                           </Link>
                           <div className="text-xs text-muted mt-1">
-                            {item.status || "scheduled"}
+                            {item.status || "Single set of 25 points"}
                           </div>
                         </div>
 
