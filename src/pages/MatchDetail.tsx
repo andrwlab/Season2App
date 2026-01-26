@@ -18,7 +18,7 @@ interface MatchDoc {
   timeHHmm?: string;
   date?: string;
   status?: string;
-  playersStats?: Record<string, { attack?: number; blocks?: number; service?: number }>;
+  playersStats?: Record<string, { attack?: number; blocks?: number; assists?: number; service?: number }>;
 }
 
 const MatchDetail = () => {
@@ -104,6 +104,7 @@ const MatchDetail = () => {
                   <th className="px-4 py-2">Player</th>
                   <th className="px-4 py-2">Attacks</th>
                   <th className="px-4 py-2">Blocks</th>
+                  <th className="px-4 py-2">Assists</th>
                   <th className="px-4 py-2">Serves</th>
                 </tr>
               </thead>
@@ -113,6 +114,7 @@ const MatchDetail = () => {
                     <td className="px-4 py-2">{playerMap[playerId] || playerId}</td>
                     <td className="px-4 py-2">{stats?.attack ?? 0}</td>
                     <td className="px-4 py-2">{stats?.blocks ?? 0}</td>
+                    <td className="px-4 py-2">{stats?.assists ?? 0}</td>
                     <td className="px-4 py-2">{stats?.service ?? 0}</td>
                   </tr>
                 ))}

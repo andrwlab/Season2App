@@ -54,6 +54,7 @@ export type PlayerStat = {
   playerId: string;
   attack?: number;
   blocks?: number;
+  assists?: number;
   service?: number;
 };
 

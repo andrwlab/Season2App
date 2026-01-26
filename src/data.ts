@@ -8,10 +8,10 @@ export const teams = [
   ];
   
   export const players = [
-    { name: 'Carlos López', team: 'Equipo A', attack: 12, blocks: 5, service: 8 },
-    { name: 'María Pérez', team: 'Equipo B', attack: 9, blocks: 3, service: 10 },
-    { name: 'Lucía García', team: 'Equipo C', attack: 15, blocks: 2, service: 6 },
-    { name: 'Andrés Ruiz', team: 'Equipo D', attack: 8, blocks: 6, service: 7 },
+    { name: 'Carlos López', team: 'Equipo A', attack: 12, blocks: 5, assists: 7, service: 8 },
+    { name: 'María Pérez', team: 'Equipo B', attack: 9, blocks: 3, assists: 11, service: 10 },
+    { name: 'Lucía García', team: 'Equipo C', attack: 15, blocks: 2, assists: 6, service: 6 },
+    { name: 'Andrés Ruiz', team: 'Equipo D', attack: 8, blocks: 6, assists: 4, service: 7 },
   ];
   
   export const schedule = [

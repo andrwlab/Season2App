@@ -28,7 +28,7 @@ const Home = () => {
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
   const [teamSortKey, setTeamSortKey] = useState<
-    "attack" | "blocks" | "service" | null
+    "attack" | "blocks" | "assists" | "service" | null
   >(null);
 
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
@@ -92,26 +92,28 @@ const Home = () => {
   }, [matches]);
 
   const playerTotals = useMemo(() => {
-    const totals: Record<string, { attack: number; blocks: number; service: number }> = {};
+    const totals: Record<string, { attack: number; blocks: number; assists: number; service: number }> = {};
     playerStats.forEach((stat) => {
       if (!totals[stat.playerId]) {
-        totals[stat.playerId] = { attack: 0, blocks: 0, service: 0 };
+        totals[stat.playerId] = { attack: 0, blocks: 0, assists: 0, service: 0 };
       }
       totals[stat.playerId].attack += stat.attack || 0;
       totals[stat.playerId].blocks += stat.blocks || 0;
+      totals[stat.playerId].assists += stat.assists || 0;
       totals[stat.playerId].service += stat.service || 0;
     });
     return totals;
   }, [playerStats]);
 
   const teamStats = useMemo(() => {
-    const totals: Record<string, { attack: number; blocks: number; service: number }> = {};
+    const totals: Record<string, { attack: number; blocks: number; assists: number; service: number }> = {};
     Object.entries(playerTotals).forEach(([playerId, stats]) => {
       const teamId = playerTeamMap[playerId];
       if (!teamId) return;
-      if (!totals[teamId]) totals[teamId] = { attack: 0, blocks: 0, service: 0 };
+      if (!totals[teamId]) totals[teamId] = { attack: 0, blocks: 0, assists: 0, service: 0 };
       totals[teamId].attack += stats.attack;
       totals[teamId].blocks += stats.blocks;
+      totals[teamId].assists += stats.assists;
       totals[teamId].service += stats.service;
     });
     return totals;
@@ -122,7 +124,7 @@ const Home = () => {
     return teamMap[teamId]?.name || teamId;
   };
 
-  const bestTeam = (key: "attack" | "blocks" | "service") => {
+  const bestTeam = (key: "attack" | "blocks" | "assists" | "service") => {
     const entries = Object.entries(teamStats);
     if (!entries.length) return null;
     return entries.reduce((a, b) => (b[1][key] > a[1][key] ? b : a));
@@ -221,10 +223,11 @@ const Home = () => {
 
       <section>
         <h2 className="section-title text-xl font-semibold mb-4">StatPadders MVP Race</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { stat: "Attacks", icon: "🏐", key: "attack" as const },
             { stat: "Blocks", icon: "🛡️", key: "blocks" as const },
+            { stat: "Assists", icon: "🤝", key: "assists" as const },
             { stat: "Serves", icon: "🎯", key: "service" as const },
           ].map(({ stat, icon, key }) => {
             const leaderId = Object.entries(playerTotals).sort((a, b) => b[1][key] - a[1][key])[0]?.[0];
@@ -254,14 +257,16 @@ const Home = () => {
 
       <section>
         <h3 className="text-xl font-bold mt-10 mb-4">Featured Teams</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {(["attack", "blocks", "service"] as const).map((key) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {(["attack", "blocks", "assists", "service"] as const).map((key) => {
             const best = bestTeam(key);
             return (
               <div key={key} className="card p-4 flex flex-col items-center">
-                <div className="text-3xl">{key === "attack" ? "🏐" : key === "blocks" ? "🛡️" : "🎯"}</div>
+                <div className="text-3xl">
+                  {key === "attack" ? "🏐" : key === "blocks" ? "🛡️" : key === "assists" ? "🤝" : "🎯"}
+                </div>
                 <h4 className="stat-title text-center mt-1">
-                  {key === "attack" ? "Attacks" : key === "blocks" ? "Blocks" : "Serves"}
+                  {key === "attack" ? "Attacks" : key === "blocks" ? "Blocks" : key === "assists" ? "Assists" : "Serves"}
                 </h4>
                 <p className="text-body">{best ? getTeamName(best[0]) : "—"}</p>
                 <p className="stat-value text-lg">{best ? best[1][key] : 0} pts</p>
@@ -282,6 +287,9 @@ const Home = () => {
                 <th className="px-4 py-2 cursor-pointer" onClick={() => setTeamSortKey("blocks")}>
                   Blocks ⇅
                 </th>
+                <th className="px-4 py-2 cursor-pointer" onClick={() => setTeamSortKey("assists")}>
+                  Assists ⇅
+                </th>
                 <th className="px-4 py-2 cursor-pointer" onClick={() => setTeamSortKey("service")}>
                   Serves ⇅
                 </th>
@@ -298,6 +306,7 @@ const Home = () => {
                     <td className="px-4 py-2 font-medium text-strong">{getTeamName(teamId)}</td>
                     <td className="px-4 py-2">{stats.attack}</td>
                     <td className="px-4 py-2">{stats.blocks}</td>
+                    <td className="px-4 py-2">{stats.assists}</td>
                     <td className="px-4 py-2">{stats.service}</td>
                   </tr>
                 ))}

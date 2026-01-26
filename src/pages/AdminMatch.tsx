@@ -63,6 +63,7 @@ const AdminMatch = () => {
         (playerId) =>
           formData[playerId]?.attack ||
           formData[playerId]?.blocks ||
+          formData[playerId]?.assists ||
           formData[playerId]?.service
       )
     ) {
@@ -156,21 +157,28 @@ const AdminMatch = () => {
                       <input
                         type="number"
                         placeholder="🏐"
-                        className="input-field px-2 py-1 w-1/3"
+                        className="input-field px-2 py-1 w-1/4"
                         value={formData[player.id]?.attack || ""}
                         onChange={(e) => handleStatChange(player.id, "attack", e.target.value)}
                       />
                       <input
                         type="number"
                         placeholder="🛡️"
-                        className="input-field px-2 py-1 w-1/3"
+                        className="input-field px-2 py-1 w-1/4"
                         value={formData[player.id]?.blocks || ""}
                         onChange={(e) => handleStatChange(player.id, "blocks", e.target.value)}
                       />
                       <input
                         type="number"
+                        placeholder="🤝"
+                        className="input-field px-2 py-1 w-1/4"
+                        value={formData[player.id]?.assists || ""}
+                        onChange={(e) => handleStatChange(player.id, "assists", e.target.value)}
+                      />
+                      <input
+                        type="number"
                         placeholder="🎯"
-                        className="input-field px-2 py-1 w-1/3"
+                        className="input-field px-2 py-1 w-1/4"
                         value={formData[player.id]?.service || ""}
                         onChange={(e) => handleStatChange(player.id, "service", e.target.value)}
                       />

@@ -19,7 +19,7 @@ const Players = () => {
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [filter, setFilter] = useState<"all" | "student" | "teacher">("all");
-  const [sortKey, setSortKey] = useState<"total" | "attack" | "blocks" | "service">("total");
+  const [sortKey, setSortKey] = useState<"total" | "attack" | "blocks" | "assists" | "service">("total");
 
   useEffect(() => subscribePlayers(setPlayers), []);
   useEffect(() => subscribePlayerStats(selectedSeasonId, setPlayerStats), [selectedSeasonId]);
@@ -42,11 +42,12 @@ const Players = () => {
   }, [rosters]);
 
   const totals = useMemo(() => {
-    const map: Record<string, { attack: number; blocks: number; service: number }> = {};
+    const map: Record<string, { attack: number; blocks: number; assists: number; service: number }> = {};
     playerStats.forEach((stat) => {
-      if (!map[stat.playerId]) map[stat.playerId] = { attack: 0, blocks: 0, service: 0 };
+      if (!map[stat.playerId]) map[stat.playerId] = { attack: 0, blocks: 0, assists: 0, service: 0 };
       map[stat.playerId].attack += stat.attack || 0;
       map[stat.playerId].blocks += stat.blocks || 0;
+      map[stat.playerId].assists += stat.assists || 0;
       map[stat.playerId].service += stat.service || 0;
     });
     return map;
@@ -67,15 +68,15 @@ const Players = () => {
   });
 
   const sorted = [...filtered].sort((a, b) => {
-    const aStats = totals[a.id] || { attack: 0, blocks: 0, service: 0 };
-    const bStats = totals[b.id] || { attack: 0, blocks: 0, service: 0 };
+    const aStats = totals[a.id] || { attack: 0, blocks: 0, assists: 0, service: 0 };
+    const bStats = totals[b.id] || { attack: 0, blocks: 0, assists: 0, service: 0 };
     const valA =
       sortKey === "total"
-        ? aStats.attack + aStats.blocks + aStats.service
+        ? aStats.attack + aStats.blocks + aStats.assists + aStats.service
         : aStats[sortKey];
     const valB =
       sortKey === "total"
-        ? bStats.attack + bStats.blocks + bStats.service
+        ? bStats.attack + bStats.blocks + bStats.assists + bStats.service
         : bStats[sortKey];
     return valB - valA;
   });
@@ -110,6 +111,9 @@ const Players = () => {
               <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("blocks")}>
                 Blocks{Arrow({ field: "blocks" })}
               </th>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("assists")}>
+                Assists{Arrow({ field: "assists" })}
+              </th>
               <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("service")}>
                 Serves{Arrow({ field: "service" })}
               </th>
@@ -121,14 +125,14 @@ const Players = () => {
           <tbody>
             {sorted.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-center text-muted" colSpan={6}>
+                <td className="px-4 py-6 text-center text-muted" colSpan={7}>
                   No players to show.
                 </td>
               </tr>
             )}
             {sorted.map((player) => {
-              const stats = totals[player.id] || { attack: 0, blocks: 0, service: 0 };
-              const total = stats.attack + stats.blocks + stats.service;
+              const stats = totals[player.id] || { attack: 0, blocks: 0, assists: 0, service: 0 };
+              const total = stats.attack + stats.blocks + stats.assists + stats.service;
               const teamId = playerTeamMap[player.id];
               return (
                 <tr key={player.id}>
@@ -140,6 +144,7 @@ const Players = () => {
                   <td className="px-4 py-2">{teamId ? teamMap[teamId] || teamId : "No team"}</td>
                   <td className="px-4 py-2">{stats.attack}</td>
                   <td className="px-4 py-2">{stats.blocks}</td>
+                  <td className="px-4 py-2">{stats.assists}</td>
                   <td className="px-4 py-2">{stats.service}</td>
                   <td className="px-4 py-2 font-bold text-strong">{total}</td>
                 </tr>
