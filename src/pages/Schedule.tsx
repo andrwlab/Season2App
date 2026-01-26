@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import useUserRole from "../hooks/useUserRole";
 import { useSeason } from "../hooks/useSeason";
 import { Match, Team, subscribeMatches, subscribeTeams } from "../firebase/queries";
+import TeamLogo from "../components/TeamLogo";
 
 const toDate = (dateISO?: string, timeHHmm?: string) =>
   dateISO ? new Date(`${dateISO}T${timeHHmm || "00:00"}:00`) : null;
@@ -17,7 +18,7 @@ const Schedule = () => {
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
 
   const teamMap = useMemo(
-    () => Object.fromEntries(teams.map((t) => [t.id, t.name])),
+    () => Object.fromEntries(teams.map((t) => [t.id, t])),
     [teams]
   );
 
@@ -63,6 +64,10 @@ const Schedule = () => {
                   const homeScore = item.scores?.home;
                   const awayScore = item.scores?.away;
                   const isPlayed = homeScore != null && awayScore != null;
+                  const homeTeam = teamMap[item.homeTeamId];
+                  const awayTeam = teamMap[item.awayTeamId];
+                  const homeName = homeTeam?.name || item.homeTeamId;
+                  const awayName = awayTeam?.name || item.awayTeamId;
 
                   return (
                     <li
@@ -74,9 +79,24 @@ const Schedule = () => {
 
                         <div className="sm:w-2/4 text-center">
                           <Link to={`/matches/${item.id}`}>
-                            <div className="font-semibold hover:underline">
-                              {teamMap[item.homeTeamId] || item.homeTeamId} vs{" "}
-                              {teamMap[item.awayTeamId] || item.awayTeamId}
+                            <div className="font-semibold hover:underline flex items-center justify-center gap-3">
+                              <span className="flex items-center gap-2">
+                                <TeamLogo
+                                  logoFile={homeTeam?.logoFile}
+                                  name={homeName}
+                                  className="h-7 w-7 rounded-full object-contain"
+                                />
+                                <span>{homeName}</span>
+                              </span>
+                              <span className="text-sm text-muted">vs</span>
+                              <span className="flex items-center gap-2">
+                                <TeamLogo
+                                  logoFile={awayTeam?.logoFile}
+                                  name={awayName}
+                                  className="h-7 w-7 rounded-full object-contain"
+                                />
+                                <span>{awayName}</span>
+                              </span>
                               {isPlayed && (
                                 <span className="text-brand ml-2">
                                   ({homeScore} - {awayScore})
