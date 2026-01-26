@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { useAuth } from './AuthContext';
 import { useSeason } from './hooks/useSeason';
@@ -7,6 +8,13 @@ const Navbar = () => {
   const auth = getAuth();
   const { user, role } = useAuth();
   const { seasons, selectedSeasonId, setSelectedSeasonId, isLoading } = useSeason();
+  const activeSeason = seasons.find((s) => s.isActive) || seasons[0] || null;
+
+  useEffect(() => {
+    if (role !== 'admin' && activeSeason && selectedSeasonId !== activeSeason.id) {
+      setSelectedSeasonId(activeSeason.id);
+    }
+  }, [role, activeSeason, selectedSeasonId, setSelectedSeasonId]);
 
   const login = () => {
     const provider = new GoogleAuthProvider();
@@ -20,54 +28,88 @@ const Navbar = () => {
   return (
     <nav className="nav-bar px-4 py-4 sm:px-6">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h1 className="nav-title text-xl sm:text-2xl font-bold text-center sm:text-left">Torneo de Vóley</h1>
+        <h1 className="nav-title text-xl sm:text-2xl font-bold text-center sm:text-left">Volleyball Tournament</h1>
 
         <ul className="flex flex-wrap justify-center sm:justify-start gap-3 text-sm sm:text-base">
-          <li><Link to="/" className="nav-link">Inicio</Link></li>
-          <li><Link to="/teams" className="nav-link">Equipos</Link></li>
-          <li><Link to="/schedule" className="nav-link">Calendario</Link></li>
-          <li><Link to="/leaderboard" className="nav-link">Posiciones</Link></li>
-          <li><Link to="/players" className="nav-link">Jugadores</Link></li>
+          <li>
+            <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
+              Home
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/teams" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
+              Teams
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/schedule" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
+              Schedule
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/leaderboard" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
+              Standings
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/players" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
+              Players
+            </NavLink>
+          </li>
           {user && role === 'admin' && (
             <>
-              <li><Link to="/matches" className="nav-link">Partidos</Link></li>
-              <li><Link to="/admin/rosters" className="nav-link">Rosters</Link></li>
+              <li>
+                <NavLink to="/matches" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
+                  Matches
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/admin/rosters" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
+                  Rosters
+                </NavLink>
+              </li>
             </>
           )}
         </ul>
 
         <div className="flex flex-col sm:flex-row items-center gap-2">
-          <label className="text-xs sm:text-sm">
-            Temporada
-            <select
-              className="input-field ml-2 px-2 py-1 text-sm"
-              value={selectedSeasonId || ''}
-              onChange={(e) => setSelectedSeasonId(e.target.value)}
-              disabled={isLoading || seasons.length === 0}
-            >
-              {seasons.map((season) => (
-                <option key={season.id} value={season.id}>
-                  {season.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {role === 'admin' ? (
+            <label className="text-xs sm:text-sm">
+              Season
+              <select
+                className="input-field ml-2 px-2 py-1 text-sm"
+                value={selectedSeasonId || ''}
+                onChange={(e) => setSelectedSeasonId(e.target.value)}
+                disabled={isLoading || seasons.length === 0}
+              >
+                {seasons.map((season) => (
+                  <option key={season.id} value={season.id}>
+                    {season.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <span className="text-xs sm:text-sm">
+              Season: {activeSeason?.name || '—'}
+            </span>
+          )}
           {user ? (
             <>
-              <span className="text-sm text-center sm:text-left">Hola, {user.displayName}</span>
+              <span className="text-sm text-center sm:text-left">Hi, {user.displayName}</span>
               <button
                 onClick={logout}
                 className="btn btn-danger px-3 py-1 text-sm"
               >
-                Cerrar sesión
+                Sign out
               </button>
             </>
           ) : (
             <button
               onClick={login}
-              className="btn btn-outline px-3 py-1 text-sm"
+              className="btn btn-signin px-4 py-1 text-sm"
             >
-              Iniciar sesión
+              Sign in
             </button>
           )}
         </div>

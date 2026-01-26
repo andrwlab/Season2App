@@ -55,7 +55,7 @@ const AdminMatch = () => {
     const scoreBVal = parseInt(scoreB as string);
 
     if (isNaN(scoreAVal) || isNaN(scoreBVal)) {
-      return "Debes ingresar un marcador válido para ambos equipos.";
+      return "You must enter a valid score for both teams.";
     }
 
     if (
@@ -66,7 +66,7 @@ const AdminMatch = () => {
           formData[playerId]?.service
       )
     ) {
-      return "Debes ingresar al menos una estadística para algún jugador.";
+      return "You must enter at least one stat for a player.";
     }
 
     return null;
@@ -88,11 +88,11 @@ const AdminMatch = () => {
       });
       navigate(`/matches/${id}`);
     } catch (err) {
-      setError("Ocurrió un error al guardar. Intenta nuevamente.");
+      setError("An error occurred while saving. Please try again.");
     }
   };
 
-  if (!match || role !== "admin") return <p className="text-center mt-10">Cargando o sin permiso...</p>;
+  if (!match || role !== "admin") return <p className="text-center mt-10">Loading or no permission...</p>;
 
   const teamMap = useMemo(
     () => Object.fromEntries(teams.map((t) => [t.id, t.name])),
@@ -115,7 +115,7 @@ const AdminMatch = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-center text-strong mb-4">Registrar Resultado</h2>
+      <h2 className="text-2xl font-bold text-center text-strong mb-4">Record Result</h2>
       <div className="card p-4">
         <p className="text-center font-medium mb-2">{teamAName} vs {teamBName}</p>
 
@@ -182,7 +182,7 @@ const AdminMatch = () => {
           </div>
 
           <button type="submit" className="btn btn-primary mt-6 px-6 py-2">
-            Guardar Resultado
+            Save Result
           </button>
         </form>
       </div>

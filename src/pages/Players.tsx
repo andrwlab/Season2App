@@ -84,7 +84,7 @@ const Players = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h2 className="text-3xl font-bold mb-6 text-center text-strong">Estadísticas de Jugadores</h2>
+      <h2 className="text-3xl font-bold mb-6 text-center text-strong">Player Statistics</h2>
 
       <div className="flex gap-4 justify-center mb-6">
         {(["all", "student", "teacher"] as const).map((f) => (
@@ -93,7 +93,7 @@ const Players = () => {
             className={`tab px-4 py-2 ${filter === f ? "tab--active" : ""}`}
             onClick={() => setFilter(f)}
           >
-            {f === "all" ? "Todos" : f === "student" ? "Estudiantes" : "Profesores"}
+            {f === "all" ? "All" : f === "student" ? "Students" : "Teachers"}
           </button>
         ))}
       </div>
@@ -102,16 +102,16 @@ const Players = () => {
         <table className="table table-auto w-full text-sm text-left">
           <thead>
             <tr>
-              <th className="px-4 py-2">Jugador</th>
-              <th className="px-4 py-2">Equipo</th>
+              <th className="px-4 py-2">Player</th>
+              <th className="px-4 py-2">Team</th>
               <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("attack")}>
-                Ataques{Arrow({ field: "attack" })}
+                Attacks{Arrow({ field: "attack" })}
               </th>
               <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("blocks")}>
-                Bloqueos{Arrow({ field: "blocks" })}
+                Blocks{Arrow({ field: "blocks" })}
               </th>
               <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("service")}>
-                Servicios{Arrow({ field: "service" })}
+                Serves{Arrow({ field: "service" })}
               </th>
               <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("total")}>
                 Total{Arrow({ field: "total" })}
@@ -122,7 +122,7 @@ const Players = () => {
             {sorted.length === 0 && (
               <tr>
                 <td className="px-4 py-6 text-center text-muted" colSpan={6}>
-                  No hay jugadores para mostrar.
+                  No players to show.
                 </td>
               </tr>
             )}
@@ -133,11 +133,11 @@ const Players = () => {
               return (
                 <tr key={player.id}>
                   <td className="px-4 py-2">
-                    <Link to={`/players/${player.id}`} className="hover:underline link-brand">
+                    <Link to={`/players/${player.id}`} className="player-name">
                       {player.fullName || (player as any).name || player.id}
                     </Link>
                   </td>
-                  <td className="px-4 py-2">{teamId ? teamMap[teamId] || teamId : "Sin equipo"}</td>
+                  <td className="px-4 py-2">{teamId ? teamMap[teamId] || teamId : "No team"}</td>
                   <td className="px-4 py-2">{stats.attack}</td>
                   <td className="px-4 py-2">{stats.blocks}</td>
                   <td className="px-4 py-2">{stats.service}</td>

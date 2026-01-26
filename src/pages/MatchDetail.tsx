@@ -45,7 +45,7 @@ const MatchDetail = () => {
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
   useEffect(() => subscribePlayers(setPlayers), []);
 
-  if (!match) return <p className="text-center mt-10">Cargando partido...</p>;
+  if (!match) return <p className="text-center mt-10">Loading match...</p>;
 
   const teamMap = useMemo(
     () => Object.fromEntries(teams.map((t) => [t.id, t.name])),
@@ -59,16 +59,16 @@ const MatchDetail = () => {
   const dateValue = match.dateISO
     ? new Date(`${match.dateISO}T${match.timeHHmm || "00:00"}:00`)
     : new Date(match.date || "");
-  const date = dateValue.toLocaleDateString("es-ES", { day: "numeric", month: "long" });
+  const date = dateValue.toLocaleDateString("en-US", { day: "numeric", month: "long" });
 
-  const homeName = teamMap[match.homeTeamId || ""] || match.teamA || "Equipo A";
-  const awayName = teamMap[match.awayTeamId || ""] || match.teamB || "Equipo B";
+  const homeName = teamMap[match.homeTeamId || ""] || match.teamA || "Team A";
+  const awayName = teamMap[match.awayTeamId || ""] || match.teamB || "Team B";
   const scoreHome = match.scores?.home ?? match.scoreA;
   const scoreAway = match.scores?.away ?? match.scoreB;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold text-center text-strong mb-4">Detalles del Partido</h2>
+      <h2 className="text-2xl font-bold text-center text-strong mb-4">Match Details</h2>
       <div className="card p-4">
         <div className="text-center font-semibold text-lg mb-1">
           {homeName} vs {awayName}
@@ -79,32 +79,32 @@ const MatchDetail = () => {
 
         {scoreHome != null && scoreAway != null ? (
           <div className="text-center text-xl font-bold text-success mb-4">
-            Resultado: {scoreHome} - {scoreAway}
+            Result: {scoreHome} - {scoreAway}
           </div>
         ) : (
-          <div className="text-center text-sm text-muted italic mb-4">Aún sin resultado</div>
+          <div className="text-center text-sm text-muted italic mb-4">No result yet</div>
         )}
 
         {role === "admin" || role === "scorekeeper" ? (
           <div className="text-center mb-4">
             <Link to={`/admin-match/${id}`}>
               <button className="btn btn-primary px-4 py-2">
-                Editar Partido
+                Edit Match
               </button>
             </Link>
           </div>
         ) : null}
 
-        <h3 className="text-md font-bold mb-2">Estadísticas por jugador:</h3>
+        <h3 className="text-md font-bold mb-2">Player statistics:</h3>
         {match.playersStats && Object.keys(match.playersStats).length > 0 ? (
           <div className="table-wrap overflow-x-auto">
             <table className="table table-auto w-full text-sm text-left">
               <thead>
                 <tr>
-                  <th className="px-4 py-2">Jugador</th>
-                  <th className="px-4 py-2">Ataques</th>
-                  <th className="px-4 py-2">Bloqueos</th>
-                  <th className="px-4 py-2">Servicios</th>
+                  <th className="px-4 py-2">Player</th>
+                  <th className="px-4 py-2">Attacks</th>
+                  <th className="px-4 py-2">Blocks</th>
+                  <th className="px-4 py-2">Serves</th>
                 </tr>
               </thead>
               <tbody>
@@ -120,7 +120,7 @@ const MatchDetail = () => {
             </table>
           </div>
         ) : (
-          <p className="text-muted text-sm">No hay estadísticas registradas.</p>
+          <p className="text-muted text-sm">No stats recorded.</p>
         )}
       </div>
     </div>

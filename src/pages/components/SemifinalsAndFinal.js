@@ -24,7 +24,7 @@ var SemifinalsAndFinal = function (_a) {
       </div>) : null;
     };
     return (<div className="mt-10 relative p-6 bg-gradient-to-b from-gray-900 to-black text-white rounded-xl shadow-xl overflow-x-auto">
-      <h3 className="text-3xl font-bold text-center mb-12">Fase Eliminatoria</h3>
+      <h3 className="text-3xl font-bold text-center mb-12">Knockout Stage</h3>
       <div className="relative w-full max-w-[1000px] mx-auto h-[450px] px-4 sm:px-6 lg:px-8 overflow-x-auto">
         {/* Bracket lines (SVG) */}
         <svg className="absolute top-0 left-0 w-full h-full z-0" viewBox="0 0 1000 450">
@@ -76,7 +76,7 @@ var SemifinalsAndFinal = function (_a) {
         {/* Final */}
         <div className="absolute top-[170px] left-1/2 transform -translate-x-1/2 z-20">
           <div className="bg-yellow-500 text-black px-6 py-3 rounded-full shadow-xl text-center font-bold border-4 border-white">
-            Ganador S1 vs S2
+            Winner S1 vs S2
           </div>
           {renderDate('final')}
         </div>
@@ -89,7 +89,7 @@ var SemifinalsAndFinal = function (_a) {
         {/* Tercer puesto */}
         <div className="absolute top-[370px] left-1/2 transform -translate-x-1/2 z-20">
           <div className="bg-gray-800 text-white px-6 py-2 rounded shadow text-center">
-            Perdedor S1 vs Perdedor S2
+            Loser S1 vs Loser S2
           </div>
           {renderDate('third')}
         </div>

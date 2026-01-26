@@ -89,20 +89,20 @@ const AdminRosters = () => {
   };
 
   if (!user || role !== "admin") {
-    return <p className="p-6 text-center text-muted">Acceso restringido.</p>;
+    return <p className="p-6 text-center text-muted">Access restricted.</p>;
   }
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold">Rosters (Admin)</h2>
       <div className="card p-4">
-        <label className="block text-sm font-medium mb-2">Nota de trade (opcional)</label>
+        <label className="block text-sm font-medium mb-2">Trade note (optional)</label>
         <input
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           className="input-field w-full px-3 py-2"
-          placeholder="Ej: cambio por ausencia"
+          placeholder="e.g., swap due to absence"
         />
       </div>
 
@@ -115,7 +115,7 @@ const AdminRosters = () => {
             <div key={team.id} className="card p-4">
               <h3 className="text-lg font-semibold mb-3">{team.name}</h3>
               {rosterPlayers.length === 0 ? (
-                <p className="text-sm text-muted">Sin jugadores.</p>
+                <p className="text-sm text-muted">No players.</p>
               ) : (
                 <ul className="space-y-3">
                   {rosterPlayers.map((player) => (
@@ -129,7 +129,7 @@ const AdminRosters = () => {
                             setTargetTeam((prev) => ({ ...prev, [player.id]: e.target.value }))
                           }
                         >
-                          <option value="">Mover a...</option>
+                          <option value="">Move to...</option>
                           {teams
                             .filter((t) => t.id !== team.id)
                             .map((t) => (
@@ -143,7 +143,7 @@ const AdminRosters = () => {
                           onClick={() => movePlayer(player.id, team.id)}
                           disabled={!targetTeam[player.id]}
                         >
-                          Mover
+                          Move
                         </button>
                       </div>
                     </li>

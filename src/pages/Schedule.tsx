@@ -24,7 +24,7 @@ const Schedule = () => {
   const matchesByDate = useMemo(() => {
     const grouped: Record<string, Match[]> = {};
     matches.forEach((m) => {
-      const key = m.dateISO || "Sin fecha";
+      const key = m.dateISO || "No date";
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(m);
     });
@@ -40,23 +40,23 @@ const Schedule = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-3xl font-bold mb-6 text-center text-strong">Calendario de Partidos</h2>
+      <h2 className="text-3xl font-bold mb-6 text-center text-strong">Match Schedule</h2>
       <div className="space-y-6">
         {matchesByDate.length === 0 && (
-          <p className="text-center text-muted">No hay partidos para esta temporada.</p>
+          <p className="text-center text-muted">No matches for this season.</p>
         )}
         {matchesByDate.map(([dateISO, list]) => {
           const dateObj = toDate(dateISO);
           const dateLabel = dateObj
-            ? dateObj.toLocaleDateString("es-ES", { day: "numeric", month: "long" })
-            : "Sin fecha";
+            ? dateObj.toLocaleDateString("en-US", { day: "numeric", month: "long" })
+            : "No date";
           return (
             <div key={dateISO}>
               <h3 className="text-lg font-semibold mb-2">{dateLabel}</h3>
               <ul className="space-y-3">
                 {list.map((item) => {
                   const dateObjItem = toDate(item.dateISO, item.timeHHmm);
-                  const time = dateObjItem?.toLocaleTimeString("es-ES", {
+                  const time = dateObjItem?.toLocaleTimeString("en-US", {
                     hour: "2-digit",
                     minute: "2-digit",
                   });
@@ -92,7 +92,7 @@ const Schedule = () => {
                         <div className="sm:w-1/4 text-right mt-2 sm:mt-0 flex justify-end gap-3">
                           {(!isPlayed && (role === "admin" || role === "scorekeeper")) && (
                             <Link to={`/admin-match/${item.id}`} className="text-xs link-brand underline">
-                              Editar
+                              Edit
                             </Link>
                           )}
                         </div>

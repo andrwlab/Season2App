@@ -4,8 +4,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var react_1 = require("react");
 var formatDate = function (iso) {
     var d = new Date(iso);
-    var date = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
-    var time = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    var date = d.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+    var time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     return "".concat(date, " \u2022 ").concat(time);
 };
 var Bracket = function (_a) {
@@ -55,7 +55,7 @@ var Bracket = function (_a) {
 
     {/* Tercer Puesto abajo */}
     <div className="col-span-3 mt-8">
-      <h4 className="text-center font-semibold mb-2">Tercer Puesto</h4>
+      <h4 className="text-center font-semibold mb-2">Third Place</h4>
       <div className="p-4 bg-gray-800 text-white text-center rounded shadow">
         <div className="font-semibold">{third.teamA} vs {third.teamB}</div>
         <div className="text-xs">{formatDate(third.date)}</div>

@@ -118,7 +118,7 @@ const Home = () => {
   }, [playerTotals, playerTeamMap]);
 
   const getTeamName = (teamId?: string) => {
-    if (!teamId) return "Equipo";
+    if (!teamId) return "Team";
     return teamMap[teamId]?.name || teamId;
   };
 
@@ -132,21 +132,21 @@ const Home = () => {
     <div className="p-6 space-y-10">
       <section className="hero text-center px-6 py-8 sm:py-10">
         <h1 className="hero-title text-4xl sm:text-5xl font-extrabold mb-2">
-          ¡Bienvenido al Torneo!
+          Welcome to the Tournament!
         </h1>
         <p className="hero-subtitle text-lg">
-          Sigue las estadísticas, el calendario y el avance en tiempo real.
+          Follow the stats, schedule, and progress in real time.
         </p>
       </section>
 
       <section>
         <Link to="/schedule">
           <h2 className="section-title text-xl font-semibold mb-4 hover:underline transition-colors">
-            Próximos Partidos
+            Upcoming Matches
           </h2>
         </Link>
         {upcomingMatches.length === 0 ? (
-          <p className="text-muted text-sm">No hay partidos programados.</p>
+          <p className="text-muted text-sm">No scheduled matches.</p>
         ) : (
           <ul className="space-y-2 text-sm text-body">
             {upcomingMatches.map((match) => {
@@ -161,8 +161,8 @@ const Home = () => {
                       {getTeamName(match.homeTeamId)} vs {getTeamName(match.awayTeamId)}
                     </div>
                     <div className="text-xs text-muted">
-                      {date?.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
-                      {date?.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                      {date?.toLocaleDateString("en-US", { day: "numeric", month: "long" })} •{" "}
+                      {date?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
                   <div className="text-xs text-muted italic">{match.status || "scheduled"}</div>
@@ -174,7 +174,7 @@ const Home = () => {
       </section>
 
       <section>
-        <h2 className="section-title text-xl font-semibold mb-4">Equipos Participantes</h2>
+        <h2 className="section-title text-xl font-semibold mb-4">Participating Teams</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {teams.map((team) => (
             <Link to={`/teams/${team.id}`} key={team.id}>
@@ -192,7 +192,7 @@ const Home = () => {
       <section>
         <Link to="/leaderboard">
           <h2 className="section-title text-xl font-semibold mb-4 hover:underline transition-colors">
-            Tabla de Posiciones
+            Standings
           </h2>
         </Link>
         <div className="table-wrap overflow-x-auto">
@@ -200,9 +200,9 @@ const Home = () => {
             <thead>
               <tr>
                 <th className="px-4 py-2">#</th>
-                <th className="px-4 py-2">Equipo</th>
-                <th className="px-4 py-2">G</th>
-                <th className="px-4 py-2">P</th>
+                <th className="px-4 py-2">Team</th>
+                <th className="px-4 py-2">W</th>
+                <th className="px-4 py-2">L</th>
               </tr>
             </thead>
             <tbody>
@@ -223,9 +223,9 @@ const Home = () => {
         <h2 className="section-title text-xl font-semibold mb-4">StatPadders MVP Race</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { stat: "Ataques", icon: "🏐", key: "attack" as const },
-            { stat: "Bloqueos", icon: "🛡️", key: "blocks" as const },
-            { stat: "Servicios", icon: "🎯", key: "service" as const },
+            { stat: "Attacks", icon: "🏐", key: "attack" as const },
+            { stat: "Blocks", icon: "🛡️", key: "blocks" as const },
+            { stat: "Serves", icon: "🎯", key: "service" as const },
           ].map(({ stat, icon, key }) => {
             const leaderId = Object.entries(playerTotals).sort((a, b) => b[1][key] - a[1][key])[0]?.[0];
             const leaderStats = leaderId ? playerTotals[leaderId] : null;
@@ -244,7 +244,7 @@ const Home = () => {
                     </div>
                   </>
                 ) : (
-                  <div className="stat-muted text-center text-sm italic">Sin datos</div>
+                  <div className="stat-muted text-center text-sm italic">No data</div>
                 )}
               </div>
             );
@@ -253,7 +253,7 @@ const Home = () => {
       </section>
 
       <section>
-        <h3 className="text-xl font-bold mt-10 mb-4">Equipos Destacados</h3>
+        <h3 className="text-xl font-bold mt-10 mb-4">Featured Teams</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {(["attack", "blocks", "service"] as const).map((key) => {
             const best = bestTeam(key);
@@ -261,7 +261,7 @@ const Home = () => {
               <div key={key} className="card p-4 flex flex-col items-center">
                 <div className="text-3xl">{key === "attack" ? "🏐" : key === "blocks" ? "🛡️" : "🎯"}</div>
                 <h4 className="stat-title text-center mt-1">
-                  {key === "attack" ? "Ataques" : key === "blocks" ? "Bloqueos" : "Servicios"}
+                  {key === "attack" ? "Attacks" : key === "blocks" ? "Blocks" : "Serves"}
                 </h4>
                 <p className="text-body">{best ? getTeamName(best[0]) : "—"}</p>
                 <p className="stat-value text-lg">{best ? best[1][key] : 0} pts</p>
@@ -270,20 +270,20 @@ const Home = () => {
           })}
         </div>
 
-        <h2 className="section-title text-xl font-semibold mb-4">Estadísticas por Equipo</h2>
+        <h2 className="section-title text-xl font-semibold mb-4">Team Statistics</h2>
         <div className="table-wrap overflow-x-auto">
           <table className="table table-auto w-full text-sm text-left">
             <thead>
               <tr>
-                <th className="px-4 py-2">Equipo</th>
+                <th className="px-4 py-2">Team</th>
                 <th className="px-4 py-2 cursor-pointer" onClick={() => setTeamSortKey("attack")}>
-                  Ataques ⇅
+                  Attacks ⇅
                 </th>
                 <th className="px-4 py-2 cursor-pointer" onClick={() => setTeamSortKey("blocks")}>
-                  Bloqueos ⇅
+                  Blocks ⇅
                 </th>
                 <th className="px-4 py-2 cursor-pointer" onClick={() => setTeamSortKey("service")}>
-                  Servicios ⇅
+                  Serves ⇅
                 </th>
               </tr>
             </thead>

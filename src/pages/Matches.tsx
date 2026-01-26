@@ -49,20 +49,20 @@ const Matches = () => {
       await addDoc(collection(db, "matches"), newMatch);
       setFormData({ homeTeamId: "", awayTeamId: "", dateISO: "", timeHHmm: "" });
     } catch (error) {
-      console.error("Error al guardar el partido:", error);
+      console.error("Error saving match:", error);
     }
   };
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Partidos</h2>
+      <h2 className="text-2xl font-bold mb-4">Matches</h2>
       {!selectedSeasonId && (
-        <p className="text-sm text-muted mb-4">Selecciona una temporada para ver los partidos.</p>
+        <p className="text-sm text-muted mb-4">Select a season to view matches.</p>
       )}
 
       {user && role === "admin" && (
         <>
-          <h3 className="text-xl font-semibold mb-2">Registrar nuevo partido</h3>
+          <h3 className="text-xl font-semibold mb-2">Register new match</h3>
           <form onSubmit={handleSubmit} className="space-y-4 max-w-xl mb-6">
             <div className="flex gap-4">
               <select
@@ -72,7 +72,7 @@ const Matches = () => {
                 className="input-field w-1/2 px-3 py-2"
                 required
               >
-                <option value="">Equipo local</option>
+                <option value="">Home team</option>
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -86,7 +86,7 @@ const Matches = () => {
                 className="input-field w-1/2 px-3 py-2"
                 required
               >
-                <option value="">Equipo visitante</option>
+                <option value="">Away team</option>
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -113,13 +113,13 @@ const Matches = () => {
               />
             </div>
             <button type="submit" className="btn btn-primary px-4 py-2">
-              Guardar
+              Save
             </button>
           </form>
         </>
       )}
 
-      <h3 className="text-xl font-semibold mb-2">Partidos registrados</h3>
+      <h3 className="text-xl font-semibold mb-2">Recorded matches</h3>
       <ul className="space-y-2">
         {matches.map((match) => (
           <li key={match.id} className="list-card px-4 py-2 flex justify-between items-center">
@@ -129,7 +129,7 @@ const Matches = () => {
             </span>
             {(role === "admin" || role === "scorekeeper") && (
               <Link to={`/admin-match/${match.id}`} className="text-sm link-brand hover:underline ml-4">
-                Editar
+                Edit
               </Link>
             )}
           </li>

@@ -26,7 +26,7 @@ const PlayerProfile = () => {
   if (!player) {
     return (
       <div className="p-6 text-center text-muted">
-        Jugador no encontrado.
+        Player not found.
       </div>
     );
   }
@@ -41,13 +41,13 @@ const PlayerProfile = () => {
 
   const typeLabel =
     player.type === "teacher"
-      ? "Profesor"
+      ? "Teacher"
       : player.type === "student"
-      ? "Estudiante"
+      ? "Student"
       : player.type === "profesor"
-      ? "Profesor"
+      ? "Teacher"
       : player.type === "estudiante"
-      ? "Estudiante"
+      ? "Student"
       : "—";
 
   return (
@@ -68,7 +68,7 @@ const PlayerProfile = () => {
           <h2 className="text-2xl font-bold">{displayName}</h2>
           <p className="text-sm text-muted">{typeLabel}</p>
           <p className="text-sm text-muted">
-            {team ? `Equipo: ${team.name}` : "Sin equipo asignado"}
+            {team ? `Team: ${team.name}` : "No team assigned"}
           </p>
         </div>
       </div>

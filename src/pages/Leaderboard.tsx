@@ -72,17 +72,17 @@ const Leaderboard = () => {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-10">
       <section>
-        <h2 className="text-2xl font-bold mb-4">Tabla de Posiciones</h2>
+        <h2 className="text-2xl font-bold mb-4">Standings</h2>
         <div className="table-wrap overflow-x-auto">
         <table className="table table-auto w-full text-sm text-left">
           <thead>
             <tr>
               <th className="px-3 py-2">#</th>
-              <th className="px-3 py-2">Equipo</th>
-              <th className="px-3 py-2">G</th>
-              <th className="px-3 py-2">P</th>
+              <th className="px-3 py-2">Team</th>
+              <th className="px-3 py-2">W</th>
+              <th className="px-3 py-2">L</th>
               <th className="px-3 py-2">PF</th>
-              <th className="px-3 py-2">PC</th>
+              <th className="px-3 py-2">PA</th>
               <th className="px-3 py-2">+/-</th>
             </tr>
           </thead>
@@ -107,10 +107,10 @@ const Leaderboard = () => {
         phaseMatches.third.length ||
         phaseMatches.final.length) && (
         <section>
-          <h2 className="text-2xl font-bold mb-4">Fase Eliminatoria</h2>
+          <h2 className="text-2xl font-bold mb-4">Knockout Stage</h2>
           <div className="space-y-6">
             <div>
-              <h3 className="font-semibold mb-2">Semifinales</h3>
+              <h3 className="font-semibold mb-2">Semifinals</h3>
               <ul className="space-y-2">
                 {phaseMatches.semifinal.map((m: any) => {
                   const d = toDate(m);
@@ -120,8 +120,8 @@ const Leaderboard = () => {
                         {teamMap[m.homeTeamId] || m.teamA} vs {teamMap[m.awayTeamId] || m.teamB}
                       </span>
                       <span className="text-sm text-muted">
-                        {d.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
-                        {d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                        {d.toLocaleDateString("en-US", { day: "numeric", month: "long" })} •{" "}
+                        {d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </li>
                   );
@@ -129,15 +129,15 @@ const Leaderboard = () => {
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">Tercer Puesto</h3>
+              <h3 className="font-semibold mb-2">Third Place</h3>
               {phaseMatches.third.map((m: any) => {
                 const d = toDate(m);
                 return (
                   <div key={m.id} className="list-card p-3 flex justify-between">
-                    <span>Perdedor SF1 vs Perdedor SF2</span>
+                    <span>Loser SF1 vs Loser SF2</span>
                     <span className="text-sm text-muted">
-                      {d.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
-                      {d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                      {d.toLocaleDateString("en-US", { day: "numeric", month: "long" })} •{" "}
+                      {d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
                 );
@@ -149,10 +149,10 @@ const Leaderboard = () => {
                 const d = toDate(m);
                 return (
                   <div key={m.id} className="list-card p-3 flex justify-between">
-                    <span>Ganador SF1 vs Ganador SF2</span>
+                    <span>Winner SF1 vs Winner SF2</span>
                     <span className="text-sm text-muted">
-                      {d.toLocaleDateString("es-ES", { day: "numeric", month: "long" })} •{" "}
-                      {d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                      {d.toLocaleDateString("en-US", { day: "numeric", month: "long" })} •{" "}
+                      {d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
                 );
@@ -164,7 +164,7 @@ const Leaderboard = () => {
 
       <div className="text-center">
         <Link to="/schedule" className="link-brand underline">
-          Ver calendario completo
+          View full schedule
         </Link>
       </div>
     </div>
