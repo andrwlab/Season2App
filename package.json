@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "migrate:s1": "tsx scripts/migrateSeason1.ts",
     "seed:s2": "tsx scripts/seedSeason2.ts",
+    "clear:s2-matches": "tsx scripts/clearSeason2Matches.ts",
     "import:roster": "tsx scripts/importRoster.ts",
     "import:stats:s1": "tsx scripts/importSeason1Stats.ts",
     "dedupe:players": "tsx scripts/dedupePlayers.ts"
