@@ -29,6 +29,9 @@ const Leaderboard = () => {
 
   const standings = useMemo(() => {
     const map: Record<string, Standing> = {};
+    teams.forEach((t) => {
+      map[t.id] = { teamId: t.id, w: 0, l: 0, pf: 0, pc: 0 };
+    });
     matches.forEach((m: any) => {
       const homeId = m.homeTeamId || m.teamA;
       const awayId = m.awayTeamId || m.teamB;

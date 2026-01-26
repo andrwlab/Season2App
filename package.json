@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "migrate:s1": "tsx scripts/migrateSeason1.ts",
     "seed:s2": "tsx scripts/seedSeason2.ts",
-    "import:roster": "tsx scripts/importRoster.ts"
+    "import:roster": "tsx scripts/importRoster.ts",
+    "import:stats:s1": "tsx scripts/importSeason1Stats.ts",
+    "dedupe:players": "tsx scripts/dedupePlayers.ts"
   },
   "dependencies": {
     "chart.js": "^4.4.9",
@@ -35,6 +37,7 @@
     "tsx": "^4.19.2",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "xlsx": "^0.18.5"
   }
 }

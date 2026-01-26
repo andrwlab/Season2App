@@ -9,19 +9,40 @@ body {
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text-2);
+  position: relative;
+  z-index: 0;
+  background-color: var(--bg-main);
+  background-image: url('../assets/backgrounds/rm251-mind-04-e.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--text-secondary);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(7,11,24,0.60);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
 a {
-  color: var(--text-2);
+  color: var(--text-secondary);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 a:hover {
-  color: var(--brand-2);
+  color: var(--text-primary);
 }
 
 h1,
@@ -30,19 +51,19 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .text-strong {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .text-body {
-  color: var(--text-2);
+  color: var(--text-secondary);
 }
 
 .text-muted {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .text-brand {
@@ -50,7 +71,7 @@ h6 {
 }
 
 .text-brand-2 {
-  color: var(--brand-2);
+  color: var(--brand-deep);
 }
 
 .text-success {
@@ -66,7 +87,7 @@ h6 {
 }
 
 .bg-surface {
-  background: var(--surface);
+  background: var(--surface-1);
 }
 
 .bg-surface-2 {
@@ -82,7 +103,7 @@ h6 {
 }
 
 .bg-brand-2 {
-  background: var(--brand-2);
+  background: var(--brand-deep);
 }
 
 .bg-divider {
@@ -95,23 +116,28 @@ h6 {
 
 .nav-bar {
   background: var(--surface-3);
-  border-bottom: 1px solid var(--divider);
-  box-shadow: var(--shadow-soft);
-  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+  color: var(--text-primary);
 }
 
 .nav-title {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .nav-link {
-  color: var(--text-2);
-  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  color: var(--text-secondary);
+  transition: color 0.2s ease, border-color 0.2s ease;
 }
 
 .nav-link:hover {
-  color: var(--brand-2);
-  text-decoration: underline;
+  color: var(--text-primary);
+}
+
+.nav-link--active {
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--brand);
+  padding-bottom: 6px;
 }
 
 .btn {
@@ -126,28 +152,40 @@ h6 {
 
 .btn-primary {
   background: var(--brand);
-  color: var(--text);
+  color: #fff;
   border: 1px solid transparent;
 }
 
 .btn-primary:hover {
-  background: var(--brand-2);
+  background: var(--brand-deep);
 }
 
 .btn-outline {
-  background: var(--surface);
-  color: var(--text);
+  background: transparent;
+  color: var(--text-primary);
   border: 1px solid var(--border);
 }
 
 .btn-outline:hover {
-  background: color-mix(in srgb, var(--brand-2) 12%, transparent);
-  border-color: var(--brand-2);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 55%, transparent);
+}
+
+.btn-signin {
+  background: color-mix(in srgb, var(--surface-1) 65%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 999px;
+}
+
+.btn-signin:hover {
+  border-color: color-mix(in srgb, var(--brand) 55%, transparent);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
 }
 
 .btn-danger {
-  background: color-mix(in srgb, var(--danger) 85%, var(--surface) 15%);
-  color: var(--text);
+  background: color-mix(in srgb, var(--danger) 85%, var(--surface-1) 15%);
+  color: #fff;
   border: 1px solid transparent;
 }
 
@@ -156,42 +194,54 @@ h6 {
 }
 
 .hero {
-  background: var(--grad-hero);
+  background: var(--grad-brand);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-strong);
 }
 
 .hero-title {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .hero-subtitle {
-  color: var(--text);
-  opacity: 0.8;
+  color: var(--text-secondary);
 }
 
 .section-title {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 a:hover .section-title {
-  color: var(--brand-2);
+  color: var(--brand);
 }
 
 .card {
-  background: var(--surface);
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
-  color: var(--text-2);
+  color: var(--text-secondary);
+  transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover,
+.card--elevated {
+  background: var(--surface-2);
+  box-shadow: var(--shadow-strong);
 }
 
 .list-card {
-  background: var(--surface);
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-soft);
-  color: var(--text-2);
+  color: var(--text-secondary);
+  transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.list-card:hover {
+  background: var(--surface-2);
+  box-shadow: var(--shadow-strong);
 }
 
 .list-divider > li + li {
@@ -199,27 +249,34 @@ a:hover .section-title {
 }
 
 .team-card {
-  background: var(--surface);
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
-  color: var(--text);
+  color: var(--text-primary);
+  transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.team-card:hover,
+.team-card--elevated {
+  background: var(--surface-2);
+  box-shadow: var(--shadow-strong);
 }
 
 .team-card--a {
-  background: linear-gradient(135deg, var(--surface-3), var(--surface));
+  background: var(--surface-2);
 }
 
 .team-card--b {
-  background: linear-gradient(135deg, var(--surface-2), var(--surface));
+  background: var(--surface-2);
 }
 
 .team-card--c {
-  background: linear-gradient(135deg, var(--surface), var(--surface-3));
+  background: var(--surface-2);
 }
 
 .team-card--d {
-  background: linear-gradient(135deg, var(--surface-3), var(--surface-2));
+  background: var(--surface-2);
 }
 
 .stat-title {
@@ -228,16 +285,16 @@ a:hover .section-title {
 }
 
 .stat-value {
-  color: var(--text);
+  color: var(--text-primary);
   font-weight: 700;
 }
 
 .stat-muted {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .table-wrap {
-  background: var(--surface);
+  background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
@@ -248,12 +305,12 @@ a:hover .section-title {
 .table {
   width: 100%;
   border-collapse: collapse;
-  color: var(--text-2);
+  color: var(--text-secondary);
 }
 
 .table thead {
   background: var(--surface-2);
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .table tbody tr {
@@ -261,7 +318,7 @@ a:hover .section-title {
 }
 
 .table tbody tr:hover {
-  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  background: var(--surface-2);
 }
 
 .badge {
@@ -272,47 +329,45 @@ a:hover .section-title {
   padding: 0.125rem 0.5rem;
   border-radius: 999px;
   background: var(--brand);
-  color: var(--text);
+  color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
 }
 
 .tab {
-  background: var(--surface-2);
-  color: var(--text-2);
+  background: transparent;
+  color: var(--text-secondary);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   font-weight: 600;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .tab:hover {
-  background: color-mix(in srgb, var(--brand-2) 12%, transparent);
-  border-color: var(--brand-2);
-  color: var(--text);
+  background: rgba(148,163,184,0.06);
 }
 
 .tab--active {
-  background: var(--brand);
-  color: var(--text);
-  border-color: transparent;
+  background: var(--grad-brand);
+  color: #fff;
+  border-color: rgba(124,58,237,0.55);
 }
 
 .input-field {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .input-field::placeholder {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .input-field:focus {
   outline: none;
-  border-color: var(--brand-2);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-2) 30%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 30%, transparent);
 }
 
 .link-brand {
@@ -320,11 +375,30 @@ a:hover .section-title {
 }
 
 .link-brand:hover {
-  color: var(--brand-2);
+  color: var(--brand-deep);
+}
+
+.player-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.player-name--highlight {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+a.player-name {
+  text-decoration: none;
+}
+
+a.player-name:hover {
+  text-decoration: underline;
+  text-decoration-color: rgba(124,58,237,0.45);
 }
 
 .shadow-strong {
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-strong);
 }
 
 .shadow-soft {
@@ -333,13 +407,13 @@ a:hover .section-title {
 
 .avatar-fallback {
   background: var(--surface-2);
-  color: var(--muted);
+  color: var(--text-muted);
   border: 1px solid var(--border);
 }
 
 .live-indicator {
   background: var(--accent);
-  color: var(--bg);
+  color: var(--bg-main);
   border-radius: 999px;
   font-weight: 700;
   letter-spacing: 0.04em;
