@@ -80,25 +80,44 @@ const Schedule = () => {
                         <div className="sm:w-2/4 text-center">
                           <Link to={`/matches/${item.id}`}>
                             <div className="font-semibold hover:underline flex items-center justify-center gap-3">
-                              <span className="flex items-center gap-2">
+                              <div className="flex items-center justify-center gap-6 sm:hidden w-full">
                                 <TeamLogo
                                   logoFile={homeTeam?.logoFile}
                                   name={homeName}
-                                  className="h-7 w-7 rounded-full object-contain"
+                                  className="h-14 w-14 rounded-full object-contain"
                                 />
-                                <span>{homeName}</span>
-                              </span>
-                              <span className="text-sm text-muted">vs</span>
-                              <span className="flex items-center gap-2">
                                 <TeamLogo
                                   logoFile={awayTeam?.logoFile}
                                   name={awayName}
-                                  className="h-7 w-7 rounded-full object-contain"
+                                  className="h-14 w-14 rounded-full object-contain"
                                 />
-                                <span>{awayName}</span>
-                              </span>
+                              </div>
+                              <div className="hidden sm:flex items-center gap-3">
+                                <span className="flex items-center gap-2">
+                                  <TeamLogo
+                                    logoFile={homeTeam?.logoFile}
+                                    name={homeName}
+                                    className="h-7 w-7 rounded-full object-contain"
+                                  />
+                                  <span>{homeName}</span>
+                                </span>
+                                <span className="text-sm text-muted">vs</span>
+                                <span className="flex items-center gap-2">
+                                  <TeamLogo
+                                    logoFile={awayTeam?.logoFile}
+                                    name={awayName}
+                                    className="h-7 w-7 rounded-full object-contain"
+                                  />
+                                  <span>{awayName}</span>
+                                </span>
+                                {isPlayed && (
+                                  <span className="text-brand ml-2">
+                                    ({homeScore} - {awayScore})
+                                  </span>
+                                )}
+                              </div>
                               {isPlayed && (
-                                <span className="text-brand ml-2">
+                                <span className="text-brand ml-2 sm:hidden">
                                   ({homeScore} - {awayScore})
                                 </span>
                               )}
