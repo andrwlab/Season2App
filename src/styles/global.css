@@ -20,6 +20,12 @@ body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
 }
 
+@media (hover: none) and (pointer: coarse) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
 body::before {
   content: "";
   position: fixed;
@@ -406,8 +412,15 @@ a:hover .section-title {
 .table-wrap,
 .tableWrap {
   border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.table-scroll,
+.tableScroll {
+  width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table {

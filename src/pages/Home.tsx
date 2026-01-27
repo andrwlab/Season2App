@@ -287,8 +287,9 @@ const Home = () => {
             Standings
           </h2>
         </Link>
-        <div className="glass glass--strong tableWrap overflow-x-auto">
-          <table className="table table-auto w-full text-sm text-left">
+        <div className="glass glass--strong tableWrap">
+          <div className="tableScroll">
+            <table className="table table-auto w-full text-sm text-left">
             <thead>
               <tr>
                 <th className="px-4 py-2">#</th>
@@ -311,7 +312,8 @@ const Home = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -382,8 +384,9 @@ const Home = () => {
         </div>
 
         <h2 className="section-title text-xl font-semibold mb-4">Team Statistics</h2>
-        <div className="glass glass--strong tableWrap overflow-x-auto">
-          <table className="table table-auto w-full text-sm text-left">
+        <div className="glass glass--strong tableWrap">
+          <div className="tableScroll">
+            <table className="table table-auto w-full text-sm text-left">
             <thead>
               <tr>
                 <th className="px-4 py-2">Team</th>
@@ -417,7 +420,8 @@ const Home = () => {
                   </tr>
                 ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       </section>
     </div>

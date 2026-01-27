@@ -44,8 +44,9 @@ const CumulativeStats = () => {
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-3xl font-bold mb-6 text-center text-strong">Cumulative Player Stats</h2>
 
-      <div className="glass glass--strong tableWrap overflow-x-auto">
-        <table className="table table-auto w-full text-sm text-left">
+      <div className="glass glass--strong tableWrap">
+        <div className="tableScroll">
+          <table className="table table-auto w-full text-sm text-left">
           <thead>
             <tr>
               <th className="px-4 py-2">Player</th>
@@ -88,7 +89,8 @@ const CumulativeStats = () => {
               );
             })}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );

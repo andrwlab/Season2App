@@ -234,8 +234,9 @@ const MatchDetail = () => {
                 <div key={label} className="card glass glass--hover p-4">
                   <h4 className="text-md font-semibold mb-3">{label}</h4>
                   {entries.length > 0 ? (
-                    <div className="glass glass--strong tableWrap overflow-x-auto">
-                      <table className="table table-auto w-full text-sm text-left">
+                    <div className="glass glass--strong tableWrap">
+                      <div className="tableScroll">
+                        <table className="table table-auto w-full text-sm text-left">
                         <thead>
                           <tr>
                             <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
@@ -268,7 +269,8 @@ const MatchDetail = () => {
                             </tr>
                           ))}
                         </tbody>
-                      </table>
+                        </table>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm text-muted">No stats recorded for this team.</p>
@@ -287,8 +289,9 @@ const MatchDetail = () => {
             <p className="text-xs text-muted mb-3">
               Tip: assign these players to a team roster so they show under Home/Away.
             </p>
-            <div className="glass glass--strong tableWrap overflow-x-auto">
-              <table className="table table-auto w-full text-sm text-left">
+            <div className="glass glass--strong tableWrap">
+              <div className="tableScroll">
+                <table className="table table-auto w-full text-sm text-left">
                 <thead>
                   <tr>
                     <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
@@ -319,7 +322,8 @@ const MatchDetail = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           </div>
         )}

@@ -156,8 +156,9 @@ const Players = () => {
         ))}
       </div>
 
-      <div className="glass glass--strong tableWrap overflow-x-auto">
-        <table className="table table-auto w-full text-sm text-left">
+      <div className="glass glass--strong tableWrap">
+        <div className="tableScroll">
+          <table className="table table-auto w-full text-sm text-left">
           <thead>
             <tr>
               <th className="px-4 py-2">Player</th>
@@ -208,7 +209,8 @@ const Players = () => {
               );
             })}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );

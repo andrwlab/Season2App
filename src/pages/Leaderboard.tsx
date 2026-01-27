@@ -75,8 +75,9 @@ const Leaderboard = () => {
     <div className="p-6 max-w-5xl mx-auto space-y-10">
       <section>
         <h2 className="text-2xl font-bold mb-4">Standings</h2>
-        <div className="glass glass--strong tableWrap overflow-x-auto">
-          <table className="table table-auto w-full text-sm text-left">
+        <div className="glass glass--strong tableWrap">
+          <div className="tableScroll">
+            <table className="table table-auto w-full text-sm text-left">
             <thead>
               <tr>
                 <th className="px-3 py-2">#</th>
@@ -121,7 +122,8 @@ const Leaderboard = () => {
               );
             })}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       </section>
 
