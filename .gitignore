@@ -23,6 +23,7 @@ serviceAccountKey.json
 *.key
 *.p12
 *.pfx
+~$*.xlsx
 
 # Editor directories and files
 .vscode/*
@@ -34,3 +35,6 @@ serviceAccountKey.json
 *.njsproj
 *.sln
 *.sw?
+
+# Large/source assets that trigger secret scanning
+purpleneonbackground/*.eps
