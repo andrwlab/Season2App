@@ -142,3 +142,15 @@ export function subscribePlayerStats(
     cb(stats);
   });
 }
+
+export function subscribeAllPlayerStats(
+  cb: (data: PlayerStat[]) => void
+): () => void {
+  return onSnapshot(collection(db, "playerStats"), (snap) => {
+    const stats = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Omit<PlayerStat, "id">),
+    }));
+    cb(stats);
+  });
+}

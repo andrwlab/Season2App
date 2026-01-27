@@ -56,6 +56,11 @@ const Navbar = () => {
               Players
             </NavLink>
           </li>
+          <li>
+            <NavLink to="/cumulative" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
+              Cumulative
+            </NavLink>
+          </li>
           {user && role === 'admin' && (
             <>
               <li>

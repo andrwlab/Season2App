@@ -26,7 +26,7 @@ const teams = [
   { id: "red-flame-dragons", name: "Red Flame Dragons", logoFile: "redflamedragons.png" },
   { id: "black-wolves", name: "Black Wolves", logoFile: "blackwolves.png" },
   { id: "white-sharks", name: "White Sharks", logoFile: "whitesharks.png" },
-  { id: "yellow-lions", name: "Yellow Lions", logoFile: "yellowlions.png" },
+  { id: "yellow-lions", name: "The Roaring Yellow Lions", logoFile: "yellowlions.png" },
   { id: "green-vipers", name: "Green Vipers", logoFile: "greenvipers.png" },
   { id: "blue-raptors", name: "Blue Raptors", logoFile: "blueraptors.png" }
 ];

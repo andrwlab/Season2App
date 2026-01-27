@@ -17,6 +17,7 @@ import AdminMatch from './pages/AdminMatch';
 import TeamDetail from './pages/TeamDetail';
 import PlayerProfile from './pages/PlayerProfile';
 import AdminRosters from './pages/AdminRosters';
+import CumulativeStats from './pages/CumulativeStats';
 
 function App() {
   const baseName =
@@ -33,6 +34,7 @@ function App() {
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/players" element={<Players />} />
+        <Route path="/cumulative" element={<CumulativeStats />} />
         <Route path="/players/:id" element={<PlayerProfile />} />
         <Route path="/matches/:id" element={<MatchDetail />} />
         <Route path="/admin-match/:id" element={<AdminMatch />} />

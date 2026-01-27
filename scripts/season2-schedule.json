@@ -11,33 +11,33 @@
     {
       "dateISO": "2026-02-06",
       "matches": [
-        { "time": "15:30", "home": "red-flame-dragons", "away": "white-sharks" },
-        { "time": "16:00", "home": "black-wolves", "away": "green-vipers" },
-        { "time": "16:30", "home": "yellow-lions", "away": "blue-raptors" }
+        { "time": "15:30", "home": "black-wolves", "away": "white-sharks" },
+        { "time": "16:00", "home": "blue-raptors", "away": "red-flame-dragons" },
+        { "time": "16:30", "home": "yellow-lions", "away": "green-vipers" }
       ]
     },
     {
       "dateISO": "2026-02-13",
       "matches": [
-        { "time": "15:30", "home": "red-flame-dragons", "away": "yellow-lions" },
-        { "time": "16:00", "home": "white-sharks", "away": "green-vipers" },
-        { "time": "16:30", "home": "black-wolves", "away": "blue-raptors" }
+        { "time": "15:30", "home": "white-sharks", "away": "green-vipers" },
+        { "time": "16:00", "home": "red-flame-dragons", "away": "yellow-lions" },
+        { "time": "16:30", "home": "blue-raptors", "away": "black-wolves" }
       ]
     },
     {
       "dateISO": "2026-02-27",
       "matches": [
-        { "time": "15:30", "home": "red-flame-dragons", "away": "green-vipers" },
-        { "time": "16:00", "home": "black-wolves", "away": "yellow-lions" },
-        { "time": "16:30", "home": "white-sharks", "away": "blue-raptors" }
+        { "time": "15:30", "home": "yellow-lions", "away": "blue-raptors" },
+        { "time": "16:00", "home": "black-wolves", "away": "green-vipers" },
+        { "time": "16:30", "home": "white-sharks", "away": "red-flame-dragons" }
       ]
     },
     {
       "dateISO": "2026-03-06",
       "matches": [
-        { "time": "15:30", "home": "red-flame-dragons", "away": "blue-raptors" },
-        { "time": "16:00", "home": "black-wolves", "away": "white-sharks" },
-        { "time": "16:30", "home": "yellow-lions", "away": "green-vipers" }
+        { "time": "15:30", "home": "green-vipers", "away": "red-flame-dragons" },
+        { "time": "16:00", "home": "blue-raptors", "away": "white-sharks" },
+        { "time": "16:30", "home": "yellow-lions", "away": "black-wolves" }
       ]
     }
   ]
