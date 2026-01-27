@@ -30,6 +30,9 @@ const TeamLogo: React.FC<TeamLogoProps> = ({ logoFile, name, className }) => {
       src={src}
       alt={safeName}
       className={className || "h-12 w-12 rounded-full object-contain"}
+      loading="lazy"
+      decoding="async"
+      fetchPriority="low"
       onError={() => setError(true)}
     />
   );
