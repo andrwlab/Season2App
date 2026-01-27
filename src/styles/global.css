@@ -11,17 +11,24 @@ body {
   margin: 0;
   position: relative;
   background-color: var(--bg-main);
-  background-image: url('../assets/backgrounds/rm251-mind-04-e.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
   color: var(--text-secondary);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
 }
 
-
 body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url('../assets/backgrounds/rm251-mind-04-e.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: translateZ(0);
+  pointer-events: none;
+  z-index: -2;
+}
+
+body::after {
   content: "";
   position: fixed;
   inset: 0;
