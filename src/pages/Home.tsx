@@ -14,14 +14,22 @@ import {
 } from "../firebase/queries";
 import { useSeason } from "../hooks/useSeason";
 import TeamLogo from "../components/TeamLogo";
+import { season1Players, season1TeamColors, season1Teams } from "../data";
+import heroBanner from "../assets/banners/LogoBannSeason2.png";
 
 const buildDate = (dateISO?: string, timeHHmm?: string) => {
   if (!dateISO) return null;
   return new Date(`${dateISO}T${timeHHmm || "00:00"}:00`);
 };
 
+const isSeason1Name = (name?: string | null) => {
+  if (!name) return false;
+  const normalized = name.toLowerCase();
+  return normalized.includes("season 1") || normalized.includes("temporada 1") || normalized === "s1";
+};
+
 const Home = () => {
-  const { selectedSeasonId } = useSeason();
+  const { selectedSeasonId, selectedSeason } = useSeason();
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -37,6 +45,8 @@ const Home = () => {
   useEffect(() => subscribePlayerStats(selectedSeasonId, setPlayerStats), [selectedSeasonId]);
   useEffect(() => subscribePlayers(setPlayers), []);
 
+  const isSeason1 = isSeason1Name(selectedSeason?.name);
+
   const teamMap = useMemo(
     () => Object.fromEntries(teams.map((t) => [t.id, t])),
     [teams]
@@ -47,7 +57,20 @@ const Home = () => {
     [players]
   );
 
+  const nameToPlayerId = useMemo(
+    () => Object.fromEntries(players.map((p) => [p.fullName, p.id])),
+    [players]
+  );
+
   const playerTeamMap = useMemo(() => {
+    if (isSeason1) {
+      const map: Record<string, string> = {};
+      season1Players.forEach((p) => {
+        const id = nameToPlayerId[p.name] || `season1:${p.name}`;
+        map[id] = p.team;
+      });
+      return map;
+    }
     const map: Record<string, string> = {};
     rosters.forEach((r) => {
       r.playerIds?.forEach((pid) => {
@@ -55,7 +78,7 @@ const Home = () => {
       });
     });
     return map;
-  }, [rosters]);
+  }, [isSeason1, nameToPlayerId, rosters]);
 
   const upcomingMatches = useMemo(() => {
     const now = new Date();
@@ -73,6 +96,7 @@ const Home = () => {
   }, [matches]);
 
   const standings = useMemo(() => {
+    if (isSeason1) return [];
     const map: Record<string, { teamId: string; w: number; l: number }> = {};
     matches.forEach((m) => {
       const homeScore = m.scores?.home;
@@ -89,9 +113,22 @@ const Home = () => {
       }
     });
     return Object.values(map).sort((a, b) => b.w - a.w);
-  }, [matches]);
+  }, [isSeason1, matches]);
 
   const playerTotals = useMemo(() => {
+    if (isSeason1) {
+      const totals: Record<string, { attack: number; blocks: number; assists: number; service: number }> = {};
+      season1Players.forEach((p) => {
+        const id = nameToPlayerId[p.name] || `season1:${p.name}`;
+        totals[id] = {
+          attack: p.attack,
+          blocks: p.blocks,
+          assists: p.assists,
+          service: p.service,
+        };
+      });
+      return totals;
+    }
     const totals: Record<string, { attack: number; blocks: number; assists: number; service: number }> = {};
     playerStats.forEach((stat) => {
       if (!totals[stat.playerId]) {
@@ -103,9 +140,20 @@ const Home = () => {
       totals[stat.playerId].service += stat.service || 0;
     });
     return totals;
-  }, [playerStats]);
+  }, [isSeason1, nameToPlayerId, playerStats]);
 
   const teamStats = useMemo(() => {
+    if (isSeason1) {
+      const totals: Record<string, { attack: number; blocks: number; assists: number; service: number }> = {};
+      season1Players.forEach((p) => {
+        if (!totals[p.team]) totals[p.team] = { attack: 0, blocks: 0, assists: 0, service: 0 };
+        totals[p.team].attack += p.attack;
+        totals[p.team].blocks += p.blocks;
+        totals[p.team].assists += p.assists;
+        totals[p.team].service += p.service;
+      });
+      return totals;
+    }
     const totals: Record<string, { attack: number; blocks: number; assists: number; service: number }> = {};
     Object.entries(playerTotals).forEach(([playerId, stats]) => {
       const teamId = playerTeamMap[playerId];
@@ -117,10 +165,11 @@ const Home = () => {
       totals[teamId].service += stats.service;
     });
     return totals;
-  }, [playerTotals, playerTeamMap]);
+  }, [isSeason1, playerTotals, playerTeamMap]);
 
   const getTeamName = (teamId?: string) => {
     if (!teamId) return "Team";
+    if (isSeason1) return teamId;
     return teamMap[teamId]?.name || teamId;
   };
 
@@ -132,13 +181,13 @@ const Home = () => {
 
   return (
     <div className="p-6 space-y-10">
-      <section className="hero text-center px-6 py-8 sm:py-10">
-        <h1 className="hero-title text-4xl sm:text-5xl font-extrabold mb-2">
-          Welcome to the Tournament!
-        </h1>
-        <p className="hero-subtitle text-lg">
-          Follow the stats, schedule, and progress in real time.
-        </p>
+      <section className="hero hero--banner text-center">
+        <img
+          src={heroBanner}
+          alt="Season 2 banner"
+          className="hero-banner__img"
+          loading="lazy"
+        />
       </section>
 
       <section>
@@ -180,16 +229,47 @@ const Home = () => {
       <section>
         <h2 className="section-title text-xl font-semibold mb-4">Participating Teams</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {teams.map((team) => (
-            <Link to={`/teams/${team.id}`} key={team.id}>
-              <div className="team-card p-4 hover:scale-[1.02] transition-transform">
-                <div className="flex items-center justify-center mb-2">
-                  <TeamLogo logoFile={team.logoFile} name={team.name} className="h-14 w-14" />
-                </div>
-                <h3 className="text-center font-bold text-lg">{team.name}</h3>
+          {(isSeason1 ? season1Teams : teams).map((team) => {
+            const key = isSeason1 ? team.name : team.id;
+            const content = (
+              <div
+                className="team-card p-4 hover:scale-[1.02] transition-transform"
+                style={
+                  isSeason1
+                    ? {
+                        backgroundColor: season1TeamColors[team.name],
+                        borderColor: "rgba(255,255,255,0.15)",
+                      }
+                    : undefined
+                }
+              >
+                {isSeason1 ? (
+                  <h3 className="text-center font-bold text-lg text-white">{team.name}</h3>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-center mb-2">
+                      <TeamLogo logoFile={team.logoFile} name={team.name} className="h-14 w-14" />
+                    </div>
+                    <h3 className="text-center font-bold text-lg">{team.name}</h3>
+                  </>
+                )}
               </div>
-            </Link>
-          ))}
+            );
+
+            if (isSeason1) {
+              return (
+                <div key={key}>
+                  {content}
+                </div>
+              );
+            }
+
+            return (
+              <Link to={`/teams/${team.id}`} key={key}>
+                {content}
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -226,23 +306,35 @@ const Home = () => {
       <section>
         <h2 className="section-title text-xl font-semibold mb-4">StatPadders MVP Race</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { stat: "Attacks", icon: "🏐", key: "attack" as const },
-            { stat: "Blocks", icon: "🛡️", key: "blocks" as const },
-            { stat: "Assists", icon: "🤝", key: "assists" as const },
-            { stat: "Serves", icon: "🎯", key: "service" as const },
-          ].map(({ stat, icon, key }) => {
-            const leaderId = Object.entries(playerTotals).sort((a, b) => b[1][key] - a[1][key])[0]?.[0];
-            const leaderStats = leaderId ? playerTotals[leaderId] : null;
-            const leader = leaderId ? playerMap[leaderId] : null;
-            return (
-              <div key={stat} className="card p-4">
-                <div className="text-center text-3xl mb-2">{icon}</div>
-                <div className="stat-title text-center">{stat}</div>
-                {leader && leaderStats ? (
+        {[
+          { stat: "Attacks", icon: "🏐", key: "attack" as const },
+          { stat: "Blocks", icon: "🛡️", key: "blocks" as const },
+          { stat: "Assists", icon: "🤝", key: "assists" as const },
+          { stat: "Serves", icon: "🎯", key: "service" as const },
+        ].map(({ stat, icon, key }) => {
+          const leaderId = Object.entries(playerTotals).sort((a, b) => b[1][key] - a[1][key])[0]?.[0];
+          const leaderStats = leaderId ? playerTotals[leaderId] : null;
+          const leader = leaderId ? playerMap[leaderId] : null;
+          const season1LeaderName = isSeason1
+            ? season1Players.find((p) => (nameToPlayerId[p.name] || `season1:${p.name}`) === leaderId)?.name
+            : null;
+          return (
+            <div key={stat} className="card p-4">
+              <div className="text-center text-3xl mb-2">{icon}</div>
+              <div className="stat-title text-center">{stat}</div>
+              {leader && leaderStats ? (
                   <>
                     <div className="stat-muted text-center text-sm mt-1">
                       {leader.fullName || (leader as any).name || leaderId}
+                    </div>
+                    <div className="stat-value text-center text-lg">
+                      {leaderStats[key]} pts
+                    </div>
+                  </>
+                ) : isSeason1 && leaderStats ? (
+                  <>
+                    <div className="stat-muted text-center text-sm mt-1">
+                      {season1LeaderName || leaderId}
                     </div>
                     <div className="stat-value text-center text-lg">
                       {leaderStats[key]} pts

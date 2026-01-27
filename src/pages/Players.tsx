@@ -11,9 +11,16 @@ import {
   subscribeTeams,
 } from "../firebase/queries";
 import { useSeason } from "../hooks/useSeason";
+import { season1Players } from "../data";
+
+const isSeason1Name = (name?: string | null) => {
+  if (!name) return false;
+  const normalized = name.toLowerCase();
+  return normalized.includes("season 1") || normalized.includes("temporada 1") || normalized === "s1";
+};
 
 const Players = () => {
-  const { selectedSeasonId } = useSeason();
+  const { selectedSeasonId, selectedSeason } = useSeason();
   const [players, setPlayers] = useState<Player[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
   const [rosters, setRosters] = useState<Roster[]>([]);
@@ -26,12 +33,48 @@ const Players = () => {
   useEffect(() => subscribeRosters(selectedSeasonId, setRosters), [selectedSeasonId]);
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
 
-  const teamMap = useMemo(
-    () => Object.fromEntries(teams.map((t) => [t.id, t.name])),
-    [teams]
-  );
+  const isSeason1 = isSeason1Name(selectedSeason?.name);
+
+  const nameToPlayerId = useMemo(() => {
+    return Object.fromEntries(players.map((p) => [p.fullName, p.id]));
+  }, [players]);
+
+  const season1PlayersForTable = useMemo(() => {
+    if (!isSeason1) return players;
+    return season1Players.map((s1) => {
+      const existingId = nameToPlayerId[s1.name];
+      if (existingId) {
+        const existing = players.find((p) => p.id === existingId);
+        if (existing) return existing;
+      }
+      return {
+        id: `season1:${s1.name}`,
+        fullName: s1.name,
+        type: undefined,
+      } as Player;
+    });
+  }, [isSeason1, nameToPlayerId, players]);
+
+  const teamMap = useMemo(() => {
+    if (isSeason1) {
+      const map: Record<string, string> = {};
+      season1Players.forEach((p) => {
+        map[p.team] = p.team;
+      });
+      return map;
+    }
+    return Object.fromEntries(teams.map((t) => [t.id, t.name]));
+  }, [isSeason1, teams]);
 
   const playerTeamMap = useMemo(() => {
+    if (isSeason1) {
+      const map: Record<string, string> = {};
+      season1Players.forEach((p) => {
+        const id = nameToPlayerId[p.name] || `season1:${p.name}`;
+        map[id] = p.team;
+      });
+      return map;
+    }
     const map: Record<string, string> = {};
     rosters.forEach((r) => {
       r.playerIds?.forEach((pid) => {
@@ -39,9 +82,22 @@ const Players = () => {
       });
     });
     return map;
-  }, [rosters]);
+  }, [isSeason1, nameToPlayerId, rosters]);
 
   const totals = useMemo(() => {
+    if (isSeason1) {
+      const map: Record<string, { attack: number; blocks: number; assists: number; service: number }> = {};
+      season1Players.forEach((p) => {
+        const id = nameToPlayerId[p.name] || `season1:${p.name}`;
+        map[id] = {
+          attack: p.attack,
+          blocks: p.blocks,
+          assists: p.assists,
+          service: p.service,
+        };
+      });
+      return map;
+    }
     const map: Record<string, { attack: number; blocks: number; assists: number; service: number }> = {};
     playerStats.forEach((stat) => {
       if (!map[stat.playerId]) map[stat.playerId] = { attack: 0, blocks: 0, assists: 0, service: 0 };
@@ -51,7 +107,7 @@ const Players = () => {
       map[stat.playerId].service += stat.service || 0;
     });
     return map;
-  }, [playerStats]);
+  }, [isSeason1, nameToPlayerId, playerStats]);
 
   const normalizeType = (type?: string) => {
     if (!type) return "";
@@ -60,7 +116,7 @@ const Players = () => {
     return type;
   };
 
-  const filtered = players.filter((p) => {
+  const filtered = season1PlayersForTable.filter((p) => {
     const type = normalizeType(p.type as string);
     if (filter === "student") return type === "student";
     if (filter === "teacher") return type === "teacher";

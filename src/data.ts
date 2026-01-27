@@ -1,29 +1,63 @@
 // src/data.ts
 
-export const teams = [
-    { name: 'Equipo A', logo: '🅰️', color: 'team-card team-card--a', players: 12 },
-    { name: 'Equipo B', logo: '🅱️', color: 'team-card team-card--b', players: 12 },
-    { name: 'Equipo C', logo: '🅾️', color: 'team-card team-card--c', players: 12 },
-    { name: 'Equipo D', logo: '🆎', color: 'team-card team-card--d', players: 12 },
-  ];
-  
-  export const players = [
-    { name: 'Carlos López', team: 'Equipo A', attack: 12, blocks: 5, assists: 7, service: 8 },
-    { name: 'María Pérez', team: 'Equipo B', attack: 9, blocks: 3, assists: 11, service: 10 },
-    { name: 'Lucía García', team: 'Equipo C', attack: 15, blocks: 2, assists: 6, service: 6 },
-    { name: 'Andrés Ruiz', team: 'Equipo D', attack: 8, blocks: 6, assists: 4, service: 7 },
-  ];
-  
-  export const schedule = [
-    { date: '2025-05-02T15:30:00', match: 'Equipo A vs Equipo B', format: '1 set de 25 pts' },
-    { date: '2025-05-02T16:00:00', match: 'Equipo C vs Equipo D', format: '1 set de 25 pts' },
-    { date: '2025-05-09T15:30:00', match: 'Equipo A vs Equipo C', format: '1 set de 25 pts' },
-    { date: '2025-05-09T16:00:00', match: 'Equipo B vs Equipo D', format: '1 set de 25 pts' },
-    { date: '2025-05-16T15:30:00', match: 'Equipo A vs Equipo D', format: '1 set de 25 pts' },
-    { date: '2025-05-16T16:00:00', match: 'Equipo B vs Equipo C', format: '1 set de 25 pts' },
-    { date: '2025-05-23T15:30:00', match: 'Semifinal 1', format: '3 sets de 15 pts' },
-    { date: '2025-05-23T16:00:00', match: 'Semifinal 2', format: '3 sets de 15 pts' },
-    { date: '2025-05-30T15:30:00', match: 'Tercer Puesto', format: '3 sets de 10 pts' },
-    { date: '2025-05-30T16:00:00', match: 'Final', format: '3 sets de 15 pts' },
-  ];
+export type Season1TeamName = "Team Blue" | "Team Red" | "Team Pink" | "Team Black";
+
+export type Season1PlayerStat = {
+  name: string;
+  team: Season1TeamName;
+  attack: number;
+  blocks: number;
+  assists: number;
+  service: number;
+  total: number;
+};
+
+export const season1TeamColors: Record<Season1TeamName, string> = {
+  "Team Blue": "#1d4ed8",
+  "Team Red": "#dc2626",
+  "Team Pink": "#ec4899",
+  "Team Black": "#111827",
+};
+
+export const season1Players: Season1PlayerStat[] = [
+  { name: "Rocco Lokee", team: "Team Blue", attack: 23, blocks: 5, assists: 0, service: 3, total: 31 },
+  { name: "Mr. Hall", team: "Team Red", attack: 24, blocks: 1, assists: 0, service: 6, total: 31 },
+  { name: "Lucas Wu", team: "Team Pink", attack: 18, blocks: 2, assists: 0, service: 4, total: 24 },
+  { name: "Wilson Chen", team: "Team Black", attack: 9, blocks: 6, assists: 0, service: 5, total: 20 },
+  { name: "Mr. Torres", team: "Team Pink", attack: 10, blocks: 0, assists: 0, service: 3, total: 13 },
+  { name: "Mr. Solis", team: "Team Blue", attack: 7, blocks: 0, assists: 0, service: 5, total: 12 },
+  { name: "Edgar Justavino", team: "Team Red", attack: 6, blocks: 0, assists: 0, service: 5, total: 11 },
+  { name: "James De Gracia", team: "Team Blue", attack: 4, blocks: 2, assists: 0, service: 2, total: 8 },
+  { name: "Willy Hou", team: "Team Red", attack: 4, blocks: 1, assists: 0, service: 2, total: 7 },
+  { name: "Ferran Ponton", team: "Team Pink", attack: 4, blocks: 0, assists: 0, service: 0, total: 4 },
+  { name: "Joel Pérez", team: "Team Black", attack: 2, blocks: 0, assists: 0, service: 2, total: 4 },
+  { name: "Mr. Marmolejo", team: "Team Black", attack: 2, blocks: 0, assists: 0, service: 1, total: 3 },
+  { name: "Mrs. Almanza", team: "Team Red", attack: 1, blocks: 0, assists: 0, service: 2, total: 3 },
+  { name: "Rafael Romero", team: "Team Pink", attack: 2, blocks: 1, assists: 0, service: 0, total: 3 },
+  { name: "Lauren Tapia", team: "Team Red", attack: 0, blocks: 0, assists: 0, service: 2, total: 2 },
+  { name: "Mr. Pérez", team: "Team Pink", attack: 1, blocks: 0, assists: 0, service: 1, total: 2 },
+  { name: "Mario Zhong", team: "Team Blue", attack: 0, blocks: 0, assists: 0, service: 2, total: 2 },
+  { name: "Anny Deng", team: "Team Pink", attack: 0, blocks: 0, assists: 0, service: 2, total: 2 },
+  { name: "William Chen", team: "Team Blue", attack: 2, blocks: 0, assists: 0, service: 0, total: 2 },
+  { name: "Mr. Aguilera", team: "Team Blue", attack: 0, blocks: 0, assists: 0, service: 1, total: 1 },
+  { name: "Dhruvin Ahir", team: "Team Blue", attack: 0, blocks: 0, assists: 0, service: 1, total: 1 },
+  { name: "Mr. Vergara", team: "Team Black", attack: 1, blocks: 0, assists: 0, service: 0, total: 1 },
+  { name: "Michell Qiu", team: "Team Pink", attack: 0, blocks: 0, assists: 0, service: 1, total: 1 },
+  { name: "Mavielis Castillero", team: "Team Blue", attack: 0, blocks: 0, assists: 0, service: 1, total: 1 },
+  { name: "Héctor Chen", team: "Team Black", attack: 0, blocks: 0, assists: 0, service: 1, total: 1 },
+];
+
+export const season1PlayerByName = Object.fromEntries(
+  season1Players.map((p) => [p.name, p])
+) as Record<string, Season1PlayerStat>;
+
+export const season1Teams = Object.entries(
+  season1Players.reduce((acc, player) => {
+    if (!acc[player.team]) {
+      acc[player.team] = { name: player.team, playerCount: 0 };
+    }
+    acc[player.team].playerCount += 1;
+    return acc;
+  }, {} as Record<Season1TeamName, { name: Season1TeamName; playerCount: number }>)
+).map(([, value]) => value);
   
