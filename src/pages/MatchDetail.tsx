@@ -8,6 +8,7 @@ import { useSeason } from "../hooks/useSeason";
 import TeamLogo from "../components/TeamLogo";
 
 interface MatchDoc {
+  seasonId?: string;
   homeTeamId?: string;
   awayTeamId?: string;
   teamA?: string;
@@ -44,21 +45,41 @@ const MatchDetail = () => {
     fetchMatch();
   }, [id]);
 
-  useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
-  useEffect(() => subscribeRosters(selectedSeasonId, setRosters), [selectedSeasonId]);
+  const seasonIdForMatch = match?.seasonId || selectedSeasonId;
+
+  useEffect(() => subscribeTeams(seasonIdForMatch, setTeams), [seasonIdForMatch]);
+  useEffect(() => subscribeRosters(seasonIdForMatch, setRosters), [seasonIdForMatch]);
   useEffect(() => subscribePlayers(setPlayers), []);
+  useEffect(() => {
+    if (
+      import.meta.env.DEV &&
+      match?.seasonId &&
+      selectedSeasonId &&
+      match.seasonId !== selectedSeasonId
+    ) {
+      console.warn(
+        `Match season (${match.seasonId}) differs from selected season (${selectedSeasonId}). Using match season for rosters/teams.`
+      );
+    }
+  }, [match?.seasonId, selectedSeasonId]);
 
   const teamById = useMemo(
     () => Object.fromEntries(teams.map((t) => [t.id, t])),
     [teams]
   );
-  const playerMap = useMemo(
-    () =>
-      Object.fromEntries(
-        players.map((p) => [p.id, p.fullName || (p as any).name || p.id])
-      ),
-    [players]
-  );
+  const playerMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    players.forEach((p) => {
+      const name = p.fullName || (p as any).name || p.id;
+      map[p.id] = name;
+      if (name) {
+        map[name] = name;
+        map[name.toLowerCase()] = name;
+      }
+    });
+    return map;
+  }, [players]);
+
   const rosterTeamByPlayerId = useMemo(() => {
     const map: Record<string, string> = {};
     rosters.forEach((r) => {
@@ -68,6 +89,32 @@ const MatchDetail = () => {
     });
     return map;
   }, [rosters]);
+
+  const rosterTeamByPlayerKey = useMemo(() => {
+    const map: Record<string, string> = {};
+    const addKey = (key: string | undefined, teamId: string) => {
+      if (!key) return;
+      const trimmed = key.trim();
+      if (!trimmed) return;
+      if (!map[trimmed]) map[trimmed] = teamId;
+      const lower = trimmed.toLowerCase();
+      if (!map[lower]) map[lower] = teamId;
+    };
+
+    Object.entries(rosterTeamByPlayerId).forEach(([playerId, teamId]) => {
+      addKey(playerId, teamId);
+      const name = playerMap[playerId];
+      if (name) addKey(name, teamId);
+    });
+
+    players.forEach((p) => {
+      const teamId = rosterTeamByPlayerId[p.id];
+      if (!teamId) return;
+      addKey(p.fullName || (p as any).name, teamId);
+    });
+
+    return map;
+  }, [playerMap, players, rosterTeamByPlayerId]);
 
   if (!match) return <p className="text-center mt-10">Loading match...</p>;
 
@@ -90,18 +137,22 @@ const MatchDetail = () => {
   const scoreAway = match.scores?.away ?? match.scoreB;
   const isPlayed = scoreHome != null && scoreAway != null;
   const statusLabel = match.status || (isPlayed ? "completed" : "scheduled");
+  const resolveTeamId = (playerKey: string) => {
+    const trimmed = playerKey.trim();
+    return rosterTeamByPlayerKey[trimmed] || rosterTeamByPlayerKey[trimmed.toLowerCase()];
+  };
+
   const statsEntries = Object.entries(match.playersStats || {});
   const homeStats = statsEntries.filter(
-    ([playerId]) => rosterTeamByPlayerId[playerId] === homeTeamId
+    ([playerKey]) => resolveTeamId(playerKey) === homeTeamId
   );
   const awayStats = statsEntries.filter(
-    ([playerId]) => rosterTeamByPlayerId[playerId] === awayTeamId
+    ([playerKey]) => resolveTeamId(playerKey) === awayTeamId
   );
-  const unassignedStats = statsEntries.filter(
-    ([playerId]) =>
-      rosterTeamByPlayerId[playerId] !== homeTeamId &&
-      rosterTeamByPlayerId[playerId] !== awayTeamId
-  );
+  const unassignedStats = statsEntries.filter(([playerKey]) => {
+    const teamId = resolveTeamId(playerKey);
+    return teamId !== homeTeamId && teamId !== awayTeamId;
+  });
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -109,16 +160,18 @@ const MatchDetail = () => {
 
       <div className="card glass glass--hover p-5 md:p-6">
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-6">
-            <div className="flex items-center justify-center md:justify-end gap-3 text-center md:text-right">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 md:gap-6">
+            <div className="flex flex-col md:flex-row items-center md:justify-end gap-2 md:gap-3 text-center md:text-right">
               <TeamLogo
                 logoFile={homeTeam?.logoFile}
                 name={homeName}
-                className="h-16 w-16 md:h-20 md:w-20 rounded-full object-contain"
+                className="h-20 w-20 sm:h-24 sm:w-24 md:h-20 md:w-20 rounded-full object-contain"
               />
               <div>
-                <div className="text-lg md:text-xl font-semibold">{homeName}</div>
-                <div className="text-xs text-muted uppercase tracking-[0.18em]">Home</div>
+                <div className="text-base sm:text-lg md:text-xl font-semibold">{homeName}</div>
+                <div className="text-[0.65rem] sm:text-xs text-muted uppercase tracking-[0.2em] md:tracking-[0.18em]">
+                  Home
+                </div>
               </div>
             </div>
 
@@ -127,20 +180,22 @@ const MatchDetail = () => {
                 {statusLabel}
               </div>
               <div className="text-4xl md:text-5xl font-extrabold text-strong leading-none">
-                {isPlayed ? `${scoreHome} - ${scoreAway}` : "vs"}
+                {isPlayed ? `${scoreHome} - ${scoreAway}` : "VS"}
               </div>
               <div className="text-sm text-muted mt-2">{date}</div>
             </div>
 
-            <div className="flex items-center justify-center md:justify-start gap-3 text-center md:text-left">
-              <div>
-                <div className="text-lg md:text-xl font-semibold">{awayName}</div>
-                <div className="text-xs text-muted uppercase tracking-[0.18em]">Away</div>
+            <div className="flex flex-col md:flex-row items-center md:justify-start gap-2 md:gap-3 text-center md:text-left">
+              <div className="order-2 md:order-1">
+                <div className="text-base sm:text-lg md:text-xl font-semibold">{awayName}</div>
+                <div className="text-[0.65rem] sm:text-xs text-muted uppercase tracking-[0.2em] md:tracking-[0.18em]">
+                  Visit
+                </div>
               </div>
               <TeamLogo
                 logoFile={awayTeam?.logoFile}
                 name={awayName}
-                className="h-16 w-16 md:h-20 md:w-20 rounded-full object-contain"
+                className="h-20 w-20 sm:h-24 sm:w-24 md:h-20 md:w-20 rounded-full object-contain order-1 md:order-2"
               />
             </div>
           </div>
@@ -156,13 +211,20 @@ const MatchDetail = () => {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-baseline justify-between">
+        <div className="flex items-baseline justify-between gap-3">
           <h3 className="text-lg font-bold">Player Statistics</h3>
-          {!match.playersStats || Object.keys(match.playersStats).length === 0 ? (
-            <span className="text-xs text-muted uppercase tracking-[0.2em]">
-              No stats yet
-            </span>
-          ) : null}
+          <div className="flex flex-col items-end gap-1">
+            {!match.playersStats || Object.keys(match.playersStats).length === 0 ? (
+              <span className="text-xs text-muted uppercase tracking-[0.2em]">
+                No stats yet
+              </span>
+            ) : null}
+            {unassignedStats.length > 0 ? (
+              <span className="text-xs text-warning uppercase tracking-[0.16em]">
+                Some players are unassigned
+              </span>
+            ) : null}
+          </div>
         </div>
 
         {match.playersStats && Object.keys(match.playersStats).length > 0 ? (
@@ -222,6 +284,9 @@ const MatchDetail = () => {
         {unassignedStats.length > 0 && (
           <div className="card glass glass--hover p-4">
             <h4 className="text-md font-semibold mb-3">Unassigned Players</h4>
+            <p className="text-xs text-muted mb-3">
+              Tip: assign these players to a team roster so they show under Home/Away.
+            </p>
             <div className="glass glass--strong tableWrap overflow-x-auto">
               <table className="table table-auto w-full text-sm text-left">
                 <thead>
