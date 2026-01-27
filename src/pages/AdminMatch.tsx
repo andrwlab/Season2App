@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import useUserRole from "../hooks/useUserRole";
 import { Player, Roster, Team, subscribePlayers, subscribeRosters, subscribeTeams } from "../firebase/queries";
 import { useSeason } from "../hooks/useSeason";
+import { useAuth } from "../AuthContext";
 
 const AdminMatch = () => {
   const { id } = useParams();
@@ -15,7 +15,8 @@ const AdminMatch = () => {
   const [scoreA, setScoreA] = useState("");
   const [scoreB, setScoreB] = useState("");
   const [error, setError] = useState("");
-  const role = useUserRole();
+  const [loadError, setLoadError] = useState<string>("");
+  const { role, loading: authLoading } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -23,14 +24,22 @@ const AdminMatch = () => {
   useEffect(() => {
     const fetchMatch = async () => {
       if (!id) return;
-      const ref = doc(db, "matches", id);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
+      setLoadError("");
+      try {
+        const ref = doc(db, "matches", id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          setLoadError("Match not found.");
+          return;
+        }
         const data = snap.data() as any;
         setMatch(data);
         setScoreA(data.scores?.home ?? data.scoreA ?? "");
         setScoreB(data.scores?.away ?? data.scoreB ?? "");
         setFormData(data.playersStats || {});
+      } catch (err) {
+        console.error("Failed to load match", err);
+        setLoadError("Failed to load match. Check console for details.");
       }
     };
     fetchMatch();
@@ -93,12 +102,41 @@ const AdminMatch = () => {
     }
   };
 
-  if (!match || role !== "admin") return <p className="text-center mt-10">Loading or no permission...</p>;
-
   const teamMap = useMemo(
     () => Object.fromEntries(teams.map((t) => [t.id, t.name])),
     [teams]
   );
+  const playersById = useMemo(
+    () => Object.fromEntries(players.map((p) => [p.id, p])),
+    [players]
+  );
+
+  const canEditMatch = role === "admin" || role === "scorekeeper";
+  if (authLoading || !match || !canEditMatch || loadError) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="card p-4">
+          <p className="text-center font-semibold text-strong">
+            {loadError || "Loading or no permission..."}
+          </p>
+          <div className="mt-3 text-xs text-muted space-y-1">
+            <p>role: {role ?? "(null)"}</p>
+            <p>authLoading: {String(authLoading)}</p>
+            <p>matchLoaded: {String(Boolean(match))}</p>
+            <p>selectedSeasonId: {selectedSeasonId ?? "(null)"}</p>
+            <p>teams: {teams.length}</p>
+            <p>rosters: {rosters.length}</p>
+            <p>players: {players.length}</p>
+            {match?.seasonId && selectedSeasonId && match.seasonId !== selectedSeasonId && (
+              <p className="text-warning">
+                Match season ({match.seasonId}) != selected season ({selectedSeasonId})
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const teamAId = match.homeTeamId || match.teamA;
   const teamBId = match.awayTeamId || match.teamB;
@@ -107,10 +145,6 @@ const AdminMatch = () => {
 
   const teamAPlayerIds = rosters.find((r) => r.teamId === teamAId)?.playerIds || [];
   const teamBPlayerIds = rosters.find((r) => r.teamId === teamBId)?.playerIds || [];
-  const playersById = useMemo(
-    () => Object.fromEntries(players.map((p) => [p.id, p])),
-    [players]
-  );
   const teamAPlayers = teamAPlayerIds.map((id) => playersById[id]).filter(Boolean);
   const teamBPlayers = teamBPlayerIds.map((id) => playersById[id]).filter(Boolean);
 
