@@ -11,6 +11,7 @@
     "seed:s2": "tsx scripts/seedSeason2.ts",
     "clear:s2-matches": "tsx scripts/clearSeason2Matches.ts",
     "import:roster": "tsx scripts/importRoster.ts",
+    "sync:roster": "tsx scripts/syncSeasonRoster.ts",
     "import:stats:s1": "tsx scripts/importSeason1Stats.ts",
     "dedupe:players": "tsx scripts/dedupePlayers.ts"
   },
