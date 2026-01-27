@@ -1,34 +1,48 @@
 :root {
-  /* Background & surfaces */
-  --bg-main: #070B18;
-  --surface-1: #0F172A;
-  --surface-2: #111C3A;
-  --surface-3: #0A0F1F;
+  --bg-base: #070B18;
+  --text: rgba(255,255,255,0.92);
+  --text-2: rgba(226,232,240,0.74);
+  --text-3: rgba(148,163,184,0.58);
 
-  /* Text */
-  --text-primary: #E5E7EB;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
-
-  /* Brand */
   --brand: #7C3AED;
-  --brand-deep: #5B21B6;
   --accent: #22D3EE;
 
-  /* Status */
+  /* Liquid glass */
+  --glass: rgba(15, 23, 42, 0.34);
+  --glass-strong: rgba(15, 23, 42, 0.50);
+  --glass-border: rgba(255,255,255,0.10);
+  --glass-border-strong: rgba(255,255,255,0.14);
+  --glass-sheen: rgba(255,255,255,0.10);
+
+  --shadow: 0 18px 45px rgba(0,0,0,0.45);
+  --blur: 18px;
+  --blur-strong: 22px;
+
+  --radius: 18px;
+  --radius-lg: 26px;
+
+  /* Back-compat mappings for existing classes */
+  --bg-main: var(--bg-base);
+  --surface-1: var(--glass);
+  --surface-2: var(--glass-strong);
+  --surface-3: rgba(10, 15, 31, 0.46);
+
+  --text-primary: var(--text);
+  --text-secondary: var(--text-2);
+  --text-muted: var(--text-3);
+
+  --brand-deep: color-mix(in srgb, var(--brand) 78%, #3b1a75 22%);
+
   --success: #10B981;
   --danger: #EF4444;
   --warning: #F59E0B;
 
-  /* Borders/shadows */
-  --border: rgba(148,163,184,0.12);
-  --divider: rgba(148,163,184,0.10);
-  --shadow-soft: 0 12px 24px rgba(0,0,0,0.35);
-  --shadow-strong: 0 20px 40px rgba(0,0,0,0.45);
+  --border: var(--glass-border);
+  --divider: rgba(255,255,255,0.08);
+  --shadow-soft: var(--shadow);
+  --shadow-strong: 0 24px 60px rgba(0,0,0,0.55);
 
-  --radius: 18px;
   --radius-sm: 14px;
 
-  /* Allowed gradients */
-  --grad-brand: linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%);
+  --grad-brand: linear-gradient(135deg, color-mix(in srgb, var(--brand) 80%, #3b1a75 20%) 0%, var(--brand) 100%);
 }

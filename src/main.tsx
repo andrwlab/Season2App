@@ -4,6 +4,7 @@ import App from './App';
 import { AuthProvider } from './AuthContext';
 import { SeasonProvider } from './hooks/useSeason';
 import './styles/theme.css';
+import './styles/glass.css';
 import './index.css';
 import './styles/global.css';
 

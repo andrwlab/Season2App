@@ -17,7 +17,7 @@ const Teams = () => {
       )}
       {teams.map((team) => (
         <Link key={team.id} to={`/teams/${team.id}`}>
-          <div className="team-card p-4 flex flex-col items-center">
+          <div className="team-card glass glass--hover p-4 flex flex-col items-center">
             <TeamLogo logoFile={team.logoFile} name={team.name} className="h-16 w-16 mb-2" />
             <h2 className="text-xl font-bold mb-1">{team.name}</h2>
             <p className="text-sm text-muted">View roster</p>

@@ -43,7 +43,7 @@ const TeamDetail = () => {
         </div>
       </div>
 
-      <section className="card p-4">
+      <section className="card glass glass--hover p-4">
         <h3 className="text-lg font-semibold mb-3">Roster</h3>
         {rosterPlayers.length === 0 ? (
           <p className="text-sm text-muted">No players assigned yet.</p>

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Match, Team, subscribeMatches, subscribeTeams } from "../firebase/queries";
 import { useSeason } from "../hooks/useSeason";
+import TeamLogo from "../components/TeamLogo";
 
 type Standing = {
   teamId: string;
@@ -22,10 +23,8 @@ const Leaderboard = () => {
   useEffect(() => subscribeMatches(selectedSeasonId, setMatches), [selectedSeasonId]);
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
 
-  const teamMap = useMemo(
-    () => Object.fromEntries(teams.map((t) => [t.id, t.name])),
-    [teams]
-  );
+  const teamMap = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t.name])), [teams]);
+  const teamById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams]);
 
   const standings = useMemo(() => {
     const map: Record<string, Standing> = {};
@@ -59,7 +58,7 @@ const Leaderboard = () => {
       if (diffB !== diffA) return diffB - diffA;
       return b.pf - a.pf;
     });
-  }, [matches]);
+  }, [matches, teams]);
 
   const phaseMatches = useMemo(() => {
     const byPhase: Record<string, Match[]> = { semifinal: [], third: [], final: [] };
@@ -76,33 +75,53 @@ const Leaderboard = () => {
     <div className="p-6 max-w-5xl mx-auto space-y-10">
       <section>
         <h2 className="text-2xl font-bold mb-4">Standings</h2>
-        <div className="table-wrap overflow-x-auto">
-        <table className="table table-auto w-full text-sm text-left">
-          <thead>
-            <tr>
-              <th className="px-3 py-2">#</th>
-              <th className="px-3 py-2">Team</th>
-              <th className="px-3 py-2">W</th>
-              <th className="px-3 py-2">L</th>
-              <th className="px-3 py-2">PF</th>
-              <th className="px-3 py-2">PA</th>
-              <th className="px-3 py-2">+/-</th>
-            </tr>
-          </thead>
-          <tbody>
-            {standings.map((s, i) => (
-              <tr key={s.teamId}>
-                <td className="px-3 py-2"><span className="badge">{i + 1}</span></td>
-                <td className="px-3 py-2 text-strong">{teamMap[s.teamId] || s.teamId}</td>
-                <td className="px-3 py-2">{s.w}</td>
-                <td className="px-3 py-2">{s.l}</td>
-                <td className="px-3 py-2">{s.pf}</td>
-                <td className="px-3 py-2">{s.pc}</td>
-                <td className="px-3 py-2">{s.pf - s.pc}</td>
+        <div className="glass glass--strong tableWrap overflow-x-auto">
+          <table className="table table-auto w-full text-sm text-left">
+            <thead>
+              <tr>
+                <th className="px-3 py-2">#</th>
+                <th className="px-3 py-2">Team</th>
+                <th className="px-3 py-2">W</th>
+                <th className="px-3 py-2">L</th>
+                <th className="px-3 py-2">PF</th>
+                <th className="px-3 py-2">PA</th>
+                <th className="px-3 py-2">+/-</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+            {standings.map((s, i) => {
+                const team = teamById[s.teamId];
+                const teamName = team?.name || teamMap[s.teamId] || s.teamId;
+                const isAdvancing = i < 4;
+                return (
+                <tr
+                  key={s.teamId}
+                  className={`standings-row${isAdvancing ? " standings-row--advancing" : ""}`}
+                >
+                  <td className="px-3 py-2"><span className="badge">{i + 1}</span></td>
+                  <td className="px-3 py-2 text-strong">
+                    <div className="standings-team">
+                      <TeamLogo
+                        logoFile={team?.logoFile}
+                        name={teamName}
+                        className="standings-team__logo"
+                      />
+                      <div className="standings-team__meta">
+                        <span className="standings-team__name">{teamName}</span>
+                        {isAdvancing && <span className="standings-team__advancing">Advancing</span>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2">{s.w}</td>
+                  <td className="px-3 py-2">{s.l}</td>
+                  <td className="px-3 py-2">{s.pf}</td>
+                  <td className="px-3 py-2">{s.pc}</td>
+                  <td className="px-3 py-2">{s.pf - s.pc}</td>
+                </tr>
+              );
+            })}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -118,7 +137,7 @@ const Leaderboard = () => {
                 {phaseMatches.semifinal.map((m: any) => {
                   const d = toDate(m);
                   return (
-                    <li key={m.id} className="list-card p-3 flex justify-between">
+                    <li key={m.id} className="list-card glass glass--hover p-3 flex justify-between">
                       <span>
                         {teamMap[m.homeTeamId] || m.teamA} vs {teamMap[m.awayTeamId] || m.teamB}
                       </span>
@@ -136,7 +155,7 @@ const Leaderboard = () => {
               {phaseMatches.third.map((m: any) => {
                 const d = toDate(m);
                 return (
-                  <div key={m.id} className="list-card p-3 flex justify-between">
+                  <div key={m.id} className="list-card glass glass--hover p-3 flex justify-between">
                     <span>Loser SF1 vs Loser SF2</span>
                     <span className="text-sm text-muted">
                       {d.toLocaleDateString("en-US", { day: "numeric", month: "long" })} •{" "}
@@ -151,7 +170,7 @@ const Leaderboard = () => {
               {phaseMatches.final.map((m: any) => {
                 const d = toDate(m);
                 return (
-                  <div key={m.id} className="list-card p-3 flex justify-between">
+                  <div key={m.id} className="list-card glass glass--hover p-3 flex justify-between">
                     <span>Winner SF1 vs Winner SF2</span>
                     <span className="text-sm text-muted">
                       {d.toLocaleDateString("en-US", { day: "numeric", month: "long" })} •{" "}

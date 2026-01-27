@@ -26,11 +26,11 @@ const Bracket: React.FC<BracketProps> = ({ semi1, semi2, third, final }) => (
   <div className="grid grid-cols-3 gap-x-4 items-center my-8">
     {/* Semifinales */}
     <div className="flex flex-col gap-6">
-      <div className="card p-3 text-center">
+      <div className="card glass glass--hover p-3 text-center">
         <div className="font-semibold">{semi1.teamA}</div>
         <div className="text-xs text-muted">{formatDate(semi1.date)}</div>
       </div>
-      <div className="card p-3 text-center">
+      <div className="card glass glass--hover p-3 text-center">
         <div className="font-semibold">{semi1.teamB}</div>
         <div className="text-xs text-muted">{formatDate(semi1.date)}</div>
       </div>
@@ -56,11 +56,11 @@ const Bracket: React.FC<BracketProps> = ({ semi1, semi2, third, final }) => (
 
     {/* Semifinales 2 */}
     <div className="flex flex-col gap-6">
-      <div className="card p-3 text-center">
+      <div className="card glass glass--hover p-3 text-center">
         <div className="font-semibold">{semi2.teamA}</div>
         <div className="text-xs text-muted">{formatDate(semi2.date)}</div>
       </div>
-      <div className="card p-3 text-center">
+      <div className="card glass glass--hover p-3 text-center">
         <div className="font-semibold">{semi2.teamB}</div>
         <div className="text-xs text-muted">{formatDate(semi2.date)}</div>
       </div>
@@ -69,7 +69,7 @@ const Bracket: React.FC<BracketProps> = ({ semi1, semi2, third, final }) => (
     {/* Tercer Puesto abajo */}
     <div className="col-span-3 mt-8">
     <h4 className="text-center font-semibold mb-2">Third Place</h4>
-      <div className="card bg-surface-3 p-4 text-center text-strong">
+      <div className="card glass glass--strong p-4 text-center text-strong">
         <div className="font-semibold">{third.teamA} vs {third.teamB}</div>
         <div className="text-xs">{formatDate(third.date)}</div>
       </div>

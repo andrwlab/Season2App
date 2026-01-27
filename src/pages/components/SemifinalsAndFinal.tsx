@@ -58,13 +58,13 @@ const SemifinalsAndFinal = ({ standings }) => {
 
         {/* Semifinal Left */}
         <div className="absolute top-[60px] left-[20px] z-10">
-          <div className="card px-4 py-2 rounded-full shadow-soft font-semibold text-strong">
+          <div className="card glass glass--hover px-4 py-2 rounded-full shadow-soft font-semibold text-strong">
             {s1.team}
           </div>
           {renderDate('semifinal1')}
         </div>
         <div className="absolute bottom-[60px] left-[20px] z-10">
-          <div className="card px-4 py-2 rounded-full shadow-soft font-semibold text-strong">
+          <div className="card glass glass--hover px-4 py-2 rounded-full shadow-soft font-semibold text-strong">
             {s4.team}
           </div>
           {renderDate('semifinal2')}
@@ -72,13 +72,13 @@ const SemifinalsAndFinal = ({ standings }) => {
 
         {/* Semifinal Right */}
         <div className="absolute top-[60px] right-[20px] z-10">
-          <div className="card px-4 py-2 rounded-full shadow-soft font-semibold text-strong">
+          <div className="card glass glass--hover px-4 py-2 rounded-full shadow-soft font-semibold text-strong">
             {s2.team}
           </div>
           {renderDate('semifinal1')}
         </div>
         <div className="absolute bottom-[60px] right-[20px] z-10">
-          <div className="card px-4 py-2 rounded-full shadow-soft font-semibold text-strong">
+          <div className="card glass glass--hover px-4 py-2 rounded-full shadow-soft font-semibold text-strong">
             {s3.team}
           </div>
           {renderDate('semifinal2')}
@@ -99,7 +99,7 @@ const SemifinalsAndFinal = ({ standings }) => {
 
         {/* Tercer puesto */}
         <div className="absolute top-[370px] left-1/2 transform -translate-x-1/2 z-20">
-          <div className="card bg-surface-3 text-strong px-6 py-2 rounded shadow-soft text-center">
+          <div className="card glass glass--strong text-strong px-6 py-2 rounded shadow-soft text-center">
             Loser S1 vs Loser S2
           </div>
           {renderDate('third')}

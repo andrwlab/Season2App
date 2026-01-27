@@ -1,6 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { Player, Roster, Team, subscribePlayers, subscribeRosters, subscribeTeams } from "../firebase/queries";
 import { useSeason } from "../hooks/useSeason";
@@ -91,14 +101,68 @@ const AdminMatch = () => {
     }
 
     try {
-      await updateDoc(doc(db, "matches", id as string), {
+      const matchRef = doc(db, "matches", id as string);
+      await updateDoc(matchRef, {
         scores: { home: parseInt(scoreA as string), away: parseInt(scoreB as string) },
         status: "completed",
         playersStats: formData,
       });
+
+      const seasonIdForStats = match.seasonId || selectedSeasonId;
+      if (seasonIdForStats) {
+        const batch = writeBatch(db);
+        const existingStatsSnap = await getDocs(
+          query(collection(db, "playerStats"), where("matchId", "==", id))
+        );
+        existingStatsSnap.forEach((statDoc) => batch.delete(statDoc.ref));
+
+        Object.entries(formData).forEach(([playerId, stats]) => {
+          const attack = stats?.attack || 0;
+          const blocks = stats?.blocks || 0;
+          const assists = stats?.assists || 0;
+          const service = stats?.service || 0;
+          const hasAnyStat = attack || blocks || assists || service;
+          if (!hasAnyStat) return;
+
+          const statRef = doc(collection(db, "playerStats"));
+          batch.set(statRef, {
+            seasonId: seasonIdForStats,
+            matchId: id,
+            playerId,
+            attack,
+            blocks,
+            assists,
+            service,
+          });
+        });
+
+        await batch.commit();
+      }
       navigate(`/matches/${id}`);
     } catch (err) {
       setError("An error occurred while saving. Please try again.");
+    }
+  };
+
+  const handleDeleteMatch = async () => {
+    if (!id || role !== "admin") return;
+    const confirmed = window.confirm(
+      "Delete this match? This will remove the score and all recorded stats."
+    );
+    if (!confirmed) return;
+
+    try {
+      const batch = writeBatch(db);
+      const existingStatsSnap = await getDocs(
+        query(collection(db, "playerStats"), where("matchId", "==", id))
+      );
+      existingStatsSnap.forEach((statDoc) => batch.delete(statDoc.ref));
+      batch.delete(doc(db, "matches", id));
+      await batch.commit();
+      navigate("/schedule");
+    } catch (err) {
+      console.error("Failed to delete match", err);
+      setError("Failed to delete match. Please try again.");
     }
   };
 
@@ -115,7 +179,7 @@ const AdminMatch = () => {
   if (authLoading || !match || !canEditMatch || loadError) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
-        <div className="card p-4">
+        <div className="card glass glass--hover p-4">
           <p className="text-center font-semibold text-strong">
             {loadError || "Loading or no permission..."}
           </p>
@@ -151,7 +215,7 @@ const AdminMatch = () => {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold text-center text-strong mb-4">Record Result</h2>
-      <div className="card p-4">
+      <div className="card glass glass--hover p-4">
         <p className="text-center font-medium mb-2">{teamAName} vs {teamBName}</p>
 
         {error && <p className="text-danger text-center mb-4">{error}</p>}
@@ -223,9 +287,20 @@ const AdminMatch = () => {
             ))}
           </div>
 
-          <button type="submit" className="btn btn-primary mt-6 px-6 py-2">
-            Save Result
-          </button>
+          <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center">
+            <button type="submit" className="btn btn-primary px-6 py-2">
+              Save Result
+            </button>
+            {role === "admin" && (
+              <button
+                type="button"
+                onClick={handleDeleteMatch}
+                className="btn btn-danger px-6 py-2"
+              >
+                Delete Match
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>

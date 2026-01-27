@@ -95,7 +95,7 @@ const AdminRosters = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold">Rosters (Admin)</h2>
-      <div className="card p-4">
+      <div className="card glass glass--hover p-4">
         <label className="block text-sm font-medium mb-2">Trade note (optional)</label>
         <input
           type="text"
@@ -112,7 +112,7 @@ const AdminRosters = () => {
           const rosterPlayers =
             roster?.playerIds?.map((pid) => playerMap[pid]).filter(Boolean) || [];
           return (
-            <div key={team.id} className="card p-4">
+            <div key={team.id} className="card glass glass--hover p-4">
               <h3 className="text-lg font-semibold mb-3">{team.name}</h3>
               {rosterPlayers.length === 0 ? (
                 <p className="text-sm text-muted">No players.</p>

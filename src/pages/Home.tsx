@@ -182,12 +182,14 @@ const Home = () => {
   return (
     <div className="p-6 space-y-10">
       <section className="hero hero--banner text-center">
-        <img
-          src={heroBanner}
-          alt="Season 2 banner"
-          className="hero-banner__img"
-          loading="lazy"
-        />
+        <div className="hero-banner">
+          <img
+            src={heroBanner}
+            alt="Season 2 banner"
+            className="hero-banner__img"
+            loading="lazy"
+          />
+        </div>
       </section>
 
       <section>
@@ -205,7 +207,7 @@ const Home = () => {
               return (
                 <li
                   key={match.id}
-                  className="list-card p-3 flex justify-between items-center"
+                  className="list-card glass glass--hover p-3 flex justify-between items-center"
                 >
                   <div>
                     <div className="font-medium text-strong">
@@ -233,7 +235,7 @@ const Home = () => {
             const key = isSeason1 ? team.name : team.id;
             const content = (
               <div
-                className="team-card p-4 hover:scale-[1.02] transition-transform"
+                className="team-card glass glass--hover p-4 hover:scale-[1.02] transition-transform"
                 style={
                   isSeason1
                     ? {
@@ -279,7 +281,7 @@ const Home = () => {
             Standings
           </h2>
         </Link>
-        <div className="table-wrap overflow-x-auto">
+        <div className="glass glass--strong tableWrap overflow-x-auto">
           <table className="table table-auto w-full text-sm text-left">
             <thead>
               <tr>
@@ -319,7 +321,7 @@ const Home = () => {
             ? season1Players.find((p) => (nameToPlayerId[p.name] || `season1:${p.name}`) === leaderId)?.name
             : null;
           return (
-            <div key={stat} className="card p-4">
+            <div key={stat} className="card glass glass--hover p-4">
               <div className="text-center text-3xl mb-2">{icon}</div>
               <div className="stat-title text-center">{stat}</div>
               {leader && leaderStats ? (
@@ -355,7 +357,7 @@ const Home = () => {
           {(["attack", "blocks", "assists", "service"] as const).map((key) => {
             const best = bestTeam(key);
             return (
-              <div key={key} className="card p-4 flex flex-col items-center">
+              <div key={key} className="card glass glass--hover p-4 flex flex-col items-center">
                 <div className="text-3xl">
                   {key === "attack" ? "🏐" : key === "blocks" ? "🛡️" : key === "assists" ? "🤝" : "🎯"}
                 </div>
@@ -370,7 +372,7 @@ const Home = () => {
         </div>
 
         <h2 className="section-title text-xl font-semibold mb-4">Team Statistics</h2>
-        <div className="table-wrap overflow-x-auto">
+        <div className="glass glass--strong tableWrap overflow-x-auto">
           <table className="table table-auto w-full text-sm text-left">
             <thead>
               <tr>

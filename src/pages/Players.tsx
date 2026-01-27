@@ -117,6 +117,7 @@ const Players = () => {
   };
 
   const filtered = season1PlayersForTable.filter((p) => {
+    if (!isSeason1 && !playerTeamMap[p.id]) return false;
     const type = normalizeType(p.type as string);
     if (filter === "student") return type === "student";
     if (filter === "teacher") return type === "teacher";
@@ -155,7 +156,7 @@ const Players = () => {
         ))}
       </div>
 
-      <div className="table-wrap overflow-x-auto">
+      <div className="glass glass--strong tableWrap overflow-x-auto">
         <table className="table table-auto w-full text-sm text-left">
           <thead>
             <tr>

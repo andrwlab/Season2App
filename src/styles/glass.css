@@ -1,0 +1,35 @@
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  position: relative;
+  overflow: hidden;
+}
+
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--glass-sheen), transparent 38%);
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.glass--strong {
+  background: var(--glass-strong);
+  border-color: var(--glass-border-strong);
+  backdrop-filter: blur(var(--blur-strong));
+  -webkit-backdrop-filter: blur(var(--blur-strong));
+}
+
+.glass--hover {
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.glass--hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.16);
+}

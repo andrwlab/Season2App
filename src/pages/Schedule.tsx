@@ -40,7 +40,7 @@ const Schedule = () => {
   }, [matches]);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-3xl font-bold mb-6 text-center text-strong">Match Schedule</h2>
       <div className="space-y-6">
         {matchesByDate.length === 0 && (
@@ -68,68 +68,58 @@ const Schedule = () => {
                   const awayTeam = teamMap[item.awayTeamId];
                   const homeName = homeTeam?.name || item.homeTeamId;
                   const awayName = awayTeam?.name || item.awayTeamId;
+                  const statusLabel = item.status || (isPlayed ? "completed" : "scheduled");
+                  const scoreLabel = isPlayed ? `${homeScore} - ${awayScore}` : "vs";
 
                   return (
-                    <li
-                      key={item.id}
-                      className="list-card p-4"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                        <span className="text-sm text-muted sm:w-1/4">{time || "--:--"}</span>
-
-                        <div className="sm:w-2/4 text-center">
-                          <Link to={`/matches/${item.id}`}>
-                            <div className="font-semibold hover:underline flex items-center justify-center gap-3">
-                              <div className="flex items-center justify-between sm:hidden w-full px-2">
-                                <TeamLogo
-                                  logoFile={homeTeam?.logoFile}
-                                  name={homeName}
-                                  className="h-16 w-16 rounded-full object-contain"
-                                />
-                                <span className="text-xs uppercase tracking-[0.2em] text-muted">VS</span>
-                                <TeamLogo
-                                  logoFile={awayTeam?.logoFile}
-                                  name={awayName}
-                                  className="h-16 w-16 rounded-full object-contain"
-                                />
-                              </div>
-                              <div className="hidden sm:flex items-center gap-3">
-                                <span className="flex items-center gap-2">
-                                  <TeamLogo
-                                    logoFile={homeTeam?.logoFile}
-                                    name={homeName}
-                                    className="h-7 w-7 rounded-full object-contain"
-                                  />
-                                  <span>{homeName}</span>
-                                </span>
-                                <span className="text-sm text-muted">vs</span>
-                                <span className="flex items-center gap-2">
-                                  <TeamLogo
-                                    logoFile={awayTeam?.logoFile}
-                                    name={awayName}
-                                    className="h-7 w-7 rounded-full object-contain"
-                                  />
-                                  <span>{awayName}</span>
-                                </span>
-                                {isPlayed && (
-                                  <span className="text-brand ml-2">
-                                    ({homeScore} - {awayScore})
-                                  </span>
-                                )}
-                              </div>
-                              {isPlayed && (
-                                <span className="text-brand ml-2 sm:hidden">
-                                  ({homeScore} - {awayScore})
-                                </span>
-                              )}
-                            </div>
-                          </Link>
-                          <div className="text-xs text-muted mt-1">
-                            {item.status || "Single set of 25 points"}
-                          </div>
+                    <li key={item.id} className="list-card glass glass--hover p-4 md:p-5">
+                      <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[110px_1fr_auto] sm:items-center sm:gap-4">
+                        <div className="text-sm text-muted sm:text-base sm:font-semibold">
+                          {time || "--:--"}
                         </div>
 
-                        <div className="sm:w-1/4 text-right mt-2 sm:mt-0 flex justify-end gap-3">
+                        <Link to={`/matches/${item.id}`} className="block hover:opacity-95 transition-opacity">
+                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                            <div className="flex items-center justify-end gap-3 text-right">
+                              <div className="min-w-0">
+                                <div className="font-semibold text-base md:text-lg truncate">{homeName}</div>
+                                <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Home</div>
+                              </div>
+                              <TeamLogo
+                                logoFile={homeTeam?.logoFile}
+                                name={homeName}
+                                className="h-12 w-12 md:h-14 md:w-14 rounded-full object-contain"
+                              />
+                            </div>
+
+                            <div className="text-center px-2">
+                              <div
+                                className={`text-2xl md:text-3xl font-extrabold leading-none ${
+                                  isPlayed ? "text-brand" : "text-strong"
+                                }`}
+                              >
+                                {scoreLabel}
+                              </div>
+                              <div className="text-[11px] uppercase tracking-[0.22em] text-muted mt-1">
+                                {statusLabel}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-start gap-3 text-left">
+                              <TeamLogo
+                                logoFile={awayTeam?.logoFile}
+                                name={awayName}
+                                className="h-12 w-12 md:h-14 md:w-14 rounded-full object-contain"
+                              />
+                              <div className="min-w-0">
+                                <div className="font-semibold text-base md:text-lg truncate">{awayName}</div>
+                                <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Away</div>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+
+                        <div className="flex justify-end">
                           {(!isPlayed && (role === "admin" || role === "scorekeeper")) && (
                             <Link to={`/admin-match/${item.id}`} className="text-xs link-brand underline">
                               Edit

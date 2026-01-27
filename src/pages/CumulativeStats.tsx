@@ -8,7 +8,10 @@ const CumulativeStats = () => {
   const [sortKey, setSortKey] = useState<SortKey>("total");
 
   const sorted = useMemo(() => {
-    const copy = [...stats];
+    const copy = stats.filter((p) => {
+      const total = p.attack + p.blocks + p.assists + p.service;
+      return total > 0;
+    });
     return copy.sort((a, b) => {
       const totalA = a.attack + a.blocks + a.assists + a.service;
       const totalB = b.attack + b.blocks + b.assists + b.service;
@@ -24,7 +27,7 @@ const CumulativeStats = () => {
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-3xl font-bold mb-6 text-center text-strong">Cumulative Player Stats</h2>
 
-      <div className="table-wrap overflow-x-auto">
+      <div className="glass glass--strong tableWrap overflow-x-auto">
         <table className="table table-auto w-full text-sm text-left">
           <thead>
             <tr>
