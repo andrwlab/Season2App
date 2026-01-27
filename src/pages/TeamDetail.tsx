@@ -128,7 +128,7 @@ const TeamDetail = () => {
 
         <div className="space-y-3">
           <h3 className="text-lg font-semibold">Team Leaders</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {leaderCards.map((card) => (
               <div key={card.key} className="card p-4 flex items-center gap-3">
                 <div className="text-2xl">{card.icon}</div>

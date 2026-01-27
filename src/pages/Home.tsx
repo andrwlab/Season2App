@@ -97,13 +97,13 @@ const Home = () => {
 
   const standings = useMemo(() => {
     if (isSeason1) return [];
-    const map: Record<string, { teamId: string; w: number; l: number }> = {};
+    const map: Record<string, { teamId: string; w: number; l: number; diff: number }> = {};
     matches.forEach((m) => {
       const homeScore = m.scores?.home;
       const awayScore = m.scores?.away;
       if (homeScore == null || awayScore == null) return;
-      if (!map[m.homeTeamId]) map[m.homeTeamId] = { teamId: m.homeTeamId, w: 0, l: 0 };
-      if (!map[m.awayTeamId]) map[m.awayTeamId] = { teamId: m.awayTeamId, w: 0, l: 0 };
+      if (!map[m.homeTeamId]) map[m.homeTeamId] = { teamId: m.homeTeamId, w: 0, l: 0, diff: 0 };
+      if (!map[m.awayTeamId]) map[m.awayTeamId] = { teamId: m.awayTeamId, w: 0, l: 0, diff: 0 };
       if (homeScore > awayScore) {
         map[m.homeTeamId].w += 1;
         map[m.awayTeamId].l += 1;
@@ -111,8 +111,14 @@ const Home = () => {
         map[m.awayTeamId].w += 1;
         map[m.homeTeamId].l += 1;
       }
+      map[m.homeTeamId].diff += homeScore - awayScore;
+      map[m.awayTeamId].diff += awayScore - homeScore;
     });
-    return Object.values(map).sort((a, b) => b.w - a.w);
+    return Object.values(map).sort((a, b) => {
+      if (b.w !== a.w) return b.w - a.w;
+      if (b.diff !== a.diff) return b.diff - a.diff;
+      return getTeamName(a.teamId).localeCompare(getTeamName(b.teamId));
+    });
   }, [isSeason1, matches]);
 
   const playerTotals = useMemo(() => {
@@ -230,7 +236,7 @@ const Home = () => {
 
       <section>
         <h2 className="section-title text-xl font-semibold mb-4">Participating Teams</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
           {(isSeason1 ? season1Teams : teams).map((team) => {
             const key = isSeason1 ? team.name : team.id;
             const content = (
@@ -289,6 +295,7 @@ const Home = () => {
                 <th className="px-4 py-2">Team</th>
                 <th className="px-4 py-2">W</th>
                 <th className="px-4 py-2">L</th>
+                <th className="px-4 py-2">+/-</th>
               </tr>
             </thead>
             <tbody>
@@ -298,6 +305,9 @@ const Home = () => {
                   <td className="px-4 py-2 font-medium text-strong">{getTeamName(team.teamId)}</td>
                   <td className="px-4 py-2">{team.w}</td>
                   <td className="px-4 py-2">{team.l}</td>
+                  <td className="px-4 py-2">
+                    {team.diff > 0 ? `+${team.diff}` : team.diff}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -307,7 +317,7 @@ const Home = () => {
 
       <section>
         <h2 className="section-title text-xl font-semibold mb-4">StatPadders MVP Race</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { stat: "Attacks", icon: "🏐", key: "attack" as const },
           { stat: "Blocks", icon: "🛡️", key: "blocks" as const },
