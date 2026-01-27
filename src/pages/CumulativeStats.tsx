@@ -1,10 +1,27 @@
 import React, { useMemo, useState } from "react";
 import { useAggregatedPlayerStats } from "../hooks/useAggregatedPlayerStats";
+import { useSeason } from "../hooks/useSeason";
+
+const isSeason1Name = (name?: string | null) => {
+  if (!name) return false;
+  const normalized = name.toLowerCase();
+  return normalized.includes("season 1") || normalized.includes("temporada 1") || normalized === "s1";
+};
 
 type SortKey = "total" | "attack" | "blocks" | "assists" | "service";
 
 const CumulativeStats = () => {
-  const stats = useAggregatedPlayerStats(null);
+  const { seasons, selectedSeasonId } = useSeason();
+
+  const seasonIdForCumulative = useMemo(() => {
+    const activeNonSeason1 = seasons.find((s) => s.isActive && !isSeason1Name(s.name));
+    if (activeNonSeason1) return activeNonSeason1.id;
+    const anyNonSeason1 = seasons.find((s) => !isSeason1Name(s.name));
+    if (anyNonSeason1) return anyNonSeason1.id;
+    return selectedSeasonId ?? null;
+  }, [seasons, selectedSeasonId]);
+
+  const stats = useAggregatedPlayerStats(seasonIdForCumulative, true);
   const [sortKey, setSortKey] = useState<SortKey>("total");
 
   const sorted = useMemo(() => {

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Player,
-  subscribeAllPlayerStats,
   subscribePlayerStats,
   subscribePlayers,
 } from "../firebase/queries";
@@ -17,7 +16,10 @@ interface PlayerStat {
   team?: string;
 }
 
-export function useAggregatedPlayerStats(seasonId?: string | null): PlayerStat[] {
+export function useAggregatedPlayerStats(
+  seasonId?: string | null,
+  includeSeason1 = false
+): PlayerStat[] {
   const [stats, setStats] = useState<PlayerStat[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [statsSnap, setStatsSnap] = useState<any[]>([]);
@@ -27,10 +29,11 @@ export function useAggregatedPlayerStats(seasonId?: string | null): PlayerStat[]
   }, []);
 
   useEffect(() => {
-    const unsubStats = seasonId
-      ? subscribePlayerStats(seasonId, setStatsSnap)
-      : subscribeAllPlayerStats(setStatsSnap);
-    return () => unsubStats();
+    if (!seasonId) {
+      setStatsSnap([]);
+      return () => {};
+    }
+    return subscribePlayerStats(seasonId, setStatsSnap);
   }, [seasonId]);
 
   const nameToPlayerId = useMemo(
@@ -51,7 +54,7 @@ export function useAggregatedPlayerStats(seasonId?: string | null): PlayerStat[]
     });
 
     const season1NameById: Record<string, string> = {};
-    if (!seasonId) {
+    if (includeSeason1) {
       season1Players.forEach((p) => {
         const id = nameToPlayerId[p.name] || `season1:${p.name}`;
         season1NameById[id] = p.name;
