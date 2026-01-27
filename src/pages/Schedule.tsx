@@ -69,26 +69,26 @@ const Schedule = () => {
                   const homeName = homeTeam?.name || item.homeTeamId;
                   const awayName = awayTeam?.name || item.awayTeamId;
                   const statusLabel = item.status || (isPlayed ? "completed" : "scheduled");
-                  const scoreLabel = isPlayed ? `${homeScore} - ${awayScore}` : "vs";
+                  const scoreLabel = isPlayed ? `${homeScore} - ${awayScore}` : "VS";
 
                   return (
                     <li key={item.id} className="list-card glass glass--hover p-4 md:p-5">
-                      <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[110px_1fr_auto] sm:items-center sm:gap-4">
-                        <div className="text-sm text-muted sm:text-base sm:font-semibold">
+                      <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[110px_1fr_auto] sm:items-center sm:gap-4">
+                        <div className="text-sm text-muted sm:text-base sm:font-semibold self-start sm:self-auto">
                           {time || "--:--"}
                         </div>
 
                         <Link to={`/matches/${item.id}`} className="block hover:opacity-95 transition-opacity">
-                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                             <div className="flex items-center justify-end gap-3 text-right">
-                              <div className="min-w-0">
+                              <div className="min-w-0 hidden sm:block">
                                 <div className="font-semibold text-base md:text-lg truncate">{homeName}</div>
                                 <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Home</div>
                               </div>
                               <TeamLogo
                                 logoFile={homeTeam?.logoFile}
                                 name={homeName}
-                                className="h-12 w-12 md:h-14 md:w-14 rounded-full object-contain"
+                                className="h-16 w-16 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full object-contain"
                               />
                             </div>
 
@@ -109,9 +109,9 @@ const Schedule = () => {
                               <TeamLogo
                                 logoFile={awayTeam?.logoFile}
                                 name={awayName}
-                                className="h-12 w-12 md:h-14 md:w-14 rounded-full object-contain"
+                                className="h-16 w-16 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full object-contain"
                               />
-                              <div className="min-w-0">
+                              <div className="min-w-0 hidden sm:block">
                                 <div className="font-semibold text-base md:text-lg truncate">{awayName}</div>
                                 <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Away</div>
                               </div>
