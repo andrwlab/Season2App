@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import useUserRole from "../hooks/useUserRole";
-import { Player, Team, subscribePlayers, subscribeTeams } from "../firebase/queries";
+import { Player, Roster, Team, subscribePlayers, subscribeRosters, subscribeTeams } from "../firebase/queries";
 import { useSeason } from "../hooks/useSeason";
 import TeamLogo from "../components/TeamLogo";
 
@@ -27,6 +27,7 @@ const MatchDetail = () => {
   const { selectedSeasonId } = useSeason();
   const [match, setMatch] = useState<MatchDoc | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [rosters, setRosters] = useState<Roster[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const role = useUserRole();
 
@@ -44,6 +45,7 @@ const MatchDetail = () => {
   }, [id]);
 
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
+  useEffect(() => subscribeRosters(selectedSeasonId, setRosters), [selectedSeasonId]);
   useEffect(() => subscribePlayers(setPlayers), []);
 
   const teamById = useMemo(
@@ -57,6 +59,15 @@ const MatchDetail = () => {
       ),
     [players]
   );
+  const rosterTeamByPlayerId = useMemo(() => {
+    const map: Record<string, string> = {};
+    rosters.forEach((r) => {
+      r.playerIds?.forEach((pid) => {
+        if (!map[pid]) map[pid] = r.teamId;
+      });
+    });
+    return map;
+  }, [rosters]);
 
   if (!match) return <p className="text-center mt-10">Loading match...</p>;
 
@@ -79,6 +90,18 @@ const MatchDetail = () => {
   const scoreAway = match.scores?.away ?? match.scoreB;
   const isPlayed = scoreHome != null && scoreAway != null;
   const statusLabel = match.status || (isPlayed ? "completed" : "scheduled");
+  const statsEntries = Object.entries(match.playersStats || {});
+  const homeStats = statsEntries.filter(
+    ([playerId]) => rosterTeamByPlayerId[playerId] === homeTeamId
+  );
+  const awayStats = statsEntries.filter(
+    ([playerId]) => rosterTeamByPlayerId[playerId] === awayTeamId
+  );
+  const unassignedStats = statsEntries.filter(
+    ([playerId]) =>
+      rosterTeamByPlayerId[playerId] !== homeTeamId &&
+      rosterTeamByPlayerId[playerId] !== awayTeamId
+  );
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -132,8 +155,8 @@ const MatchDetail = () => {
         </div>
       </div>
 
-      <div className="card glass glass--hover p-4 md:p-5">
-        <div className="flex items-baseline justify-between mb-3">
+      <div className="space-y-4">
+        <div className="flex items-baseline justify-between">
           <h3 className="text-lg font-bold">Player Statistics</h3>
           {!match.playersStats || Object.keys(match.playersStats).length === 0 ? (
             <span className="text-xs text-muted uppercase tracking-[0.2em]">
@@ -143,44 +166,97 @@ const MatchDetail = () => {
         </div>
 
         {match.playersStats && Object.keys(match.playersStats).length > 0 ? (
-          <div className="glass glass--strong tableWrap overflow-x-auto">
-            <table className="table table-auto w-full text-sm text-left">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-xs uppercase tracking-[0.2em] text-muted">
-                    Player
-                  </th>
-                  <th className="px-4 py-3 text-xs uppercase tracking-[0.2em] text-muted">
-                    Attacks
-                  </th>
-                  <th className="px-4 py-3 text-xs uppercase tracking-[0.2em] text-muted">
-                    Blocks
-                  </th>
-                  <th className="px-4 py-3 text-xs uppercase tracking-[0.2em] text-muted">
-                    Assists
-                  </th>
-                  <th className="px-4 py-3 text-xs uppercase tracking-[0.2em] text-muted">
-                    Serves
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(match.playersStats).map(([playerId, stats]) => (
-                  <tr key={playerId} className="border-t border-white/5 hover:bg-white/5">
-                    <td className="px-4 py-3 font-medium">
-                      {playerMap[playerId] || playerId}
-                    </td>
-                    <td className="px-4 py-3">{stats?.attack ?? 0}</td>
-                    <td className="px-4 py-3">{stats?.blocks ?? 0}</td>
-                    <td className="px-4 py-3">{stats?.assists ?? 0}</td>
-                    <td className="px-4 py-3">{stats?.service ?? 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {[{ label: homeName, entries: homeStats }, { label: awayName, entries: awayStats }].map(
+              ({ label, entries }) => (
+                <div key={label} className="card glass glass--hover p-4">
+                  <h4 className="text-md font-semibold mb-3">{label}</h4>
+                  {entries.length > 0 ? (
+                    <div className="glass glass--strong tableWrap overflow-x-auto">
+                      <table className="table table-auto w-full text-sm text-left">
+                        <thead>
+                          <tr>
+                            <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                              Player
+                            </th>
+                            <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                              Att
+                            </th>
+                            <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                              Blk
+                            </th>
+                            <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                              Ast
+                            </th>
+                            <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                              Srv
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {entries.map(([playerId, stats]) => (
+                            <tr key={playerId} className="border-t border-white/5 hover:bg-white/5">
+                              <td className="px-3 py-2 font-medium">
+                                {playerMap[playerId] || playerId}
+                              </td>
+                              <td className="px-3 py-2">{stats?.attack ?? 0}</td>
+                              <td className="px-3 py-2">{stats?.blocks ?? 0}</td>
+                              <td className="px-3 py-2">{stats?.assists ?? 0}</td>
+                              <td className="px-3 py-2">{stats?.service ?? 0}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted">No stats recorded for this team.</p>
+                  )}
+                </div>
+              )
+            )}
           </div>
         ) : (
           <p className="text-muted text-sm">No stats recorded.</p>
+        )}
+
+        {unassignedStats.length > 0 && (
+          <div className="card glass glass--hover p-4">
+            <h4 className="text-md font-semibold mb-3">Unassigned Players</h4>
+            <div className="glass glass--strong tableWrap overflow-x-auto">
+              <table className="table table-auto w-full text-sm text-left">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                      Player
+                    </th>
+                    <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                      Att
+                    </th>
+                    <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                      Blk
+                    </th>
+                    <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                      Ast
+                    </th>
+                    <th className="px-3 py-2 text-xs uppercase tracking-[0.2em] text-muted">
+                      Srv
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unassignedStats.map(([playerId, stats]) => (
+                    <tr key={playerId} className="border-t border-white/5 hover:bg-white/5">
+                      <td className="px-3 py-2 font-medium">{playerMap[playerId] || playerId}</td>
+                      <td className="px-3 py-2">{stats?.attack ?? 0}</td>
+                      <td className="px-3 py-2">{stats?.blocks ?? 0}</td>
+                      <td className="px-3 py-2">{stats?.assists ?? 0}</td>
+                      <td className="px-3 py-2">{stats?.service ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </div>
     </div>
