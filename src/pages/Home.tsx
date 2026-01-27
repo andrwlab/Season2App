@@ -167,7 +167,9 @@ const Home = () => {
                       {date?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
-                  <div className="text-xs text-muted italic">{match.status || "scheduled"}</div>
+                  <div className="text-xs text-muted italic">
+                    {match.status || "Single set of 25 points"}
+                  </div>
                 </li>
               );
             })}

@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { useAuth } from './AuthContext';
 import { useSeason } from './hooks/useSeason';
 
@@ -9,6 +9,7 @@ const Navbar = () => {
   const { user, role } = useAuth();
   const { seasons, selectedSeasonId, setSelectedSeasonId, isLoading } = useSeason();
   const activeSeason = seasons.find((s) => s.isActive) || seasons[0] || null;
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (role !== 'admin' && activeSeason && selectedSeasonId !== activeSeason.id) {
@@ -16,9 +17,34 @@ const Navbar = () => {
     }
   }, [role, activeSeason, selectedSeasonId, setSelectedSeasonId]);
 
-  const login = () => {
+  const login = async () => {
     const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider).catch(console.error);
+    setAuthError(null);
+
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error(error);
+      const errorCode = error?.code as string | undefined;
+      if (errorCode === 'auth/popup-blocked') {
+        setAuthError('Popup blocked. Redirecting to the sign-in page...');
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      if (errorCode === 'auth/unauthorized-domain') {
+        setAuthError(
+          `Sign-in is disabled for ${window.location.hostname}. Add this domain in Firebase Auth settings.`
+        );
+        return;
+      }
+
+      if (errorCode === 'auth/popup-closed-by-user') {
+        setAuthError('Popup closed before completing sign-in.');
+        return;
+      }
+
+      setAuthError('Unable to sign in. Please try again.');
+    }
   };
 
   const logout = () => {
@@ -110,12 +136,17 @@ const Navbar = () => {
               </button>
             </>
           ) : (
-            <button
-              onClick={login}
-              className="btn btn-signin px-4 py-1 text-sm"
-            >
-              Sign in
-            </button>
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={login}
+                className="btn btn-signin px-4 py-1 text-sm"
+              >
+                Sign in
+              </button>
+              {authError && (
+                <span className="text-xs text-red-500 text-center max-w-[220px]">{authError}</span>
+              )}
+            </div>
           )}
         </div>
       </div>

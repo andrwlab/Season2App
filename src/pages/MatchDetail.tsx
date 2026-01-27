@@ -74,7 +74,7 @@ const MatchDetail = () => {
           {homeName} vs {awayName}
         </div>
         <div className="text-center text-muted text-sm mb-4">
-          {date} • {match.status || "scheduled"}
+          {date} • {match.status || "Single set of 25 points"}
         </div>
 
         {scoreHome != null && scoreAway != null ? (
