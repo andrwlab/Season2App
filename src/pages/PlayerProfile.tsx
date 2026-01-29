@@ -38,15 +38,12 @@ const PlayerProfile = () => {
   }, [rosters, id]);
   const team = teams.find((t) => t.id === playerTeamId);
 
-  if (!player) {
-    return (
-      <div className="p-6 text-center text-muted">
-        Player not found.
-      </div>
-    );
-  }
-
-  const displayName = player.fullName || (player as any).name || player.id;
+  const displayName =
+    player?.fullName ||
+    (player as any)?.name ||
+    player?.id ||
+    id ||
+    "Unknown player";
   const initials = displayName
     .split(" ")
     .map((p) => p[0])
@@ -55,13 +52,13 @@ const PlayerProfile = () => {
     .toUpperCase();
 
   const typeLabel =
-    player.type === "teacher"
+    player?.type === "teacher"
       ? "Teacher"
-      : player.type === "student"
+      : player?.type === "student"
       ? "Student"
-      : player.type === "profesor"
+      : player?.type === "profesor"
       ? "Teacher"
-      : player.type === "estudiante"
+      : player?.type === "estudiante"
       ? "Student"
       : "—";
 
@@ -119,6 +116,14 @@ const PlayerProfile = () => {
         (stat.attack || stat.blocks || stat.assists || stat.service)
     );
   }, [allStats, displayName, id]);
+
+  if (!player) {
+    return (
+      <div className="p-6 text-center text-muted">
+        Player not found.
+      </div>
+    );
+  }
 
   const StatCard = ({
     icon,
