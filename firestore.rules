@@ -1,11 +1,140 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdmin() {
-      return request.auth != null && request.auth.token.role == "admin";
+    function hasRole(role) {
+      if (request.auth == null) {
+        return false;
+      }
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return request.auth.token.role == role
+        || (userDoc.exists() && userDoc.data.role == role);
     }
 
-    match /{document=**} {
+    function isAdmin() {
+      return hasRole("admin");
+    }
+
+    function isScorekeeper() {
+      return hasRole("scorekeeper");
+    }
+
+    function voteIsOpen(matchId) {
+      let matchDoc = get(/databases/$(database)/documents/matches/$(matchId));
+      return matchDoc.exists()
+        && matchDoc.data.fanVoteEnabled == true
+        && matchDoc.data.fanVoteCloseAt is timestamp
+        && request.time < matchDoc.data.fanVoteCloseAt
+        && (
+          matchDoc.data.status == "finished" ||
+          matchDoc.data.status == "completed"
+        );
+    }
+
+    function isValidFanVoteCreate(uid) {
+      return request.resource.data.keys()
+          .hasOnly(["uid", "playerId", "createdAt", "updatedAt"])
+        && request.resource.data.uid == uid
+        && request.resource.data.playerId is string
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function isValidFanVoteUpdate(uid) {
+      return request.resource.data.uid == uid
+        && request.resource.data.playerId is string
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).changedKeys()
+          .hasOnly(["playerId", "updatedAt"]);
+    }
+
+    function isScorekeeperMatchUpdate() {
+      let changed = request.resource.data.diff(resource.data).changedKeys();
+      return changed.hasOnly([
+          "scores",
+          "status",
+          "playersStats",
+          "endedAt",
+          "fanVoteEnabled",
+          "fanVoteCloseAt",
+          "updatedAt"
+        ])
+        && request.resource.data.scores is map
+        && request.resource.data.scores.home is int
+        && request.resource.data.scores.away is int
+        && request.resource.data.status in ["finished", "completed"]
+        && (
+          !request.resource.data.keys().hasAny(["playersStats"]) ||
+          request.resource.data.playersStats is map
+        )
+        && (
+          !request.resource.data.keys().hasAny(["endedAt"]) ||
+          request.resource.data.endedAt is timestamp
+        )
+        && (
+          !request.resource.data.keys().hasAny(["fanVoteEnabled"]) ||
+          request.resource.data.fanVoteEnabled is bool
+        )
+        && (
+          !request.resource.data.keys().hasAny(["fanVoteCloseAt"]) ||
+          request.resource.data.fanVoteCloseAt is timestamp
+        )
+        && (
+          !request.resource.data.keys().hasAny(["updatedAt"]) ||
+          request.resource.data.updatedAt is timestamp
+        );
+    }
+
+    function isValidPlayerStatWrite() {
+      return request.resource.data.keys().hasOnly([
+          "seasonId",
+          "matchId",
+          "playerId",
+          "attack",
+          "blocks",
+          "assists",
+          "service"
+        ])
+        && request.resource.data.seasonId is string
+        && request.resource.data.matchId is string
+        && request.resource.data.playerId is string
+        && request.resource.data.attack is int
+        && request.resource.data.blocks is int
+        && request.resource.data.assists is int
+        && request.resource.data.service is int;
+    }
+
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isScorekeeper() && isScorekeeperMatchUpdate());
+
+      match /fanVotes/{uid} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow create: if request.auth != null
+          && request.auth.uid == uid
+          && voteIsOpen(matchId)
+          && isValidFanVoteCreate(uid);
+        allow update: if request.auth != null
+          && request.auth.uid == uid
+          && voteIsOpen(matchId)
+          && isValidFanVoteUpdate(uid);
+        allow delete: if false;
+      }
+
+      match /fanTally/{playerId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    match /playerStats/{docId} {
+      allow read: if true;
+      allow create, update: if isAdmin() || (isScorekeeper() && isValidPlayerStatWrite());
+      allow delete: if isAdmin() || isScorekeeper();
+    }
+
+    match /{collection}/{docId} {
       allow read: if true;
       allow write: if isAdmin();
     }
