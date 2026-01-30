@@ -2,12 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function hasRole(role) {
-      if (request.auth == null) {
-        return false;
-      }
       let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return request.auth.token.role == role
-        || (userDoc.exists() && userDoc.data.role == role);
+      return request.auth != null
+        && (
+          request.auth.token.role == role
+          || (userDoc.data != null && userDoc.data.role == role)
+        );
     }
 
     function isAdmin() {
@@ -20,7 +20,7 @@ service cloud.firestore {
 
     function voteIsOpen(matchId) {
       let matchDoc = get(/databases/$(database)/documents/matches/$(matchId));
-      return matchDoc.exists()
+      return matchDoc.data != null
         && matchDoc.data.fanVoteEnabled == true
         && matchDoc.data.fanVoteCloseAt is timestamp
         && request.time < matchDoc.data.fanVoteCloseAt
@@ -101,7 +101,7 @@ service cloud.firestore {
         && request.resource.data.attack is int
         && request.resource.data.blocks is int
         && request.resource.data.assists is int
-        && request.resource.data.service is int;
+        && request.resource.data["service"] is int;
     }
 
     match /matches/{matchId} {
