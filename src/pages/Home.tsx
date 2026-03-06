@@ -95,6 +95,12 @@ const Home = () => {
       .slice(0, 3);
   }, [matches]);
 
+  const getTeamName = (teamId?: string) => {
+    if (!teamId) return "Team";
+    if (isSeason1) return teamId;
+    return teamMap[teamId]?.name || teamId;
+  };
+
   const standings = useMemo(() => {
     if (isSeason1) return [];
     const map: Record<string, { teamId: string; w: number; l: number; diff: number }> = {};
@@ -172,12 +178,6 @@ const Home = () => {
     });
     return totals;
   }, [isSeason1, playerTotals, playerTeamMap]);
-
-  const getTeamName = (teamId?: string) => {
-    if (!teamId) return "Team";
-    if (isSeason1) return teamId;
-    return teamMap[teamId]?.name || teamId;
-  };
 
   const bestTeam = (key: "attack" | "blocks" | "assists" | "service") => {
     const entries = Object.entries(teamStats);

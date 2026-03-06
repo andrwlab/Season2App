@@ -13,15 +13,24 @@ type SortKey = "total" | "attack" | "blocks" | "assists" | "service";
 const CumulativeStats = () => {
   const { seasons, selectedSeasonId } = useSeason();
 
-  const seasonIdForCumulative = useMemo(() => {
+  const season1Ids = useMemo(
+    () => seasons.filter((s) => isSeason1Name(s.name)).map((s) => s.id),
+    [seasons]
+  );
+
+  const excludedSeasonId = useMemo(() => {
     const activeNonSeason1 = seasons.find((s) => s.isActive && !isSeason1Name(s.name));
     if (activeNonSeason1) return activeNonSeason1.id;
-    const anyNonSeason1 = seasons.find((s) => !isSeason1Name(s.name));
-    if (anyNonSeason1) return anyNonSeason1.id;
-    return selectedSeasonId ?? null;
+    const selected = seasons.find((s) => s.id === selectedSeasonId);
+    if (selected && !isSeason1Name(selected.name)) return selected.id;
+    return null;
   }, [seasons, selectedSeasonId]);
 
-  const stats = useAggregatedPlayerStats(seasonIdForCumulative, true);
+  const stats = useAggregatedPlayerStats(null, {
+    includeSeason1: true,
+    excludeSeasonId: excludedSeasonId,
+    season1Ids,
+  });
   const [sortKey, setSortKey] = useState<SortKey>("total");
 
   const sorted = useMemo(() => {

@@ -14,9 +14,15 @@ import {
 import { useSeason } from "../hooks/useSeason";
 import { season1PlayerByName } from "../data";
 
+const isSeason1Name = (name?: string | null) => {
+  if (!name) return false;
+  const normalized = name.toLowerCase();
+  return normalized.includes("season 1") || normalized.includes("temporada 1") || normalized === "s1";
+};
+
 const PlayerProfile = () => {
   const { id } = useParams();
-  const { selectedSeasonId } = useSeason();
+  const { selectedSeasonId, seasons } = useSeason();
   const [players, setPlayers] = useState<Player[]>([]);
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -28,6 +34,18 @@ const PlayerProfile = () => {
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
   useEffect(() => subscribePlayerStats(selectedSeasonId, setSeasonStats), [selectedSeasonId]);
   useEffect(() => subscribeAllPlayerStats(setAllStats), []);
+
+  const season1IdSet = useMemo(
+    () => new Set(seasons.filter((s) => isSeason1Name(s.name)).map((s) => s.id)),
+    [seasons]
+  );
+  const isExcludingSeason1 = !!(selectedSeasonId && season1IdSet.has(selectedSeasonId));
+  const hasSeason1StatsInDb = useMemo(() => {
+    if (!id || season1IdSet.size === 0) return false;
+    return allStats.some(
+      (stat) => stat.playerId === id && season1IdSet.has(stat.seasonId)
+    );
+  }, [allStats, id, season1IdSet]);
 
   const player = players.find((p) => p.id === id);
   const playerTeamId = useMemo(() => {
@@ -80,20 +98,28 @@ const PlayerProfile = () => {
     if (!id) return totals;
     allStats.forEach((stat) => {
       if (stat.playerId !== id) return;
+      if (selectedSeasonId && stat.seasonId === selectedSeasonId) return;
       totals.attack += stat.attack || 0;
       totals.blocks += stat.blocks || 0;
       totals.assists += stat.assists || 0;
       totals.service += stat.service || 0;
     });
     const season1 = season1PlayerByName[displayName];
-    if (season1) {
+    if (season1 && !hasSeason1StatsInDb && !isExcludingSeason1) {
       totals.attack += season1.attack || 0;
       totals.blocks += season1.blocks || 0;
       totals.assists += season1.assists || 0;
       totals.service += season1.service || 0;
     }
     return totals;
-  }, [allStats, displayName, id]);
+  }, [
+    allStats,
+    displayName,
+    hasSeason1StatsInDb,
+    id,
+    isExcludingSeason1,
+    selectedSeasonId,
+  ]);
 
   const hasSeasonData = useMemo(() => {
     if (!id) return false;
@@ -105,17 +131,29 @@ const PlayerProfile = () => {
   }, [id, seasonStats]);
 
   const hasCumulativeData = useMemo(() => {
-    const season1 = season1PlayerByName[displayName];
-    if (season1 && (season1.attack || season1.blocks || season1.assists || season1.service)) {
-      return true;
-    }
     if (!id) return false;
-    return allStats.some(
+    const hasDb = allStats.some(
       (stat) =>
         stat.playerId === id &&
+        (!selectedSeasonId || stat.seasonId !== selectedSeasonId) &&
         (stat.attack || stat.blocks || stat.assists || stat.service)
     );
-  }, [allStats, displayName, id]);
+    if (hasDb) return true;
+    if (!hasSeason1StatsInDb && !isExcludingSeason1) {
+      const season1 = season1PlayerByName[displayName];
+      if (season1 && (season1.attack || season1.blocks || season1.assists || season1.service)) {
+        return true;
+      }
+    }
+    return false;
+  }, [
+    allStats,
+    displayName,
+    hasSeason1StatsInDb,
+    id,
+    isExcludingSeason1,
+    selectedSeasonId,
+  ]);
 
   if (!player) {
     return (
