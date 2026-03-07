@@ -16,6 +16,7 @@ const Matches = () => {
     awayTeamId: "",
     dateISO: "",
     timeHHmm: "",
+    phase: "",
   });
 
   useEffect(() => subscribeMatches(selectedSeasonId, setMatches), [selectedSeasonId]);
@@ -41,13 +42,14 @@ const Matches = () => {
       timeHHmm: formData.timeHHmm,
       homeTeamId: formData.homeTeamId,
       awayTeamId: formData.awayTeamId,
-      status: "scheduled",
+      status: formData.phase === "semifinal" ? "Semifinals" : "scheduled",
+      phase: formData.phase || undefined,
       scores: { home: null, away: null },
     };
 
     try {
       await addDoc(collection(db, "matches"), newMatch);
-      setFormData({ homeTeamId: "", awayTeamId: "", dateISO: "", timeHHmm: "" });
+      setFormData({ homeTeamId: "", awayTeamId: "", dateISO: "", timeHHmm: "", phase: "" });
     } catch (error) {
       console.error("Error saving match:", error);
     }
@@ -112,6 +114,19 @@ const Matches = () => {
                 required
               />
             </div>
+            <div>
+              <select
+                name="phase"
+                value={formData.phase}
+                onChange={handleChange}
+                className="input-field w-full px-3 py-2"
+              >
+                <option value="">Regular season</option>
+                <option value="semifinal">Semifinals</option>
+                <option value="third">Third place</option>
+                <option value="final">Final</option>
+              </select>
+            </div>
             <button type="submit" className="btn btn-primary px-4 py-2">
               Save
             </button>
@@ -126,6 +141,7 @@ const Matches = () => {
             <span>
               <strong>{match.dateISO}</strong>: {teamMap[match.homeTeamId] || match.homeTeamId} vs{" "}
               {teamMap[match.awayTeamId] || match.awayTeamId}
+              {match.phase === "semifinal" && <em className="ml-2">(Semifinals)</em>}
             </span>
             {(role === "admin" || role === "scorekeeper") && (
               <Link to={`/admin-match/${match.id}`} className="text-sm link-brand hover:underline ml-4">

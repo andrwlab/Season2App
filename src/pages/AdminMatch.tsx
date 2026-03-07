@@ -104,7 +104,7 @@ const AdminMatch = () => {
       const matchRef = doc(db, "matches", id as string);
       await updateDoc(matchRef, {
         scores: { home: parseInt(scoreA as string), away: parseInt(scoreB as string) },
-        status: "completed",
+        status: match.phase === "semifinal" ? "Semifinals" : "completed",
         playersStats: formData,
       });
 

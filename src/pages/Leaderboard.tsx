@@ -32,6 +32,7 @@ const Leaderboard = () => {
       map[t.id] = { teamId: t.id, w: 0, l: 0, pf: 0, pc: 0 };
     });
     matches.forEach((m: any) => {
+      if (m.phase === "semifinal" || m.phase === "third" || m.phase === "final") return;
       const homeId = m.homeTeamId || m.teamA;
       const awayId = m.awayTeamId || m.teamB;
       const homeScore = m.scores?.home ?? m.scoreA;
