@@ -105,6 +105,7 @@ const Home = () => {
     if (isSeason1) return [];
     const map: Record<string, { teamId: string; w: number; l: number; diff: number }> = {};
     matches.forEach((m) => {
+      if (m.phase === "semifinal" || m.phase === "third" || m.phase === "final") return;
       const homeScore = m.scores?.home;
       const awayScore = m.scores?.away;
       if (homeScore == null || awayScore == null) return;

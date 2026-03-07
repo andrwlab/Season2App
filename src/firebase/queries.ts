@@ -74,7 +74,8 @@ export type Match = {
   timeHHmm?: string;
   homeTeamId: string;
   awayTeamId: string;
-  status?: "scheduled" | "completed" | "canceled";
+  status?: "scheduled" | "completed" | "canceled" | "Semifinals" | string;
+  phase?: "semifinal" | "third" | "final";
   scores?: { home: number | null; away: number | null };
 };
 
