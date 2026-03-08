@@ -98,6 +98,7 @@ export type PlayerStat = {
   seasonId: string;
   matchId: string;
   playerId: string;
+  playerName?: string;
   attack?: number;
   blocks?: number;
   assists?: number;

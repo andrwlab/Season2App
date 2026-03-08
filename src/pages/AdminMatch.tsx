@@ -238,25 +238,26 @@ const AdminMatch = () => {
         const batch = writeBatch(db);
         const statEntries = Object.entries(formData)
           .map(([playerId, stats]) => {
+            const playerInfo = playersById[playerId];
+            const playerName = playerInfo?.fullName || (playerInfo as any)?.name;
             const attack = stats?.attack || 0;
             const blocks = stats?.blocks || 0;
             const assists = stats?.assists || 0;
             const service = stats?.service || 0;
             const hasAnyStat = attack || blocks || assists || service;
             if (!hasAnyStat) return null;
-            return {
-              id: `${matchId}__${playerId}`,
-              data: {
-                seasonId: seasonIdForStats,
-                matchId,
-                playerId,
-                attack,
-                blocks,
-                assists,
-                service,
-                updatedAt: serverTimestamp(),
-              },
+            const data: Record<string, unknown> = {
+              seasonId: seasonIdForStats,
+              matchId,
+              playerId,
+              attack,
+              blocks,
+              assists,
+              service,
+              updatedAt: serverTimestamp(),
             };
+            if (playerName) data.playerName = playerName;
+            return { id: `${matchId}__${playerId}`, data };
           })
           .filter(Boolean) as Array<{ id: string; data: Record<string, unknown> }>;
         const newStatIds = new Set(statEntries.map((entry) => entry.id));
