@@ -167,7 +167,11 @@ const Players = () => {
             onChange={(e) => setPageSeasonId(e.target.value)}
             disabled={seasons.length === 0}
           >
-            {!pageSeasonId && <option value="">Select season</option>}
+            {!pageSeasonId && (
+              <option value="" disabled>
+                Select season
+              </option>
+            )}
             {seasons.map((season) => (
               <option key={season.id} value={season.id}>
                 {season.name}
