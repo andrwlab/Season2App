@@ -35,6 +35,8 @@ type ScheduleMatch = {
   time: string;
   home: string;
   away: string;
+  phase?: "semifinal" | "third" | "final";
+  status?: string;
 };
 
 type ScheduleDate = {
@@ -109,7 +111,8 @@ async function seedMatches() {
           timeHHmm: match.time,
           homeTeamId: match.home,
           awayTeamId: match.away,
-          status: "scheduled",
+          status: match.status || (match.phase === "semifinal" ? "Semifinals" : "scheduled"),
+          phase: match.phase,
           scores: { home: null, away: null },
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),

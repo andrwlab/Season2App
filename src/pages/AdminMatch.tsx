@@ -18,6 +18,61 @@ import { Player, Roster, Team, subscribePlayers, subscribeRosters, subscribeTeam
 import { useSeason } from "../hooks/useSeason";
 import { useAuth } from "../AuthContext";
 
+type SetScoreInput = { home: string; away: string };
+type SetScore = { home: number; away: number };
+
+const createEmptySetScores = (): SetScoreInput[] => [
+  { home: "", away: "" },
+  { home: "", away: "" },
+  { home: "", away: "" },
+];
+
+const parseSetScores = (sets: SetScoreInput[]) => {
+  const parsed: SetScore[] = [];
+  const wins = { home: 0, away: 0 };
+  let sawGap = false;
+
+  for (let i = 0; i < sets.length; i += 1) {
+    const homeRaw = sets[i].home.trim();
+    const awayRaw = sets[i].away.trim();
+    const hasHome = homeRaw !== "";
+    const hasAway = awayRaw !== "";
+
+    if (!hasHome && !hasAway) {
+      if (parsed.length > 0) sawGap = true;
+      continue;
+    }
+
+    if (!hasHome || !hasAway) {
+      return { error: `Enter both scores for set ${i + 1}.`, parsed, wins };
+    }
+
+    const homeVal = Number.parseInt(homeRaw, 10);
+    const awayVal = Number.parseInt(awayRaw, 10);
+
+    if (Number.isNaN(homeVal) || Number.isNaN(awayVal) || homeVal < 0 || awayVal < 0) {
+      return { error: `Set ${i + 1} needs valid non-negative scores.`, parsed, wins };
+    }
+
+    if (sawGap) {
+      return { error: "Fill set scores in order without skipping a set.", parsed, wins };
+    }
+
+    if (homeVal === awayVal) {
+      return { error: `Set ${i + 1} cannot be tied.`, parsed, wins };
+    }
+
+    parsed.push({ home: homeVal, away: awayVal });
+    if (homeVal > awayVal) {
+      wins.home += 1;
+    } else {
+      wins.away += 1;
+    }
+  }
+
+  return { parsed, wins };
+};
+
 const AdminMatch = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -26,6 +81,7 @@ const AdminMatch = () => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [scoreA, setScoreA] = useState("");
   const [scoreB, setScoreB] = useState("");
+  const [setScores, setSetScores] = useState<SetScoreInput[]>(createEmptySetScores);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState<string>("");
   const { role, loading: authLoading } = useAuth();
@@ -48,6 +104,16 @@ const AdminMatch = () => {
         setMatch(data);
         setScoreA(data.scores?.home ?? data.scoreA ?? "");
         setScoreB(data.scores?.away ?? data.scoreB ?? "");
+        const rawSetScores = Array.isArray(data.setScores) ? data.setScores : [];
+        const nextSetScores = createEmptySetScores().map((set, index) => {
+          const entry = rawSetScores[index];
+          if (!entry) return set;
+          return {
+            home: entry.home != null ? String(entry.home) : "",
+            away: entry.away != null ? String(entry.away) : "",
+          };
+        });
+        setSetScores(nextSetScores);
         setFormData(data.playersStats || {});
       } catch (err) {
         console.error("Failed to load match", err);
@@ -71,12 +137,42 @@ const AdminMatch = () => {
     }));
   };
 
-  const validateForm = () => {
-    const scoreAVal = parseInt(scoreA as string);
-    const scoreBVal = parseInt(scoreB as string);
+  const isBestOfThree =
+    match?.phase === "semifinal" || match?.status === "Semifinals" || match?.bestOf === 3;
 
-    if (isNaN(scoreAVal) || isNaN(scoreBVal)) {
-      return "You must enter a valid score for both teams.";
+  const resolveScores = () => {
+    if (isBestOfThree) {
+      const { parsed, wins, error: setErrorMessage } = parseSetScores(setScores);
+      if (setErrorMessage) {
+        return { error: setErrorMessage };
+      }
+      if (wins.home > 2 || wins.away > 2) {
+        return { error: "Best of 3 only allows up to 2 set wins." };
+      }
+      if (wins.home !== 2 && wins.away !== 2) {
+        return { error: "Best of 3 requires a team to win 2 sets." };
+      }
+      return { scores: wins, setScores: parsed };
+    }
+
+    const scoreAVal = Number.parseInt(scoreA as string, 10);
+    const scoreBVal = Number.parseInt(scoreB as string, 10);
+
+    if (Number.isNaN(scoreAVal) || Number.isNaN(scoreBVal)) {
+      return { error: "You must enter a valid score for both teams." };
+    }
+
+    if (scoreAVal < 0 || scoreBVal < 0) {
+      return { error: "Scores must be zero or higher." };
+    }
+
+    return { scores: { home: scoreAVal, away: scoreBVal } };
+  };
+
+  const validateForm = () => {
+    const scorePayload = resolveScores();
+    if (scorePayload.error) {
+      return scorePayload.error;
     }
 
     if (
@@ -94,9 +190,20 @@ const AdminMatch = () => {
     return null;
   };
 
+  const handleSetScoreChange = (index: number, side: "home" | "away", value: string) => {
+    setSetScores((prev) =>
+      prev.map((set, idx) => (idx === index ? { ...set, [side]: value } : set))
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
+    const scorePayload = resolveScores();
+    if (scorePayload.error) {
+      setError(scorePayload.error);
+      return;
+    }
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
@@ -108,14 +215,20 @@ const AdminMatch = () => {
       const matchId = id;
       const matchRef = doc(db, "matches", matchId);
       const closeAt = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
+      const statusValue =
+        match?.phase === "semifinal" || match?.status === "Semifinals" ? "Semifinals" : "finished";
       const matchUpdate: Record<string, any> = {
-        scores: { home: parseInt(scoreA as string), away: parseInt(scoreB as string) },
-        status: "finished",
+        scores: scorePayload.scores,
+        status: statusValue,
         playersStats: formData,
         endedAt: serverTimestamp(),
         fanVoteEnabled: true,
         fanVoteCloseAt: closeAt,
       };
+      if (scorePayload.setScores) {
+        matchUpdate.setScores = scorePayload.setScores;
+        matchUpdate.bestOf = 3;
+      }
       if (seasonIdForStats) {
         matchUpdate.seasonId = seasonIdForStats;
       }
@@ -231,6 +344,7 @@ const AdminMatch = () => {
   const teamBId = match.awayTeamId || match.teamB;
   const teamAName = teamMap[teamAId] || teamAId;
   const teamBName = teamMap[teamBId] || teamBId;
+  const setWinsPreview = parseSetScores(setScores).wins;
 
   const teamAPlayerIds = rosters.find((r) => r.teamId === teamAId)?.playerIds || [];
   const teamBPlayerIds = rosters.find((r) => r.teamId === teamBId)?.playerIds || [];
@@ -246,25 +360,62 @@ const AdminMatch = () => {
         {error && <p className="text-danger text-center mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit}>
-          <div className="flex gap-4 justify-center mb-6">
-            <input
-              type="number"
-              className="input-field px-3 py-2 w-24 text-center"
-              placeholder={teamAName}
-              value={scoreA}
-              onChange={(e) => setScoreA(e.target.value)}
-              required
-            />
-            <span className="text-xl font-bold">-</span>
-            <input
-              type="number"
-              className="input-field px-3 py-2 w-24 text-center"
-              placeholder={teamBName}
-              value={scoreB}
-              onChange={(e) => setScoreB(e.target.value)}
-              required
-            />
-          </div>
+          {isBestOfThree ? (
+            <div className="mb-6 space-y-3">
+              <div className="text-center text-sm font-semibold text-strong">
+                Best of 3 sets
+              </div>
+              {setScores.map((set, index) => (
+                <div key={`set-${index}`} className="flex items-center justify-center gap-3">
+                  <span className="text-xs uppercase tracking-[0.2em] text-muted w-16 text-right">
+                    Set {index + 1}
+                  </span>
+                  <input
+                    type="number"
+                    className="input-field px-3 py-2 w-24 text-center"
+                    placeholder={teamAName}
+                    min={0}
+                    value={set.home}
+                    onChange={(e) => handleSetScoreChange(index, "home", e.target.value)}
+                  />
+                  <span className="text-xl font-bold">-</span>
+                  <input
+                    type="number"
+                    className="input-field px-3 py-2 w-24 text-center"
+                    placeholder={teamBName}
+                    min={0}
+                    value={set.away}
+                    onChange={(e) => handleSetScoreChange(index, "away", e.target.value)}
+                  />
+                </div>
+              ))}
+              <div className="text-xs text-muted text-center">
+                Sets won: {setWinsPreview.home} - {setWinsPreview.away}
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-4 justify-center mb-6">
+              <input
+                type="number"
+                className="input-field px-3 py-2 w-24 text-center"
+                placeholder={teamAName}
+                value={scoreA}
+                onChange={(e) => setScoreA(e.target.value)}
+                min={0}
+                required
+              />
+              <span className="text-xl font-bold">-</span>
+              <input
+                type="number"
+                className="input-field px-3 py-2 w-24 text-center"
+                placeholder={teamBName}
+                value={scoreB}
+                onChange={(e) => setScoreB(e.target.value)}
+                min={0}
+                required
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[

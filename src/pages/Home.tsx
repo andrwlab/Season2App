@@ -17,6 +17,9 @@ import TeamLogo from "../components/TeamLogo";
 import { season1Players, season1TeamColors, season1Teams } from "../data";
 import heroBanner from "../assets/banners/LogoBannSeason2.png";
 
+type MatchPhase = "semifinal" | "third" | "final";
+type MatchWithPhase = Match & { phase?: MatchPhase };
+
 const buildDate = (dateISO?: string, timeHHmm?: string) => {
   if (!dateISO) return null;
   return new Date(`${dateISO}T${timeHHmm || "00:00"}:00`);
@@ -31,7 +34,7 @@ const isSeason1Name = (name?: string | null) => {
 const Home = () => {
   const { selectedSeasonId, selectedSeason } = useSeason();
   const [teams, setTeams] = useState<Team[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<MatchWithPhase[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
@@ -40,7 +43,10 @@ const Home = () => {
   >(null);
 
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
-  useEffect(() => subscribeMatches(selectedSeasonId, setMatches), [selectedSeasonId]);
+  useEffect(
+    () => subscribeMatches(selectedSeasonId, (data) => setMatches(data as MatchWithPhase[])),
+    [selectedSeasonId]
+  );
   useEffect(() => subscribeRosters(selectedSeasonId, setRosters), [selectedSeasonId]);
   useEffect(() => subscribePlayerStats(selectedSeasonId, setPlayerStats), [selectedSeasonId]);
   useEffect(() => subscribePlayers(setPlayers), []);
@@ -105,6 +111,7 @@ const Home = () => {
     if (isSeason1) return [];
     const map: Record<string, { teamId: string; w: number; l: number; diff: number }> = {};
     matches.forEach((m) => {
+      if (m.phase === "semifinal" || m.phase === "third" || m.phase === "final") return;
       const homeScore = m.scores?.home;
       const awayScore = m.scores?.away;
       if (homeScore == null || awayScore == null) return;

@@ -4,6 +4,9 @@ import { Match, Team, subscribeMatches, subscribeTeams } from "../firebase/queri
 import { useSeason } from "../hooks/useSeason";
 import TeamLogo from "../components/TeamLogo";
 
+type MatchPhase = "semifinal" | "third" | "final";
+type MatchWithPhase = Match & { phase?: MatchPhase };
+
 type Standing = {
   teamId: string;
   w: number;
@@ -17,10 +20,13 @@ const toDate = (m: any) =>
 
 const Leaderboard = () => {
   const { selectedSeasonId } = useSeason();
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<MatchWithPhase[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
 
-  useEffect(() => subscribeMatches(selectedSeasonId, setMatches), [selectedSeasonId]);
+  useEffect(
+    () => subscribeMatches(selectedSeasonId, (data) => setMatches(data as MatchWithPhase[])),
+    [selectedSeasonId]
+  );
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
 
   const teamMap = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t.name])), [teams]);
@@ -32,6 +38,7 @@ const Leaderboard = () => {
       map[t.id] = { teamId: t.id, w: 0, l: 0, pf: 0, pc: 0 };
     });
     matches.forEach((m: any) => {
+      if (m.phase === "semifinal" || m.phase === "third" || m.phase === "final") return;
       const homeId = m.homeTeamId || m.teamA;
       const awayId = m.awayTeamId || m.teamB;
       const homeScore = m.scores?.home ?? m.scoreA;
@@ -61,12 +68,12 @@ const Leaderboard = () => {
   }, [matches, teams]);
 
   const phaseMatches = useMemo(() => {
-    const byPhase: Record<string, Match[]> = { semifinal: [], third: [], final: [] };
-    (matches as any[]).forEach((m) => {
-      if (m.phase && byPhase[m.phase]) byPhase[m.phase].push(m as any);
+    const byPhase: Record<MatchPhase, MatchWithPhase[]> = { semifinal: [], third: [], final: [] };
+    matches.forEach((m) => {
+      if (m.phase && byPhase[m.phase]) byPhase[m.phase].push(m);
     });
     Object.values(byPhase).forEach((group) =>
-      group.sort((a: any, b: any) => toDate(a).getTime() - toDate(b).getTime())
+      group.sort((a, b) => toDate(a).getTime() - toDate(b).getTime())
     );
     return byPhase;
   }, [matches]);
