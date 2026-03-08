@@ -8,13 +8,31 @@ import TeamLogo from "../components/TeamLogo";
 const toDate = (dateISO?: string, timeHHmm?: string) =>
   dateISO ? new Date(`${dateISO}T${timeHHmm || "00:00"}:00`) : null;
 
+type SetScore = { home: number; away: number };
+type MatchWithSets = Match & { setScores?: SetScore[] };
+
+const normalizeSetScores = (setScores?: Array<{ home?: number; away?: number }>) => {
+  if (!Array.isArray(setScores)) return [];
+  return setScores
+    .map((set) => ({
+      home: typeof set?.home === "number" ? set.home : Number.parseInt(String(set?.home ?? ""), 10),
+      away: typeof set?.away === "number" ? set.away : Number.parseInt(String(set?.away ?? ""), 10),
+    }))
+    .filter((set) => Number.isFinite(set.home) && Number.isFinite(set.away));
+};
+
 const Schedule = () => {
   const { selectedSeasonId } = useSeason();
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<MatchWithSets[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const role = useUserRole();
+  const sectionRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const didScroll = React.useRef(false);
 
-  useEffect(() => subscribeMatches(selectedSeasonId, setMatches), [selectedSeasonId]);
+  useEffect(
+    () => subscribeMatches(selectedSeasonId, (data) => setMatches(data as MatchWithSets[])),
+    [selectedSeasonId]
+  );
   useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
 
   const teamMap = useMemo(
@@ -39,6 +57,31 @@ const Schedule = () => {
     return Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
   }, [matches]);
 
+  const scrollTargetDate = useMemo(() => {
+    if (!matchesByDate.length) return null;
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    let lastPast: string | null = null;
+    matchesByDate.forEach(([dateISO]) => {
+      if (!dateISO || dateISO === "No date") return;
+      const dateValue = new Date(`${dateISO}T00:00:00`);
+      if (Number.isNaN(dateValue.getTime())) return;
+      if (dateValue <= todayStart) lastPast = dateISO;
+    });
+    if (lastPast) return lastPast;
+    const firstDated = matchesByDate.find(([dateISO]) => dateISO && dateISO !== "No date");
+    return firstDated ? firstDated[0] : matchesByDate[0][0];
+  }, [matchesByDate]);
+
+  useEffect(() => {
+    if (didScroll.current) return;
+    if (!scrollTargetDate) return;
+    const target = sectionRefs.current[scrollTargetDate];
+    if (!target) return;
+    target.scrollIntoView({ behavior: "auto", block: "start" });
+    didScroll.current = true;
+  }, [scrollTargetDate]);
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-3xl font-bold mb-6 text-center text-strong">Match Schedule</h2>
@@ -52,7 +95,13 @@ const Schedule = () => {
             ? dateObj.toLocaleDateString("en-US", { day: "numeric", month: "long" })
             : "No date";
           return (
-            <div key={dateISO}>
+            <div
+              key={dateISO}
+              ref={(el) => {
+                sectionRefs.current[dateISO] = el;
+              }}
+              style={{ scrollMarginTop: "120px" }}
+            >
               <h3 className="text-lg font-semibold mb-2">{dateLabel}</h3>
               <ul className="space-y-3">
                 {list.map((item) => {
@@ -70,6 +119,7 @@ const Schedule = () => {
                   const awayName = awayTeam?.name || item.awayTeamId;
                   const statusLabel = item.status || (isPlayed ? "completed" : "scheduled");
                   const scoreLabel = isPlayed ? `${homeScore} - ${awayScore}` : "VS";
+                  const setScores = normalizeSetScores(item.setScores);
 
                   return (
                     <li key={item.id} className="list-card glass glass--hover p-4 md:p-5">
@@ -103,6 +153,18 @@ const Schedule = () => {
                               <div className="text-[11px] uppercase tracking-[0.22em] text-muted mt-1">
                                 {statusLabel}
                               </div>
+                              {setScores.length > 0 && (
+                                <div className="mt-2 flex flex-wrap justify-center gap-2 text-[10px] text-muted">
+                                  {setScores.map((set, index) => (
+                                    <span
+                                      key={`${item.id}-set-${index}`}
+                                      className="px-2 py-0.5 rounded-full border border-white/10 bg-white/5"
+                                    >
+                                      Set {index + 1} {set.home}-{set.away}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex items-center justify-start gap-3 text-left">
