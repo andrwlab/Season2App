@@ -14,12 +14,15 @@ interface MatchDoc {
   teamA?: string;
   teamB?: string;
   scores?: { home: number | null; away: number | null };
+  setScores?: { home: number; away: number }[];
+  bestOf?: number;
   scoreA?: number | null;
   scoreB?: number | null;
   dateISO?: string;
   timeHHmm?: string;
   date?: string;
   status?: string;
+  phase?: "semifinal" | "third" | "final";
   playersStats?: Record<string, { attack?: number; blocks?: number; assists?: number; service?: number }>;
 }
 
@@ -137,6 +140,14 @@ const MatchDetail = () => {
   const scoreAway = match.scores?.away ?? match.scoreB;
   const isPlayed = scoreHome != null && scoreAway != null;
   const statusLabel = match.status || (isPlayed ? "completed" : "scheduled");
+  const setScores = Array.isArray(match.setScores)
+    ? match.setScores
+        .map((set) => ({
+          home: typeof set?.home === "number" ? set.home : Number.parseInt(String(set?.home ?? ""), 10),
+          away: typeof set?.away === "number" ? set.away : Number.parseInt(String(set?.away ?? ""), 10),
+        }))
+        .filter((set) => Number.isFinite(set.home) && Number.isFinite(set.away))
+    : [];
   const resolveTeamId = (playerKey: string) => {
     const trimmed = playerKey.trim();
     return rosterTeamByPlayerKey[trimmed] || rosterTeamByPlayerKey[trimmed.toLowerCase()];
@@ -183,6 +194,21 @@ const MatchDetail = () => {
                 {isPlayed ? `${scoreHome} - ${scoreAway}` : "VS"}
               </div>
               <div className="text-sm text-muted mt-2">{date}</div>
+              {setScores.length > 0 && (
+                <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs">
+                  {setScores.map((set, index) => (
+                    <div
+                      key={`set-${index}`}
+                      className="px-3 py-1 rounded-full border border-white/15 bg-white/5 text-muted"
+                    >
+                      <span className="uppercase tracking-[0.2em] mr-2">Set {index + 1}</span>
+                      <span className="text-strong font-semibold">
+                        {set.home} - {set.away}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col md:flex-row items-center md:justify-start gap-2 md:gap-3 text-center md:text-left">
