@@ -74,7 +74,7 @@ export type Match = {
   timeHHmm?: string;
   homeTeamId: string;
   awayTeamId: string;
-  status?: "scheduled" | "completed" | "canceled";
+  status?: "scheduled" | "live" | "finished" | "completed" | "canceled";
   scores?: { home: number | null; away: number | null };
 };
 
@@ -102,6 +102,48 @@ export type PlayerStat = {
   blocks?: number;
   assists?: number;
   service?: number;
+  updatedAt?: unknown;
+};
+
+const toMillis = (value: any): number => {
+  if (!value) return 0;
+  if (typeof value === "number") return value;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value.seconds === "number") {
+    return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6);
+  }
+  return 0;
+};
+
+const normalizeId = (value: any): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value.id === "string") return value.id;
+  if (typeof value === "number") return String(value);
+  return "";
+};
+
+const dedupePlayerStats = (stats: PlayerStat[]) => {
+  const map = new Map<string, PlayerStat>();
+  stats.forEach((stat) => {
+    const matchId = normalizeId(stat.matchId);
+    const playerId = normalizeId(stat.playerId);
+    if (!matchId || !playerId) return;
+    const key = `${matchId}:${playerId}`;
+    const normalizedStat = { ...stat, matchId, playerId };
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, normalizedStat);
+      return;
+    }
+    const existingUpdated = toMillis((existing as any).updatedAt);
+    const nextUpdated = toMillis((stat as any).updatedAt);
+    if (nextUpdated >= existingUpdated) {
+      map.set(key, normalizedStat);
+    }
+  });
+  return Array.from(map.values());
 };
 
 export function subscribeSeasons(
@@ -200,7 +242,7 @@ export function subscribePlayerStats(
         id: doc.id,
         ...(doc.data() as Omit<PlayerStat, "id">),
       }));
-      emit(stats);
+      emit(dedupePlayerStats(stats));
     });
   }, cb);
 }
@@ -214,7 +256,7 @@ export function subscribeAllPlayerStats(
         id: doc.id,
         ...(doc.data() as Omit<PlayerStat, "id">),
       }));
-      emit(stats);
+      emit(dedupePlayerStats(stats));
     });
   }, cb);
 }

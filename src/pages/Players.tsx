@@ -20,7 +20,8 @@ const isSeason1Name = (name?: string | null) => {
 };
 
 const Players = () => {
-  const { selectedSeasonId, selectedSeason } = useSeason();
+  const { seasons, selectedSeasonId } = useSeason();
+  const [pageSeasonId, setPageSeasonId] = useState<string | null>(selectedSeasonId);
   const [players, setPlayers] = useState<Player[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
   const [rosters, setRosters] = useState<Roster[]>([]);
@@ -28,12 +29,22 @@ const Players = () => {
   const [filter, setFilter] = useState<"all" | "student" | "teacher">("all");
   const [sortKey, setSortKey] = useState<"total" | "attack" | "blocks" | "assists" | "service">("total");
 
-  useEffect(() => subscribePlayers(setPlayers), []);
-  useEffect(() => subscribePlayerStats(selectedSeasonId, setPlayerStats), [selectedSeasonId]);
-  useEffect(() => subscribeRosters(selectedSeasonId, setRosters), [selectedSeasonId]);
-  useEffect(() => subscribeTeams(selectedSeasonId, setTeams), [selectedSeasonId]);
+  useEffect(() => {
+    if (!pageSeasonId && selectedSeasonId) {
+      setPageSeasonId(selectedSeasonId);
+    }
+  }, [pageSeasonId, selectedSeasonId]);
 
-  const isSeason1 = isSeason1Name(selectedSeason?.name);
+  useEffect(() => subscribePlayers(setPlayers), []);
+  useEffect(() => subscribePlayerStats(pageSeasonId, setPlayerStats), [pageSeasonId]);
+  useEffect(() => subscribeRosters(pageSeasonId, setRosters), [pageSeasonId]);
+  useEffect(() => subscribeTeams(pageSeasonId, setTeams), [pageSeasonId]);
+
+  const pageSeason = useMemo(
+    () => seasons.find((season) => season.id === pageSeasonId) || null,
+    [pageSeasonId, seasons]
+  );
+  const isSeason1 = isSeason1Name(pageSeason?.name);
 
   const nameToPlayerId = useMemo(() => {
     return Object.fromEntries(players.map((p) => [p.fullName, p.id]));
@@ -119,6 +130,9 @@ const Players = () => {
   const filtered = season1PlayersForTable.filter((p) => {
     if (!isSeason1 && !playerTeamMap[p.id]) return false;
     const type = normalizeType(p.type as string);
+    const stats = totals[p.id] || { attack: 0, blocks: 0, assists: 0, service: 0 };
+    const total = stats.attack + stats.blocks + stats.assists + stats.service;
+    if (total <= 0) return false;
     if (filter === "student") return type === "student";
     if (filter === "teacher") return type === "teacher";
     return true;
@@ -143,6 +157,25 @@ const Players = () => {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-3xl font-bold mb-6 text-center text-strong">Player Statistics</h2>
+
+      <div className="flex justify-center mb-4">
+        <label className="text-sm text-muted">
+          Season
+          <select
+            className="input-field ml-2 px-3 py-2 text-sm"
+            value={pageSeasonId || ""}
+            onChange={(e) => setPageSeasonId(e.target.value)}
+            disabled={seasons.length === 0}
+          >
+            {!pageSeasonId && <option value="">Select season</option>}
+            {seasons.map((season) => (
+              <option key={season.id} value={season.id}>
+                {season.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <div className="flex gap-4 justify-center mb-6">
         {(["all", "student", "teacher"] as const).map((f) => (

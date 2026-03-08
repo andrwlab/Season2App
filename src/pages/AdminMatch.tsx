@@ -7,6 +7,8 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
@@ -94,6 +96,7 @@ const AdminMatch = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!id) return;
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
@@ -101,39 +104,61 @@ const AdminMatch = () => {
     }
 
     try {
-      const matchRef = doc(db, "matches", id as string);
-      await updateDoc(matchRef, {
-        scores: { home: parseInt(scoreA as string), away: parseInt(scoreB as string) },
-        status: "completed",
-        playersStats: formData,
-      });
-
       const seasonIdForStats = match.seasonId || selectedSeasonId;
+      const matchId = id;
+      const matchRef = doc(db, "matches", matchId);
+      const closeAt = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
+      const matchUpdate: Record<string, any> = {
+        scores: { home: parseInt(scoreA as string), away: parseInt(scoreB as string) },
+        status: "finished",
+        playersStats: formData,
+        endedAt: serverTimestamp(),
+        fanVoteEnabled: true,
+        fanVoteCloseAt: closeAt,
+      };
+      if (seasonIdForStats) {
+        matchUpdate.seasonId = seasonIdForStats;
+      }
+      await updateDoc(matchRef, matchUpdate);
+
       if (seasonIdForStats) {
         const batch = writeBatch(db);
+        const statEntries = Object.entries(formData)
+          .map(([playerId, stats]) => {
+            const attack = stats?.attack || 0;
+            const blocks = stats?.blocks || 0;
+            const assists = stats?.assists || 0;
+            const service = stats?.service || 0;
+            const hasAnyStat = attack || blocks || assists || service;
+            if (!hasAnyStat) return null;
+            return {
+              id: `${matchId}__${playerId}`,
+              data: {
+                seasonId: seasonIdForStats,
+                matchId,
+                playerId,
+                attack,
+                blocks,
+                assists,
+                service,
+                updatedAt: serverTimestamp(),
+              },
+            };
+          })
+          .filter(Boolean) as Array<{ id: string; data: Record<string, unknown> }>;
+        const newStatIds = new Set(statEntries.map((entry) => entry.id));
         const existingStatsSnap = await getDocs(
-          query(collection(db, "playerStats"), where("matchId", "==", id))
+          query(collection(db, "playerStats"), where("matchId", "==", matchId))
         );
-        existingStatsSnap.forEach((statDoc) => batch.delete(statDoc.ref));
+        existingStatsSnap.forEach((statDoc) => {
+          if (!newStatIds.has(statDoc.id)) {
+            batch.delete(statDoc.ref);
+          }
+        });
 
-        Object.entries(formData).forEach(([playerId, stats]) => {
-          const attack = stats?.attack || 0;
-          const blocks = stats?.blocks || 0;
-          const assists = stats?.assists || 0;
-          const service = stats?.service || 0;
-          const hasAnyStat = attack || blocks || assists || service;
-          if (!hasAnyStat) return;
-
-          const statRef = doc(collection(db, "playerStats"));
-          batch.set(statRef, {
-            seasonId: seasonIdForStats,
-            matchId: id,
-            playerId,
-            attack,
-            blocks,
-            assists,
-            service,
-          });
+        statEntries.forEach((entry) => {
+          const statRef = doc(db, "playerStats", entry.id);
+          batch.set(statRef, entry.data);
         });
 
         await batch.commit();
