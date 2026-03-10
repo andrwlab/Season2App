@@ -109,30 +109,39 @@ const Home = () => {
 
   const standings = useMemo(() => {
     if (isSeason1) return [];
-    const map: Record<string, { teamId: string; w: number; l: number; diff: number }> = {};
-    matches.forEach((m) => {
+    const map: Record<string, { teamId: string; w: number; l: number; pf: number; pc: number }> = {};
+    teams.forEach((t) => {
+      map[t.id] = { teamId: t.id, w: 0, l: 0, pf: 0, pc: 0 };
+    });
+    matches.forEach((m: any) => {
       if (m.phase === "semifinal" || m.phase === "third" || m.phase === "final") return;
-      const homeScore = m.scores?.home;
-      const awayScore = m.scores?.away;
+      const homeId = m.homeTeamId || m.teamA;
+      const awayId = m.awayTeamId || m.teamB;
+      const homeScore = m.scores?.home ?? m.scoreA;
+      const awayScore = m.scores?.away ?? m.scoreB;
       if (homeScore == null || awayScore == null) return;
-      if (!map[m.homeTeamId]) map[m.homeTeamId] = { teamId: m.homeTeamId, w: 0, l: 0, diff: 0 };
-      if (!map[m.awayTeamId]) map[m.awayTeamId] = { teamId: m.awayTeamId, w: 0, l: 0, diff: 0 };
+      if (!map[homeId]) map[homeId] = { teamId: homeId, w: 0, l: 0, pf: 0, pc: 0 };
+      if (!map[awayId]) map[awayId] = { teamId: awayId, w: 0, l: 0, pf: 0, pc: 0 };
+      map[homeId].pf += homeScore;
+      map[homeId].pc += awayScore;
+      map[awayId].pf += awayScore;
+      map[awayId].pc += homeScore;
       if (homeScore > awayScore) {
-        map[m.homeTeamId].w += 1;
-        map[m.awayTeamId].l += 1;
+        map[homeId].w += 1;
+        map[awayId].l += 1;
       } else if (awayScore > homeScore) {
-        map[m.awayTeamId].w += 1;
-        map[m.homeTeamId].l += 1;
+        map[awayId].w += 1;
+        map[homeId].l += 1;
       }
-      map[m.homeTeamId].diff += homeScore - awayScore;
-      map[m.awayTeamId].diff += awayScore - homeScore;
     });
     return Object.values(map).sort((a, b) => {
       if (b.w !== a.w) return b.w - a.w;
-      if (b.diff !== a.diff) return b.diff - a.diff;
-      return getTeamName(a.teamId).localeCompare(getTeamName(b.teamId));
+      const diffA = a.pf - a.pc;
+      const diffB = b.pf - b.pc;
+      if (diffB !== diffA) return diffB - diffA;
+      return b.pf - a.pf;
     });
-  }, [isSeason1, matches]);
+  }, [isSeason1, matches, teams]);
 
   const playerTotals = useMemo(() => {
     if (isSeason1) {
@@ -307,17 +316,20 @@ const Home = () => {
               </tr>
             </thead>
             <tbody>
-              {standings.slice(0, 4).map((team, idx) => (
-                <tr key={team.teamId}>
-                  <td className="px-4 py-2"><span className="badge">{idx + 1}</span></td>
-                  <td className="px-4 py-2 font-medium text-strong">{getTeamName(team.teamId)}</td>
-                  <td className="px-4 py-2">{team.w}</td>
-                  <td className="px-4 py-2">{team.l}</td>
-                  <td className="px-4 py-2">
-                    {team.diff > 0 ? `+${team.diff}` : team.diff}
-                  </td>
-                </tr>
-              ))}
+              {standings.slice(0, 6).map((team, idx) => {
+                const diff = team.pf - team.pc;
+                return (
+                  <tr key={team.teamId}>
+                    <td className="px-4 py-2"><span className="badge">{idx + 1}</span></td>
+                    <td className="px-4 py-2 font-medium text-strong">{getTeamName(team.teamId)}</td>
+                    <td className="px-4 py-2">{team.w}</td>
+                    <td className="px-4 py-2">{team.l}</td>
+                    <td className="px-4 py-2">
+                      {diff > 0 ? `+${diff}` : diff}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             </table>
           </div>
