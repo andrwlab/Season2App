@@ -198,21 +198,36 @@ const Players = () => {
           <table className="table table-auto w-full text-sm text-left">
           <thead>
             <tr>
-              <th className="px-4 py-2">Player</th>
-              <th className="px-4 py-2">Team</th>
-              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("attack")}>
+              <th className="px-2 py-2 sm:px-4">Player</th>
+              <th className="px-2 py-2 sm:px-4">Team</th>
+              <th className="px-2 py-2 cursor-pointer sm:hidden" onClick={() => setSortKey("total")}>
+                Total{Arrow({ field: "total" })}
+              </th>
+              <th className="px-2 py-2 cursor-pointer sm:hidden" onClick={() => setSortKey("attack")}>
+                Att{Arrow({ field: "attack" })}
+              </th>
+              <th className="px-2 py-2 cursor-pointer sm:hidden" onClick={() => setSortKey("blocks")}>
+                Blk{Arrow({ field: "blocks" })}
+              </th>
+              <th className="px-2 py-2 cursor-pointer sm:hidden" onClick={() => setSortKey("assists")}>
+                Ast{Arrow({ field: "assists" })}
+              </th>
+              <th className="px-2 py-2 cursor-pointer sm:hidden" onClick={() => setSortKey("service")}>
+                Srv{Arrow({ field: "service" })}
+              </th>
+              <th className="hidden px-4 py-2 cursor-pointer sm:table-cell" onClick={() => setSortKey("attack")}>
                 Attacks{Arrow({ field: "attack" })}
               </th>
-              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("blocks")}>
+              <th className="hidden px-4 py-2 cursor-pointer sm:table-cell" onClick={() => setSortKey("blocks")}>
                 Blocks{Arrow({ field: "blocks" })}
               </th>
-              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("assists")}>
+              <th className="hidden px-4 py-2 cursor-pointer sm:table-cell" onClick={() => setSortKey("assists")}>
                 Assists{Arrow({ field: "assists" })}
               </th>
-              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("service")}>
+              <th className="hidden px-4 py-2 cursor-pointer sm:table-cell" onClick={() => setSortKey("service")}>
                 Serves{Arrow({ field: "service" })}
               </th>
-              <th className="px-4 py-2 cursor-pointer" onClick={() => setSortKey("total")}>
+              <th className="hidden px-4 py-2 cursor-pointer sm:table-cell" onClick={() => setSortKey("total")}>
                 Total{Arrow({ field: "total" })}
               </th>
             </tr>
@@ -220,7 +235,10 @@ const Players = () => {
           <tbody>
             {sorted.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-center text-muted" colSpan={7}>
+                <td className="px-2 py-6 text-center text-muted sm:hidden" colSpan={7}>
+                  No players to show.
+                </td>
+                <td className="hidden px-4 py-6 text-center text-muted sm:table-cell" colSpan={7}>
                   No players to show.
                 </td>
               </tr>
@@ -231,17 +249,22 @@ const Players = () => {
               const teamId = playerTeamMap[player.id];
               return (
                 <tr key={player.id}>
-                  <td className="px-4 py-2">
+                  <td className="px-2 py-2 sm:px-4">
                     <Link to={`/players/${player.id}`} className="player-name">
                       {player.fullName || (player as any).name || player.id}
                     </Link>
                   </td>
-                  <td className="px-4 py-2">{teamId ? teamMap[teamId] || teamId : "No team"}</td>
-                  <td className="px-4 py-2">{stats.attack}</td>
-                  <td className="px-4 py-2">{stats.blocks}</td>
-                  <td className="px-4 py-2">{stats.assists}</td>
-                  <td className="px-4 py-2">{stats.service}</td>
-                  <td className="px-4 py-2 font-bold text-strong">{total}</td>
+                  <td className="px-2 py-2 sm:px-4">{teamId ? teamMap[teamId] || teamId : "No team"}</td>
+                  <td className="px-2 py-2 font-bold text-strong sm:hidden">{total}</td>
+                  <td className="px-2 py-2 sm:hidden">{stats.attack}</td>
+                  <td className="px-2 py-2 sm:hidden">{stats.blocks}</td>
+                  <td className="px-2 py-2 sm:hidden">{stats.assists}</td>
+                  <td className="px-2 py-2 sm:hidden">{stats.service}</td>
+                  <td className="hidden px-4 py-2 sm:table-cell">{stats.attack}</td>
+                  <td className="hidden px-4 py-2 sm:table-cell">{stats.blocks}</td>
+                  <td className="hidden px-4 py-2 sm:table-cell">{stats.assists}</td>
+                  <td className="hidden px-4 py-2 sm:table-cell">{stats.service}</td>
+                  <td className="hidden px-4 py-2 font-bold text-strong sm:table-cell">{total}</td>
                 </tr>
               );
             })}

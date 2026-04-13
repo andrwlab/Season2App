@@ -16,9 +16,12 @@ import { useSeason } from "../hooks/useSeason";
 import TeamLogo from "../components/TeamLogo";
 import { season1Players, season1TeamColors, season1Teams } from "../data";
 import heroBanner from "../assets/banners/LogoBannSeason2.png";
+import redChampions from "../assets/RedChampions.png";
+import mvpSeason2 from "../assets/MVPS2.png";
 
 type MatchPhase = "semifinal" | "third" | "final";
 type MatchWithPhase = Match & { phase?: MatchPhase };
+type HomePopup = "champion" | "mvp" | null;
 
 const buildDate = (dateISO?: string, timeHHmm?: string) => {
   if (!dateISO) return null;
@@ -38,6 +41,7 @@ const Home = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
+  const [activePopup, setActivePopup] = useState<HomePopup>("champion");
   const [teamSortKey, setTeamSortKey] = useState<
     "attack" | "blocks" | "assists" | "service" | null
   >(null);
@@ -50,6 +54,25 @@ const Home = () => {
   useEffect(() => subscribeRosters(selectedSeasonId, setRosters), [selectedSeasonId]);
   useEffect(() => subscribePlayerStats(selectedSeasonId, setPlayerStats), [selectedSeasonId]);
   useEffect(() => subscribePlayers(setPlayers), []);
+  useEffect(() => {
+    if (!activePopup) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActivePopup((current) => (current === "champion" ? "mvp" : null));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activePopup]);
 
   const isSeason1 = isSeason1Name(selectedSeason?.name);
 
@@ -201,8 +224,42 @@ const Home = () => {
     return entries.reduce((a, b) => (b[1][key] > a[1][key] ? b : a));
   };
 
+  const closePopup = () => {
+    setActivePopup((current) => (current === "champion" ? "mvp" : null));
+  };
+
+  const popupImage = activePopup === "champion" ? redChampions : mvpSeason2;
+  const popupAlt =
+    activePopup === "champion"
+      ? "Champion team announcement"
+      : "Season 2 MVP announcement";
+  const popupLabel =
+    activePopup === "champion" ? "Close champions popup" : "Close MVP popup";
+
   return (
     <div className="p-6 space-y-10">
+      {activePopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 sm:p-6">
+          <div className="relative w-full max-w-5xl">
+            <button
+              type="button"
+              aria-label={popupLabel}
+              onClick={closePopup}
+              className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/65 text-2xl font-bold leading-none text-white transition hover:bg-black/85"
+            >
+              ×
+            </button>
+            <div className="card overflow-hidden border-white/15 bg-black/40 shadow-2xl">
+              <img
+                src={popupImage}
+                alt={popupAlt}
+                className="block max-h-[85vh] w-full object-contain bg-black"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="hero hero--banner text-center">
         <div className="hero-banner">
           <img
