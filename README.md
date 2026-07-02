@@ -1,47 +1,21 @@
-# Season2App
+# Season2App — Tournament Operations Internal Tool
 
-## Roster Import (before Friday)
+Season2App is a real-time tournament management tool built for a school volleyball tournament. It helps manage teams, rosters, schedules, match results, player statistics, standings and cumulative performance across seasons.
 
-1) Set admin credentials (local only, never commit keys):
-```
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
-export FIREBASE_PROJECT_ID="your-project-id"
-```
+## Problem
+The tournament workflow involved manual tracking of fixtures, results, standings and player stats, which created delays, duplicated work and limited visibility for students and staff.
 
-2) Provide a roster input file (JSON or CSV-like).
+## Solution
+I built a web app that centralizes tournament operations and provides real-time visibility for teams, matches, standings and player performance.
 
-JSON map (teamId/slug -> players):
-```
-{
-  "red-flame-dragons": ["Ana Perez 8A", "Mr. Juan Gomez", "Luis Soto 10th"],
-  "black-wolves": ["Camila Ruiz 11B", "Mr. Carlos Lima"]
-}
-```
+## Key Features
+- Team and roster management
+- Match schedule and match detail views
+- Result and player stat entry
+- Role-based admin/scorekeeper access
+- Firebase-backed real-time data
+- Cumulative player statistics across seasons
+- Public-facing leaderboard and standings
 
-JSON array:
-```
-{
-  "teams": [
-    { "teamId": "red-flame-dragons", "players": ["Ana Perez 8A", "Mr. Juan Gomez"] },
-    { "teamName": "Black Wolves", "players": ["Camila Ruiz 11B"] }
-  ]
-}
-```
-
-CSV-like (one per line):
-```
-red-flame-dragons,Ana Perez 8A
-red-flame-dragons,Mr. Juan Gomez
-black-wolves,Camila Ruiz 11B
-```
-
-3) Run the importer:
-```
-SEASON_ID="s2" ROSTER_FILE="/abs/path/to/roster.json" npm run import:roster
-```
-
-Notes
-- Trailing grade tokens like `8A`, `11th`, `10` are removed during normalization.
-- Names starting with `Mr.` are saved as type `teacher`, otherwise `student`.
-- Players are global; existing players (same normalized name) are reused.
-- Rosters are upserted as `{seasonId, teamId, playerIds, updatedAt}`.
+## Tech Stack
+React, TypeScript, Vite, Firebase Auth, Firestore, Tailwind CSS, Chart.js.
