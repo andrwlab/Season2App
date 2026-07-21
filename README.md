@@ -19,3 +19,7 @@ I built a web app that centralizes tournament operations and provides real-time 
 
 ## Tech Stack
 React, TypeScript, Vite, Firebase Auth, Firestore, Tailwind CSS, Chart.js.
+
+
+
+This public demo uses fictional team and participant identities. It contains no personal information from the original tournament.
