@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
 // Páginas principales
 import ProtectedRoute from './ProtectedRoute';
@@ -21,14 +21,13 @@ const CumulativeStats = lazy(() => import('./pages/CumulativeStats'));
 const PilotScorer = lazy(() => import('./pages/PilotScorer'));
 const PilotLive = lazy(() => import('./pages/PilotLive'));
 
-function App() {
-  const baseName =
-    typeof window !== 'undefined' && window.location.pathname.startsWith('/Season2App')
-      ? '/Season2App'
-      : '/';
+function AppShell() {
+  const location = useLocation();
+  const isPilotSurface = location.pathname.startsWith('/scorer/') || location.pathname.startsWith('/live/');
+
   return (
-    <Router basename={baseName}>
-      <Navbar />
+    <>
+      {!isPilotSurface && <Navbar />}
       <Suspense fallback={<div className="p-6 text-muted">Loading...</div>}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -64,6 +63,18 @@ function App() {
           />
         </Routes>
       </Suspense>
+    </>
+  );
+}
+
+function App() {
+  const baseName =
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/Season2App')
+      ? '/Season2App'
+      : '/';
+  return (
+    <Router basename={baseName}>
+      <AppShell />
     </Router>
   );
 }
