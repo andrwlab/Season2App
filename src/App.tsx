@@ -2,7 +2,6 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 // Páginas principales
-
 import ProtectedRoute from './ProtectedRoute';
 import Navbar from './Navbar';
 import Home from './pages/Home';
@@ -19,6 +18,8 @@ const TeamDetail = lazy(() => import('./pages/TeamDetail'));
 const PlayerProfile = lazy(() => import('./pages/PlayerProfile'));
 const AdminRosters = lazy(() => import('./pages/AdminRosters'));
 const CumulativeStats = lazy(() => import('./pages/CumulativeStats'));
+const PilotScorer = lazy(() => import('./pages/PilotScorer'));
+const PilotLive = lazy(() => import('./pages/PilotLive'));
 
 function App() {
   const baseName =
@@ -41,6 +42,10 @@ function App() {
           <Route path="/matches/:id" element={<MatchDetail />} />
           <Route path="/admin-match/:id" element={<AdminMatch />} />
           <Route path="/admin/rosters" element={<AdminRosters />} />
+
+          <Route path="/scorer/:tournamentId/:matchId" element={<PilotScorer />} />
+          <Route path="/live/:tournamentId/match/:matchId" element={<PilotLive />} />
+
           <Route
             path="/matches"
             element={
@@ -52,7 +57,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute roles={['admin', 'scorekeeper']}>
+              <ProtectedRoute requiredRole="admin">
                 <Admin />
               </ProtectedRoute>
             }
