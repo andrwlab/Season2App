@@ -20,6 +20,7 @@ const AdminRosters = lazy(() => import('./pages/AdminRosters'));
 const CumulativeStats = lazy(() => import('./pages/CumulativeStats'));
 const PilotScorer = lazy(() => import('./pages/PilotScorer'));
 const PilotLive = lazy(() => import('./pages/PilotLive'));
+const PilotTournament = lazy(() => import('./pages/PilotTournament'));
 
 function AppShell() {
   const location = useLocation();
@@ -43,6 +44,7 @@ function AppShell() {
           <Route path="/admin/rosters" element={<AdminRosters />} />
 
           <Route path="/scorer/:tournamentId/:matchId" element={<PilotScorer />} />
+          <Route path="/live/:tournamentId" element={<PilotTournament />} />
           <Route path="/live/:tournamentId/match/:matchId" element={<PilotLive />} />
 
           <Route
