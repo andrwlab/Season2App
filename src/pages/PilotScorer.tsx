@@ -23,6 +23,7 @@ type PilotLastEvent = {
 
 type PilotMatch = {
   tournamentId: string;
+  matchId: string;
   homeName: string;
   awayName: string;
   scoreHome: number;
@@ -34,6 +35,7 @@ type PilotMatch = {
 
 const PilotScorer = () => {
   const { tournamentId = "pilot0", matchId = "match-001" } = useParams();
+  const pilotMatchId = `${tournamentId}__${matchId}`;
   const [match, setMatch] = useState<PilotMatch | null>(null);
   const [exists, setExists] = useState<boolean | null>(null);
   const [homeName, setHomeName] = useState("Team A");
@@ -41,10 +43,7 @@ const PilotScorer = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const matchRef = useMemo(
-    () => doc(db, "liveTournaments", tournamentId, "matches", matchId),
-    [matchId, tournamentId]
-  );
+  const matchRef = useMemo(() => doc(db, "pilotMatches", pilotMatchId), [pilotMatchId]);
 
   useEffect(() => {
     return onSnapshot(
@@ -67,6 +66,7 @@ const PilotScorer = () => {
     try {
       await setDoc(matchRef, {
         tournamentId,
+        matchId,
         homeName: homeName.trim() || "Team A",
         awayName: awayName.trim() || "Team B",
         scoreHome: 0,
@@ -89,7 +89,7 @@ const PilotScorer = () => {
     setBusy(true);
     setError(null);
     try {
-      const eventRef = doc(collection(matchRef, "events"));
+      const eventRef = doc(collection(db, "pilotEvents"));
       const batch = writeBatch(db);
       const clientCreatedAt = Date.now();
       const lastEvent: PilotLastEvent = {
@@ -104,6 +104,7 @@ const PilotScorer = () => {
         eventId: eventRef.id,
         tournamentId,
         matchId,
+        pilotMatchId,
         sport: "football",
         type: "GOAL",
         teamSide,
@@ -136,7 +137,7 @@ const PilotScorer = () => {
     setBusy(true);
     setError(null);
     try {
-      const reversalRef = doc(collection(matchRef, "events"));
+      const reversalRef = doc(collection(db, "pilotEvents"));
       const batch = writeBatch(db);
       const clientCreatedAt = Date.now();
       const reversal: PilotLastEvent = {
@@ -152,6 +153,7 @@ const PilotScorer = () => {
         eventId: reversalRef.id,
         tournamentId,
         matchId,
+        pilotMatchId,
         sport: "football",
         type: "REVERSAL",
         revertsEventId: target.eventId,
@@ -187,7 +189,7 @@ const PilotScorer = () => {
           <div className="mb-6">
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-300">Pilot 0</p>
             <h1 className="mt-2 text-3xl font-black">Create live match</h1>
-            <p className="mt-2 text-sm text-slate-400">This is a temporary match isolated from the Season 2 player database.</p>
+            <p className="mt-2 text-sm text-slate-400">Temporary football match, isolated from Season 2 players and rosters.</p>
           </div>
 
           <form onSubmit={createPilotMatch} className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -288,7 +290,7 @@ const PilotScorer = () => {
         )}
 
         <p className="px-2 text-center text-xs leading-relaxed text-slate-500">
-          Pilot 0 only: Goal → Firestore event + live score → public spectator view.
+          Pilot 0: Goal → Firestore event + live score → spectator view.
         </p>
       </div>
     </div>
