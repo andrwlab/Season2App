@@ -12,12 +12,15 @@ import {
 import { db } from "../firebase";
 
 type TeamSide = "HOME" | "AWAY";
+type EventType = "GOAL" | "SHOT" | "FOUL" | "YELLOW_CARD" | "RED_CARD";
+type StoredEventType = EventType | "REVERSAL";
 
 type PilotLastEvent = {
   eventId: string;
-  type: "GOAL" | "REVERSAL";
+  type: StoredEventType;
   teamSide?: TeamSide;
   targetEventId?: string;
+  targetEventType?: EventType;
   clientCreatedAt: number;
 };
 
@@ -28,9 +31,46 @@ type PilotMatch = {
   awayName: string;
   scoreHome: number;
   scoreAway: number;
+  shotsHome: number;
+  shotsAway: number;
+  foulsHome: number;
+  foulsAway: number;
+  yellowHome: number;
+  yellowAway: number;
+  redHome: number;
+  redAway: number;
   status: "READY" | "LIVE" | "FULLTIME";
   phase: "FIRST_HALF" | "HALFTIME" | "SECOND_HALF" | "FULLTIME";
   lastEvent?: PilotLastEvent;
+};
+
+const getCounterField = (type: EventType, side: TeamSide) => {
+  const suffix = side === "HOME" ? "Home" : "Away";
+  switch (type) {
+    case "GOAL":
+      return `score${suffix}` as const;
+    case "SHOT":
+      return `shots${suffix}` as const;
+    case "FOUL":
+      return `fouls${suffix}` as const;
+    case "YELLOW_CARD":
+      return `yellow${suffix}` as const;
+    case "RED_CARD":
+      return `red${suffix}` as const;
+  }
+};
+
+const getEventLabel = (type: StoredEventType) => {
+  switch (type) {
+    case "YELLOW_CARD":
+      return "YELLOW";
+    case "RED_CARD":
+      return "RED";
+    case "REVERSAL":
+      return "REVERSAL";
+    default:
+      return type;
+  }
 };
 
 const PilotScorer = () => {
@@ -71,6 +111,14 @@ const PilotScorer = () => {
         awayName: awayName.trim() || "Team B",
         scoreHome: 0,
         scoreAway: 0,
+        shotsHome: 0,
+        shotsAway: 0,
+        foulsHome: 0,
+        foulsAway: 0,
+        yellowHome: 0,
+        yellowAway: 0,
+        redHome: 0,
+        redAway: 0,
         status: "LIVE",
         phase: "FIRST_HALF",
         createdAt: serverTimestamp(),
@@ -84,17 +132,18 @@ const PilotScorer = () => {
     }
   };
 
-  const addGoal = async (teamSide: TeamSide) => {
+  const recordEvent = async (type: EventType, teamSide: TeamSide) => {
     if (!match || busy) return;
     setBusy(true);
     setError(null);
+
     try {
       const eventRef = doc(collection(db, "pilotEvents"));
       const batch = writeBatch(db);
       const clientCreatedAt = Date.now();
       const lastEvent: PilotLastEvent = {
         eventId: eventRef.id,
-        type: "GOAL",
+        type,
         teamSide,
         clientCreatedAt,
       };
@@ -106,7 +155,7 @@ const PilotScorer = () => {
         matchId,
         pilotMatchId,
         sport: "football",
-        type: "GOAL",
+        type,
         teamSide,
         clientCreatedAt,
         serverReceivedAt: serverTimestamp(),
@@ -114,25 +163,28 @@ const PilotScorer = () => {
       });
 
       batch.update(matchRef, {
-        [teamSide === "HOME" ? "scoreHome" : "scoreAway"]: increment(1),
+        [getCounterField(type, teamSide)]: increment(1),
         lastEvent,
         updatedAt: serverTimestamp(),
       });
 
       await batch.commit();
     } catch (err) {
-      console.error("Failed to record pilot goal", err);
-      setError("Goal was not saved. Try again before continuing.");
+      console.error(`Failed to record pilot ${type}`, err);
+      setError(`${getEventLabel(type)} was not saved. Try again before continuing.`);
     } finally {
       setBusy(false);
     }
   };
 
-  const undoLastGoal = async () => {
-    if (!match?.lastEvent || match.lastEvent.type !== "GOAL" || busy) return;
+  const undoLastEvent = async () => {
+    if (!match?.lastEvent || match.lastEvent.type === "REVERSAL" || !match.lastEvent.teamSide || busy) return;
+
     const target = match.lastEvent;
-    const currentScore = target.teamSide === "HOME" ? match.scoreHome : match.scoreAway;
-    if (!target.teamSide || currentScore <= 0) return;
+    const targetType = target.type as EventType;
+    const field = getCounterField(targetType, target.teamSide);
+    const currentValue = Number(match[field] ?? 0);
+    if (currentValue <= 0) return;
 
     setBusy(true);
     setError(null);
@@ -144,6 +196,7 @@ const PilotScorer = () => {
         eventId: reversalRef.id,
         type: "REVERSAL",
         targetEventId: target.eventId,
+        targetEventType: targetType,
         teamSide: target.teamSide,
         clientCreatedAt,
       };
@@ -157,6 +210,7 @@ const PilotScorer = () => {
         sport: "football",
         type: "REVERSAL",
         revertsEventId: target.eventId,
+        revertsEventType: targetType,
         teamSide: target.teamSide,
         clientCreatedAt,
         serverReceivedAt: serverTimestamp(),
@@ -164,15 +218,15 @@ const PilotScorer = () => {
       });
 
       batch.update(matchRef, {
-        [target.teamSide === "HOME" ? "scoreHome" : "scoreAway"]: increment(-1),
+        [field]: increment(-1),
         lastEvent: reversal,
         updatedAt: serverTimestamp(),
       });
 
       await batch.commit();
     } catch (err) {
-      console.error("Failed to undo pilot goal", err);
-      setError("Undo failed. Do not continue until the score is correct.");
+      console.error("Failed to undo pilot event", err);
+      setError("Undo failed. Do not continue until the match state is correct.");
     } finally {
       setBusy(false);
     }
@@ -225,16 +279,50 @@ const PilotScorer = () => {
 
   if (!match) return null;
 
-  const canUndo = match.lastEvent?.type === "GOAL";
-  const lastLabel = match.lastEvent
-    ? match.lastEvent.type === "GOAL"
-      ? `GOAL · ${match.lastEvent.teamSide === "HOME" ? match.homeName : match.awayName}`
-      : "REVERSAL · last goal corrected"
-    : "No events yet";
+  const canUndo = Boolean(match.lastEvent && match.lastEvent.type !== "REVERSAL");
+  const lastLabel = !match.lastEvent
+    ? "No events yet"
+    : match.lastEvent.type === "REVERSAL"
+      ? `${getEventLabel(match.lastEvent.targetEventType ?? "GOAL")} corrected`
+      : `${getEventLabel(match.lastEvent.type)} · ${match.lastEvent.teamSide === "HOME" ? match.homeName : match.awayName}`;
+
+  const TeamLane = ({ side }: { side: TeamSide }) => {
+    const isHome = side === "HOME";
+    const teamName = isHome ? match.homeName : match.awayName;
+    const buttonBase = "w-full rounded-xl px-2 font-black active:scale-[0.98] disabled:opacity-50";
+
+    return (
+      <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2.5">
+        <div className="truncate px-1 text-center text-sm font-black">{teamName}</div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => recordEvent("GOAL", side)}
+          className={`${buttonBase} min-h-20 ${isHome ? "bg-blue-600" : "bg-fuchsia-700"} text-lg text-white`}
+        >
+          GOAL +1
+        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" disabled={busy} onClick={() => recordEvent("SHOT", side)} className={`${buttonBase} min-h-14 bg-slate-800 text-sm text-white`}>
+            SHOT +
+          </button>
+          <button type="button" disabled={busy} onClick={() => recordEvent("FOUL", side)} className={`${buttonBase} min-h-14 bg-slate-800 text-sm text-white`}>
+            FOUL +
+          </button>
+          <button type="button" disabled={busy} onClick={() => recordEvent("YELLOW_CARD", side)} className={`${buttonBase} min-h-14 bg-amber-300 text-xs text-slate-950`}>
+            YELLOW
+          </button>
+          <button type="button" disabled={busy} onClick={() => recordEvent("RED_CARD", side)} className={`${buttonBase} min-h-14 bg-red-600 text-xs text-white`}>
+            RED
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-950 px-3 py-4 text-white">
-      <div className="mx-auto max-w-lg space-y-4">
+      <div className="mx-auto max-w-lg space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-cyan-300">Pilot 0 · Match Control</p>
@@ -252,46 +340,33 @@ const PilotScorer = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => addGoal("HOME")}
-            className="min-h-28 rounded-2xl bg-blue-600 px-3 text-xl font-black shadow-lg shadow-blue-950/30 active:scale-[0.98] disabled:opacity-50"
-          >
-            GOAL +1
-            <span className="mt-2 block text-xs font-bold opacity-80">{match.homeName}</span>
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => addGoal("AWAY")}
-            className="min-h-28 rounded-2xl bg-fuchsia-700 px-3 text-xl font-black shadow-lg shadow-fuchsia-950/30 active:scale-[0.98] disabled:opacity-50"
-          >
-            GOAL +1
-            <span className="mt-2 block text-xs font-bold opacity-80">{match.awayName}</span>
-          </button>
+          <TeamLane side="HOME" />
+          <TeamLane side="AWAY" />
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="grid grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-center">
+          <div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Shots</div><div className="mt-1 font-black">{match.shotsHome ?? 0}–{match.shotsAway ?? 0}</div></div>
+          <div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Fouls</div><div className="mt-1 font-black">{match.foulsHome ?? 0}–{match.foulsAway ?? 0}</div></div>
+          <div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Yellow</div><div className="mt-1 font-black">{match.yellowHome ?? 0}–{match.yellowAway ?? 0}</div></div>
+          <div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Red</div><div className="mt-1 font-black">{match.redHome ?? 0}–{match.redAway ?? 0}</div></div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
           <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-500">Last event</p>
           <p className="mt-1 font-bold">{lastLabel}</p>
           <button
             type="button"
-            onClick={undoLastGoal}
+            onClick={undoLastEvent}
             disabled={!canUndo || busy}
-            className="mt-4 w-full rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-4 font-black text-red-200 disabled:cursor-not-allowed disabled:opacity-30"
+            className="mt-3 w-full rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-black text-red-200 disabled:cursor-not-allowed disabled:opacity-30"
           >
-            {canUndo ? "UNDO LAST GOAL" : "NOTHING TO UNDO"}
+            {canUndo ? `UNDO ${getEventLabel(match.lastEvent!.type)}` : "NOTHING TO UNDO"}
           </button>
         </div>
 
         {error && (
           <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm font-semibold text-red-200">{error}</div>
         )}
-
-        <p className="px-2 text-center text-xs leading-relaxed text-slate-500">
-          Pilot 0: Goal → Firestore event + live score → spectator view.
-        </p>
       </div>
     </div>
   );
