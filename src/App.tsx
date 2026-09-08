@@ -47,14 +47,7 @@ function AppShell() {
           <Route path="/scorer/:tournamentId/:matchId" element={<PilotScorerSurface />} />
           <Route path="/live/:tournamentId" element={<PilotTournament />} />
           <Route path="/live/:tournamentId/match/:matchId" element={<PilotLive />} />
-          <Route
-            path="/pilot/:tournamentId/setup"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <PilotSetup />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/pilot/:tournamentId/setup" element={<PilotSetup />} />
 
           <Route
             path="/matches"
