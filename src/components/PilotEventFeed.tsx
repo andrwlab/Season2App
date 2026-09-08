@@ -18,6 +18,10 @@ type PilotEvent = {
   eventId: string;
   type: VisibleEventType | "REVERSAL" | "MATCH_START" | "CLOCK_PAUSE" | "CLOCK_RESUME" | "HALFTIME" | "SECOND_HALF_START" | "REGULATION_END" | "EXTRA_TIME_START" | "EXTRA_TIME_HALFTIME" | "EXTRA_TIME_SECOND_HALF_START" | "EXTRA_TIME_END" | "PENALTIES_START" | "FULLTIME";
   teamSide?: TeamSide;
+  playerId?: string | null;
+  playerName?: string | null;
+  assistPlayerId?: string | null;
+  assistPlayerName?: string | null;
   phase?: PilotPhase;
   matchClockMs?: number;
   clientCreatedAt?: number;
@@ -120,7 +124,7 @@ const PilotEventFeed = ({
   }, [events]);
 
   return (
-    <div className="border-t border-white/[0.07] bg-black/20 px-5 py-4 sm:px-7">
+    <div className="rounded-3xl border border-white/[0.07] bg-[#101010] px-5 py-5">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-white/30">Match feed</p>
         <span className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-red-300">Live</span>
@@ -134,15 +138,17 @@ const PilotEventFeed = ({
             const type = event.type as VisibleEventType;
             const teamName = event.teamSide === "HOME" ? homeName : event.teamSide === "AWAY" ? awayName : "";
             const minute = minutePartsFor(event, periodDurationMs, extraTimePeriodDurationMs);
+            const subject = event.playerName || teamName;
             return (
-              <div key={event.eventId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <span className="w-14 shrink-0 text-sm font-black tabular-nums text-white/80">
+              <div key={event.eventId} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                <span className="w-14 shrink-0 pt-0.5 text-sm font-black tabular-nums text-white/80">
                   {minute.base}{minute.penalty ? "" : "'"}
                   {minute.added && <span className="ml-0.5 text-cyan-300">{minute.added}'</span>}
                 </span>
-                <span className="text-base" aria-hidden="true">{iconFor(type)}</span>
+                <span className="pt-0.5 text-base" aria-hidden="true">{iconFor(type)}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-white/90">{labelFor(type)}{teamName ? ` · ${teamName}` : ""}</p>
+                  <p className="text-sm font-bold text-white/90">{labelFor(type)}{subject ? ` · ${subject}` : ""}{event.playerName && teamName ? <span className="font-semibold text-white/45"> · {teamName}</span> : null}</p>
+                  {type === "GOAL" && event.assistPlayerName && <p className="mt-1 text-xs font-semibold text-cyan-200/70">Assist · {event.assistPlayerName}</p>}
                 </div>
               </div>
             );
