@@ -28,13 +28,13 @@ The MVP is successful when an organizer can:
 - [x] Firestore realtime score subscription
 - [x] Live Score Hero redesign — mobile-first, score is the visual hero
 - [x] Moment data model
-- [ ] Firebase Storage client setup
-- [ ] Storage rules for public media reads and admin uploads
-- [ ] Admin `Add Moment` flow
-- [ ] Upload image/video and publish metadata to Firestore
-- [ ] Realtime Moments rail below the score
-- [ ] Fullscreen story viewer
-- [ ] Match timeline powered by the same Moments collection
+- [x] Firebase Storage client setup
+- [x] Storage rules for public media reads and admin uploads
+- [x] Admin `Add Moment` flow
+- [x] Upload image/video and publish metadata to Firestore
+- [x] Realtime Moments rail below the score
+- [x] Fullscreen story viewer
+- [x] Match timeline powered by the same Moments collection
 
 ### P1 — Spectator retention
 
@@ -47,9 +47,9 @@ The MVP is successful when an organizer can:
 ### P2 — Polish
 
 - [ ] Mobile responsive pass
-- [ ] Skeleton loading states
+- [x] Skeleton loading states on live match view
 - [ ] Minimal live/score/story transitions
-- [ ] Persistent tournament QR
+- [x] Persistent tournament QR
 - [ ] Final visual consistency pass
 
 ## Explicitly out of scope for this 48-hour MVP
@@ -77,3 +77,7 @@ The MVP is successful when an organizer can:
 - Moments opened per spectator
 - repeat visits
 - Moment Open Rate = spectators opening at least one Moment / total spectators
+
+## Current implementation state
+
+P0 is implemented in `feature/live-spectator-mvp`. Before merging to `main`, run the production build and perform the two-phone acceptance test described above. Storage rules must also be deployed to Firebase for media uploads to work in production.
