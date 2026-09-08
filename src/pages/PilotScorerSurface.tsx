@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import PilotMomentComposer from "../components/PilotMomentComposer";
 import { db } from "../firebase";
 import {
@@ -88,8 +88,19 @@ const PilotScorerSurface = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
+      <div className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/95 px-3 py-2.5 backdrop-blur">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-2">
+          <Link to={`/live/${tournamentId}`} className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-200 active:scale-[0.98]">
+            ← TOURNAMENT HUB
+          </Link>
+          <Link to={`/pilot/${tournamentId}/setup`} className="rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-black text-slate-300 active:scale-[0.98]">
+            SETUP
+          </Link>
+        </div>
+      </div>
+
       {showSetup && (
-        <div className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/95 px-3 py-3 backdrop-blur">
+        <div className="px-3 pt-3">
           <div className="mx-auto max-w-lg rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
             <div className="flex items-center justify-between gap-3">
               <div><p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-cyan-300">Minutes per half</p><p className="mt-1 text-xs text-slate-400">Default: 10 minutes. Editable only before kickoff.</p></div>
