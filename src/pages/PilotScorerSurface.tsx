@@ -1,11 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useParams } from "react-router-dom";
+import PilotMomentComposer from "../components/PilotMomentComposer";
 import { db } from "../firebase";
-import { DEFAULT_PERIOD_DURATION_MS, PilotClockStatus } from "../pilot/clock";
+import {
+  DEFAULT_PERIOD_DURATION_MS,
+  getVisibleMatchMs,
+  PilotClockState,
+  PilotClockStatus,
+} from "../pilot/clock";
 import PilotScorer from "./PilotScorer";
 
 const clampMinutes = (value: number) => Math.min(90, Math.max(1, Math.round(Number(value) || 10)));
+
+type MomentMatchState = PilotClockState & {
+  homeName: string;
+  awayName: string;
+};
 
 const PilotScorerSurface = () => {
   const { tournamentId = "pilot0", matchId = "match-001" } = useParams();
@@ -14,14 +25,18 @@ const PilotScorerSurface = () => {
 
   const [exists, setExists] = useState(false);
   const [clockStatus, setClockStatus] = useState<PilotClockStatus>("NOT_STARTED");
+  const [momentMatch, setMomentMatch] = useState<MomentMatchState | null>(null);
   const [minutes, setMinutes] = useState(10);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showMomentComposer, setShowMomentComposer] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     return onSnapshot(matchRef, (snap) => {
       if (!snap.exists()) {
         setExists(false);
+        setMomentMatch(null);
         return;
       }
 
@@ -29,6 +44,15 @@ const PilotScorerSurface = () => {
       const data = snap.data();
       const nextClockStatus = (data.clockStatus ?? "NOT_STARTED") as PilotClockStatus;
       setClockStatus(nextClockStatus);
+      setMomentMatch({
+        homeName: String(data.homeName ?? "Home"),
+        awayName: String(data.awayName ?? "Away"),
+        phase: data.phase,
+        clockStatus: nextClockStatus,
+        phaseElapsedBaseMs: Number(data.phaseElapsedBaseMs ?? 0),
+        runningSinceMs: data.runningSinceMs ?? null,
+        periodDurationMs: Number(data.periodDurationMs ?? DEFAULT_PERIOD_DURATION_MS),
+      });
 
       if (nextClockStatus === "NOT_STARTED") {
         const storedMinutes = Math.round(
@@ -38,6 +62,11 @@ const PilotScorerSurface = () => {
       }
     });
   }, [matchRef]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const saveMinutes = async (nextValue: number) => {
     if (!exists || clockStatus !== "NOT_STARTED") return;
@@ -60,6 +89,7 @@ const PilotScorerSurface = () => {
   };
 
   const showSetup = exists && clockStatus === "NOT_STARTED";
+  const visibleMatchMs = momentMatch ? getVisibleMatchMs(momentMatch, now) : 0;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -117,6 +147,46 @@ const PilotScorerSurface = () => {
       )}
 
       <PilotScorer />
+
+      {exists && momentMatch && (
+        <button
+          type="button"
+          onClick={() => setShowMomentComposer(true)}
+          className="fixed bottom-4 right-4 z-40 rounded-full bg-cyan-300 px-5 py-3.5 text-sm font-black text-slate-950 shadow-2xl shadow-black/40 active:scale-[0.98]"
+        >
+          + MOMENT
+        </button>
+      )}
+
+      {showMomentComposer && momentMatch && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 px-3 py-4 backdrop-blur-sm">
+          <div className="mx-auto max-w-lg">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-cyan-300">Spectator feed</p>
+                <p className="mt-1 text-xs text-slate-400">{momentMatch.homeName} vs {momentMatch.awayName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMomentComposer(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl font-bold text-white"
+                aria-label="Close moment composer"
+              >
+                ×
+              </button>
+            </div>
+
+            <PilotMomentComposer
+              tournamentId={tournamentId}
+              matchId={matchId}
+              pilotMatchId={pilotMatchId}
+              matchClockMs={visibleMatchMs}
+              homeName={momentMatch.homeName}
+              awayName={momentMatch.awayName}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
