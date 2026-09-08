@@ -1,6 +1,8 @@
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
 import { collection, doc, onSnapshot, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { Link, useParams } from "react-router-dom";
+import { useAuth } from "../AuthContext";
 import { db } from "../firebase";
 
 const clampMinutes = (value: number) => Math.min(90, Math.max(1, Number(value) || 10));
@@ -26,6 +28,11 @@ type PilotMatchSummary = {
 
 const PilotSetup = () => {
   const { tournamentId = "pilot0" } = useParams();
+  const auth = getAuth();
+  const authState = useAuth();
+  const user = authState?.user ?? null;
+  const role = authState?.role ?? null;
+  const authLoading = authState?.loading ?? true;
   const tournamentRef = useMemo(() => doc(db, "pilotTournaments", tournamentId), [tournamentId]);
 
   const [tournament, setTournament] = useState<PilotTournamentDoc | null>(null);
@@ -39,8 +46,11 @@ const PilotSetup = () => {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading || !user || role !== "admin") return undefined;
+
     const unsubscribeTournament = onSnapshot(tournamentRef, (snap) => {
       if (!snap.exists()) return;
       const data = snap.data() as PilotTournamentDoc;
@@ -64,7 +74,35 @@ const PilotSetup = () => {
       unsubscribeTournament();
       unsubscribeMatches();
     };
-  }, [tournamentId, tournamentRef]);
+  }, [authLoading, role, tournamentId, tournamentRef, user]);
+
+  const login = async () => {
+    const provider = new GoogleAuthProvider();
+    setAuthError(null);
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      console.error("Pilot setup sign-in failed", err);
+      const code = err?.code as string | undefined;
+      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request" || code === "auth/operation-not-supported-in-this-environment") {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      if (code === "auth/popup-closed-by-user") {
+        setAuthError("Sign-in was closed before it finished.");
+        return;
+      }
+      if (code === "auth/unauthorized-domain") {
+        setAuthError(`Google sign-in is not enabled for ${window.location.hostname}.`);
+        return;
+      }
+      setAuthError("Could not sign in. Try again, or open this page in Safari/Chrome.");
+    }
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+  };
 
   const saveTournament = async (event: FormEvent) => {
     event.preventDefault();
@@ -90,7 +128,7 @@ const PilotSetup = () => {
       setMessage("Tournament settings saved.");
     } catch (err) {
       console.error("Pilot tournament setup failed", err);
-      setError("Could not save tournament settings. Make sure you are signed in as admin.");
+      setError("Could not save tournament settings. This page requires an admin account.");
     } finally {
       setBusy(false);
     }
@@ -142,11 +180,60 @@ const PilotSetup = () => {
       setMessage(`${cleanMatchId} created.`);
     } catch (err) {
       console.error("Pilot match creation failed", err);
-      setError("Could not create the match. Make sure you are signed in as admin.");
+      setError("Could not create the match. This page requires an admin account.");
     } finally {
       setBusy(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <div className="mx-auto max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-center">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Pilot 0 · Setup</p>
+          <p className="mt-4 text-sm text-slate-400">Checking admin session…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <main className="mx-auto max-w-md space-y-5">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Pilot 0 · Admin</p>
+            <h1 className="mt-2 text-3xl font-black">Tournament Setup</h1>
+            <p className="mt-2 text-sm leading-relaxed text-slate-400">
+              Sign in here to configure this pilot. You will stay inside the Pilot 0 interface; this page does not send you to the Season 2 dashboard.
+            </p>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+            <button onClick={login} className="w-full rounded-xl bg-cyan-300 px-4 py-4 font-black text-slate-950">
+              SIGN IN WITH GOOGLE
+            </button>
+            {authError && <p className="mt-3 text-sm font-semibold text-red-300">{authError}</p>}
+          </div>
+          <Link to={`/live/${tournamentId}`} className="block text-center text-sm font-bold text-cyan-200">
+            Open public tournament hub →
+          </Link>
+        </main>
+      </div>
+    );
+  }
+
+  if (role !== "admin") {
+    return (
+      <div className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <main className="mx-auto max-w-md rounded-3xl border border-red-400/20 bg-red-500/[0.06] p-6 text-center">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-red-300">Pilot 0 · Access blocked</p>
+          <h1 className="mt-3 text-2xl font-black">Admin account required</h1>
+          <p className="mt-2 text-sm text-slate-400">Signed in as {user.email || user.displayName || "this account"}, but this account is not an admin.</p>
+          <button onClick={logout} className="mt-5 w-full rounded-xl bg-slate-800 px-4 py-3 font-black">SIGN OUT</button>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-6 text-white">
@@ -157,9 +244,12 @@ const PilotSetup = () => {
             <h1 className="mt-2 text-3xl font-black">{tournament?.name || name || tournamentId}</h1>
             <p className="mt-1 text-sm text-slate-500">{tournamentId}</p>
           </div>
-          <Link to={`/live/${tournamentId}`} className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-black text-cyan-200">
-            OPEN PUBLIC HUB →
-          </Link>
+          <div className="flex gap-2">
+            <Link to={`/live/${tournamentId}`} className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-black text-cyan-200">
+              PUBLIC HUB →
+            </Link>
+            <button onClick={logout} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-slate-400">SIGN OUT</button>
+          </div>
         </header>
 
         <form onSubmit={saveTournament} className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
