@@ -10,11 +10,18 @@
       (function () {
         var l = window.location;
         var base = "/Season2App";
-        var path = l.pathname.replace(base, "");
-        var newUrl = base + "/?/" + path.replace(/^\/+/, "");
-        if (l.search) newUrl += l.search.replace("?", "&");
+        var path = l.pathname.replace(base, "").replace(/^\/+/, "").replace(/&/g, "~and~");
+        var newUrl = base + "/?/" + path;
+
+        // Keep the separator between path and query as a real ampersand so
+        // index.html can restore it as "?". Only encode ampersands that were
+        // part of the original path/query values.
+        if (l.search) {
+          newUrl += "&" + l.search.slice(1).replace(/&/g, "~and~");
+        }
+
         if (l.hash) newUrl += l.hash;
-        l.replace(newUrl.replace(/&/g, "~and~"));
+        l.replace(newUrl);
       })();
     </script>
   </body>
