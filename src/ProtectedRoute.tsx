@@ -10,12 +10,14 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const { user, role, loading } = useAuth();
 
-  if (!user || role === undefined) {
-    return null; // o un loader si prefieres
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 p-8 text-center text-slate-400">
+        Loading access…
+      </div>
+    );
   }
 
-  if (loading) return null;
-  
   if (!user || role !== requiredRole) {
     return <Navigate to="/" replace />;
   }
