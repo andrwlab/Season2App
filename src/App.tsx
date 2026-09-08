@@ -21,10 +21,11 @@ const CumulativeStats = lazy(() => import('./pages/CumulativeStats'));
 const PilotScorerSurface = lazy(() => import('./pages/PilotScorerSurface'));
 const PilotLive = lazy(() => import('./pages/PilotLive'));
 const PilotTournament = lazy(() => import('./pages/PilotTournament'));
+const PilotSetup = lazy(() => import('./pages/PilotSetup'));
 
 function AppShell() {
   const location = useLocation();
-  const isPilotSurface = location.pathname.startsWith('/scorer/') || location.pathname.startsWith('/live/');
+  const isPilotSurface = location.pathname.startsWith('/scorer/') || location.pathname.startsWith('/live/') || location.pathname.startsWith('/pilot/');
 
   return (
     <>
@@ -46,6 +47,14 @@ function AppShell() {
           <Route path="/scorer/:tournamentId/:matchId" element={<PilotScorerSurface />} />
           <Route path="/live/:tournamentId" element={<PilotTournament />} />
           <Route path="/live/:tournamentId/match/:matchId" element={<PilotLive />} />
+          <Route
+            path="/pilot/:tournamentId/setup"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <PilotSetup />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/matches"
