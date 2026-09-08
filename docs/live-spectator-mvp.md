@@ -46,11 +46,11 @@ The MVP is successful when an organizer can:
 
 ### P2 — Polish
 
-- [ ] Mobile responsive pass
+- [x] Mobile responsive pass
 - [x] Skeleton loading states on live match view
-- [ ] Minimal live/score/story transitions
+- [x] Minimal live/score/story transitions
 - [x] Persistent tournament QR
-- [ ] Final visual consistency pass
+- [x] Final visual consistency pass
 
 ## Explicitly out of scope for this 48-hour MVP
 
@@ -80,4 +80,21 @@ The MVP is successful when an organizer can:
 
 ## Current implementation state
 
-P0 and P1 are implemented in `feature/live-spectator-mvp`. The production build passed in GitHub Actions after P0. Re-run CI after the P1 changes and perform the two-phone acceptance test before merging to `main`. Storage rules must also be deployed to Firebase for media uploads to work in production.
+P0, P1 and P2 implementation are complete in `feature/live-spectator-mvp`.
+
+GitHub Actions production builds pass after the spectator retention and mobile-polish changes.
+
+### Remaining release validation
+
+These are release steps, not missing application features:
+
+- [ ] Deploy `storage.rules` to Firebase Storage.
+- [ ] Run the two-phone acceptance test:
+  - scorer phone updates score;
+  - spectator phone receives score in realtime;
+  - scorer phone publishes an image/video Moment;
+  - spectator phone receives it without refresh;
+  - Moment opens fullscreen and navigation works;
+  - returning to the match preserves the live experience;
+  - reopening the page shows viewed vs new Moments correctly.
+- [ ] Merge `feature/live-spectator-mvp` into `main` only after the acceptance test passes.
