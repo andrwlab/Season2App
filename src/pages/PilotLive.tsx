@@ -127,7 +127,7 @@ const PilotLive = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070707] px-4 py-6 text-white">
+      <div className="min-h-[100dvh] bg-[#070707] px-4 py-6 text-white">
         <div className="mx-auto max-w-lg animate-pulse space-y-5">
           <div className="h-8 w-40 rounded-lg bg-white/10" />
           <div className="h-[420px] rounded-[2rem] bg-white/[0.05]" />
@@ -138,12 +138,12 @@ const PilotLive = () => {
   }
 
   if (error) {
-    return <div className="min-h-screen bg-[#070707] p-8 text-center font-semibold text-red-300">{error}</div>;
+    return <div className="min-h-[100dvh] bg-[#070707] p-8 text-center font-semibold text-red-300">{error}</div>;
   }
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-[#070707] px-5 py-10 text-white">
+      <div className="min-h-[100dvh] bg-[#070707] px-5 py-10 text-white">
         <div className="mx-auto max-w-md text-center">
           <Link to={`/live/${tournamentId}`} className="text-sm font-bold text-white/60">
             ← Tournament
@@ -194,8 +194,8 @@ const PilotLive = () => {
   const tournamentName = tournament?.name || tournamentId;
 
   return (
-    <div className="min-h-screen bg-[#070707] text-white">
-      <main className="mx-auto max-w-lg px-4 pb-12 pt-4 sm:pt-6">
+    <div className="min-h-[100dvh] bg-[#070707] text-white">
+      <main className="mx-auto max-w-lg px-4 pb-[max(env(safe-area-inset-bottom),3rem)] pt-[max(env(safe-area-inset-top),1rem)] sm:pt-6">
         <header className="flex min-h-12 items-center justify-between gap-3">
           <Link
             to={`/live/${tournamentId}`}
@@ -217,7 +217,7 @@ const PilotLive = () => {
           <div className="px-5 pb-8 pt-5 sm:px-7">
             <div className="flex items-center justify-center gap-2">
               <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.7rem] font-black uppercase tracking-[0.12em] ${statusClass}`}>
-                {isLive && <span className="h-1.5 w-1.5 rounded-full bg-red-400" />}
+                {isLive && <span className="live-dot h-1.5 w-1.5 rounded-full bg-red-400" />}
                 {statusLabel}
               </span>
             </div>
@@ -234,7 +234,7 @@ const PilotLive = () => {
                 <p className="mt-1 text-[0.62rem] font-bold uppercase tracking-[0.16em] text-white/30">Home</p>
               </div>
 
-              <div className="flex min-w-[8.5rem] items-center justify-center pt-4 sm:min-w-[10rem] sm:pt-5">
+              <div key={`${match.scoreHome}-${match.scoreAway}`} className="score-pop flex min-w-[8.5rem] items-center justify-center pt-4 sm:min-w-[10rem] sm:pt-5">
                 <span className="text-[4.5rem] font-black leading-none tracking-[-0.08em] tabular-nums sm:text-[5.5rem]">{match.scoreHome}</span>
                 <span className="mx-2 pb-1 text-3xl font-light text-white/20 sm:mx-3">–</span>
                 <span className="text-[4.5rem] font-black leading-none tracking-[-0.08em] tabular-nums sm:text-[5.5rem]">{match.scoreAway}</span>
