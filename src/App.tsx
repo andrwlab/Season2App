@@ -18,11 +18,16 @@ const TeamDetail = lazy(() => import('./pages/TeamDetail'));
 const PlayerProfile = lazy(() => import('./pages/PlayerProfile'));
 const AdminRosters = lazy(() => import('./pages/AdminRosters'));
 const CumulativeStats = lazy(() => import('./pages/CumulativeStats'));
-const PilotScorerSurface = lazy(() => import('./pages/PilotScorerSurface'));
-const PilotLive = lazy(() => import('./pages/PilotLive'));
-const PilotTournament = lazy(() => import('./pages/PilotTournament'));
-const PilotSetup = lazy(() => import('./pages/PilotSetup'));
-const PilotAdminHome = lazy(() => import('./pages/PilotAdminHome'));
+
+// Pilot surfaces stay in the main bundle on purpose. During live use, a GitHub
+// Pages deployment can replace lazy-loaded chunk filenames while an older scorer
+// tab is still open. Keeping these routes eagerly loaded prevents navigation to
+// Setup/Hub/Live from turning into a blank screen after a deployment.
+import PilotScorerSurface from './pages/PilotScorerSurface';
+import PilotLive from './pages/PilotLive';
+import PilotTournament from './pages/PilotTournament';
+import PilotSetup from './pages/PilotSetup';
+import PilotAdminHome from './pages/PilotAdminHome';
 
 function AppShell() {
   const location = useLocation();
