@@ -166,16 +166,19 @@ const PilotLive = () => {
               <div className="min-w-0 text-center"><TeamMark name={match.awayName} logoUrl={match.awayLogoUrl} /><p className="mt-4 line-clamp-2 min-h-10 text-sm font-black leading-tight sm:text-base">{match.awayName}</p><p className="mt-1 text-[0.62rem] font-bold uppercase tracking-[0.16em] text-white/30">Away</p></div>
             </div>
           </div>
-          <PilotEventFeed pilotMatchId={pilotMatchId} homeName={match.homeName} awayName={match.awayName} periodDurationMs={periodDurationMs} extraTimePeriodDurationMs={extraTimePeriodDurationMs} />
         </section>
-
-        <PilotMomentsRail pilotMatchId={pilotMatchId} />
-        <PilotMatchTimeline pilotMatchId={pilotMatchId} />
 
         <section className="mt-5 rounded-3xl border border-white/[0.07] bg-[#101010] px-5 py-5">
           <div className="mb-5 flex items-center justify-between"><h2 className="text-base font-black tracking-tight">Match stats</h2><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-white/30">{match.phase === "FULLTIME" ? "Final" : isTimedPhase(match.phase) ? "Live" : "Match"}</span></div>
           <div className="space-y-4">{stats.map(([label, home, away]) => <div key={label} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4"><span className="text-right text-base font-black tabular-nums">{home}</span><span className="min-w-24 text-center text-xs font-semibold text-white/40">{label}</span><span className="text-left text-base font-black tabular-nums">{away}</span></div>)}</div>
         </section>
+
+        <section className="mt-5 overflow-hidden rounded-3xl border border-white/[0.07] bg-[#101010]">
+          <PilotEventFeed pilotMatchId={pilotMatchId} homeName={match.homeName} awayName={match.awayName} periodDurationMs={periodDurationMs} extraTimePeriodDurationMs={extraTimePeriodDurationMs} />
+        </section>
+
+        <PilotMomentsRail pilotMatchId={pilotMatchId} />
+        <PilotMatchTimeline pilotMatchId={pilotMatchId} />
       </main>
     </div>
   );
