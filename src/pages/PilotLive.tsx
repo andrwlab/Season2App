@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { Link, useParams } from "react-router-dom";
+import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
 import { formatClock, formatPhase, getVisibleMatchMs, PilotClockStatus, PilotPhase } from "../pilot/clock";
 
@@ -180,7 +181,7 @@ const PilotLive = () => {
     ? "bg-white/10 text-white/70"
     : match.phase === "HALFTIME" || clockStatus === "PAUSED" || clockStatus === "NOT_STARTED"
       ? "bg-amber-400/10 text-amber-200"
-      : "bg-red-500/12 text-red-300";
+      : "bg-red-500/[0.12] text-red-300";
 
   const stats = [
     ["Shots", match.shotsHome ?? 0, match.shotsAway ?? 0],
@@ -256,6 +257,8 @@ const PilotLive = () => {
             </div>
           </div>
         </section>
+
+        <PilotMomentsRail pilotMatchId={pilotMatchId} />
 
         <section className="mt-5 rounded-3xl border border-white/[0.07] bg-[#101010] px-5 py-5">
           <div className="mb-5 flex items-center justify-between">
