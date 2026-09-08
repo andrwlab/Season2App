@@ -165,15 +165,15 @@ const PilotLive = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-[1fr_auto_1fr] border-t border-white/10 bg-black/10 px-5 py-4 text-center">
-            <div className="space-y-3 text-right">
-              {stats.map(([label, home]) => <div key={label} className="font-black">{home}</div>)}
-            </div>
-            <div className="space-y-3 px-7 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-slate-500">
-              {stats.map(([label]) => <div key={label}>{label}</div>)}
-            </div>
-            <div className="space-y-3 text-left">
-              {stats.map(([label, , away]) => <div key={label} className="font-black">{away}</div>)}
+          <div className="border-t border-white/10 bg-black/10 px-5 py-4">
+            <div className="space-y-3">
+              {stats.map(([label, home, away]) => (
+                <div key={label} className="grid min-h-6 grid-cols-[1fr_auto_1fr] items-center gap-5 text-center">
+                  <div className="text-right text-base font-black leading-none">{home}</div>
+                  <div className="min-w-20 text-center text-[0.65rem] font-bold uppercase leading-none tracking-[0.16em] text-slate-500">{label}</div>
+                  <div className="text-left text-base font-black leading-none">{away}</div>
+                </div>
+              ))}
             </div>
           </div>
 
