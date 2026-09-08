@@ -2,7 +2,7 @@ name: Live Spectator MVP CI
 
 on:
   push:
-    branches: [feature/live-spectator-mvp, feature/match-format-flow, feature/admin-navigation-management]
+    branches: [feature/live-spectator-mvp, feature/match-format-flow, feature/admin-navigation-management, feature/player-rosters-events]
   workflow_dispatch:
 
 permissions:
