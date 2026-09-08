@@ -1,45 +1,104 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase";
+import {
+  DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
+  DEFAULT_PERIOD_DURATION_MS,
+  getPhaseNominalDurationMs,
+  getPhaseOfficialStartMs,
+  PilotPhase,
+} from "../pilot/clock";
 
 type TeamSide = "HOME" | "AWAY";
-type EventType = "GOAL" | "SHOT" | "FOUL" | "YELLOW_CARD" | "RED_CARD";
+type MatchEventType = "GOAL" | "SHOT" | "FOUL" | "YELLOW_CARD" | "RED_CARD";
+type PenaltyEventType = "PENALTY_GOAL" | "PENALTY_MISS";
+type VisibleEventType = MatchEventType | PenaltyEventType;
+
 type PilotEvent = {
   eventId: string;
-  type: EventType | "REVERSAL" | "MATCH_START" | "CLOCK_PAUSE" | "CLOCK_RESUME" | "HALFTIME" | "SECOND_HALF_START" | "FULLTIME";
+  type: VisibleEventType | "REVERSAL" | "MATCH_START" | "CLOCK_PAUSE" | "CLOCK_RESUME" | "HALFTIME" | "SECOND_HALF_START" | "REGULATION_END" | "EXTRA_TIME_START" | "EXTRA_TIME_HALFTIME" | "EXTRA_TIME_SECOND_HALF_START" | "EXTRA_TIME_END" | "PENALTIES_START" | "FULLTIME";
   teamSide?: TeamSide;
+  phase?: PilotPhase;
   matchClockMs?: number;
   clientCreatedAt?: number;
   revertsEventId?: string;
   status?: string;
 };
 
-const visibleTypes = new Set<EventType>(["GOAL", "SHOT", "FOUL", "YELLOW_CARD", "RED_CARD"]);
+const visibleTypes = new Set<VisibleEventType>([
+  "GOAL",
+  "SHOT",
+  "FOUL",
+  "YELLOW_CARD",
+  "RED_CARD",
+  "PENALTY_GOAL",
+  "PENALTY_MISS",
+]);
 
-const labelFor = (type: EventType) => {
+const labelFor = (type: VisibleEventType) => {
   switch (type) {
     case "GOAL": return "Goal";
     case "SHOT": return "Shot";
     case "FOUL": return "Foul";
     case "YELLOW_CARD": return "Yellow card";
     case "RED_CARD": return "Red card";
+    case "PENALTY_GOAL": return "Penalty scored";
+    case "PENALTY_MISS": return "Penalty missed";
   }
 };
 
-const iconFor = (type: EventType) => {
+const iconFor = (type: VisibleEventType) => {
   switch (type) {
     case "GOAL": return "⚽";
     case "SHOT": return "🎯";
     case "FOUL": return "⚠️";
     case "YELLOW_CARD": return "🟨";
     case "RED_CARD": return "🟥";
+    case "PENALTY_GOAL": return "✅";
+    case "PENALTY_MISS": return "❌";
   }
 };
 
-// Football convention requested for this MVP: 0:01–1:00 = 1', 1:01–2:00 = 2', etc.
-const displayMinute = (matchClockMs = 0) => Math.max(1, Math.ceil(matchClockMs / 60000));
+type MinuteParts = { base: string; added?: string; penalty?: boolean };
 
-const PilotEventFeed = ({ pilotMatchId, homeName, awayName }: { pilotMatchId: string; homeName: string; awayName: string }) => {
+const minutePartsFor = (
+  event: PilotEvent,
+  periodDurationMs: number,
+  extraTimePeriodDurationMs: number
+): MinuteParts => {
+  if (event.type === "PENALTY_GOAL" || event.type === "PENALTY_MISS") return { base: "PEN", penalty: true };
+
+  const matchClockMs = Math.max(0, Number(event.matchClockMs ?? 0));
+  const phase = event.phase;
+  if (!phase) return { base: String(Math.max(1, Math.ceil(matchClockMs / 60000))) };
+
+  const clockShape = { phase, periodDurationMs, extraTimePeriodDurationMs };
+  const nominalDuration = getPhaseNominalDurationMs(clockShape);
+  const officialStart = getPhaseOfficialStartMs(clockShape);
+  const officialEnd = officialStart + nominalDuration;
+
+  if (nominalDuration > 0 && matchClockMs > officialEnd) {
+    const baseMinute = Math.round(officialEnd / 60000);
+    const addedMinute = Math.max(1, Math.ceil((matchClockMs - officialEnd) / 60000));
+    return { base: String(baseMinute), added: `+${addedMinute}` };
+  }
+
+  return { base: String(Math.max(1, Math.ceil(matchClockMs / 60000))) };
+};
+
+const PilotEventFeed = ({
+  pilotMatchId,
+  homeName,
+  awayName,
+  periodDurationMs = DEFAULT_PERIOD_DURATION_MS,
+  extraTimePeriodDurationMs = DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
+}: {
+  pilotMatchId: string;
+  homeName: string;
+  awayName: string;
+  periodDurationMs?: number;
+  extraTimePeriodDurationMs?: number;
+}) => {
   const [events, setEvents] = useState<PilotEvent[]>([]);
 
   useEffect(() => {
@@ -55,7 +114,7 @@ const PilotEventFeed = ({ pilotMatchId, homeName, awayName }: { pilotMatchId: st
     );
 
     return events
-      .filter((event): event is PilotEvent & { type: EventType } => visibleTypes.has(event.type as EventType))
+      .filter((event): event is PilotEvent & { type: VisibleEventType } => visibleTypes.has(event.type as VisibleEventType))
       .filter((event) => event.status !== "HIDDEN" && !revertedIds.has(event.eventId))
       .sort((a, b) => (b.clientCreatedAt ?? 0) - (a.clientCreatedAt ?? 0));
   }, [events]);
@@ -72,11 +131,15 @@ const PilotEventFeed = ({ pilotMatchId, homeName, awayName }: { pilotMatchId: st
       ) : (
         <div className="divide-y divide-white/[0.06]">
           {visibleEvents.map((event) => {
-            const type = event.type as EventType;
+            const type = event.type as VisibleEventType;
             const teamName = event.teamSide === "HOME" ? homeName : event.teamSide === "AWAY" ? awayName : "";
+            const minute = minutePartsFor(event, periodDurationMs, extraTimePeriodDurationMs);
             return (
               <div key={event.eventId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <span className="w-9 shrink-0 text-sm font-black tabular-nums text-white/80">{displayMinute(event.matchClockMs)}'</span>
+                <span className="w-14 shrink-0 text-sm font-black tabular-nums text-white/80">
+                  {minute.base}{minute.penalty ? "" : "'"}
+                  {minute.added && <span className="ml-0.5 text-cyan-300">{minute.added}'</span>}
+                </span>
                 <span className="text-base" aria-hidden="true">{iconFor(type)}</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-white/90">{labelFor(type)}{teamName ? ` · ${teamName}` : ""}</p>
