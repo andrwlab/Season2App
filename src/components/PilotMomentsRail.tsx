@@ -105,6 +105,15 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
   }, [moments, selectedIndex]);
 
   useEffect(() => {
+    if (selectedIndex === null || typeof document === "undefined") return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selectedIndex]);
+
+  useEffect(() => {
     if (selectedIndex === null) return;
 
     const handleKey = (event: KeyboardEvent) => {
@@ -166,7 +175,7 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
                 key={moment.momentId}
                 type="button"
                 onClick={() => selectMoment(index)}
-                className="w-[5.4rem] shrink-0 text-left active:scale-[0.98]"
+                className="w-[5.4rem] shrink-0 text-left transition active:scale-[0.98]"
               >
                 <div className={`relative h-28 overflow-hidden rounded-2xl bg-[#151515] transition ${isUnseen ? "border-2 border-red-400/80" : "border border-white/10"}`}>
                   {moment.mediaUrl && moment.mediaType === "IMAGE" ? (
@@ -193,9 +202,9 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
       </section>
 
       {selectedMoment && selectedIndex !== null && (
-        <div className="fixed inset-0 z-[80] bg-black text-white">
-          <div className="mx-auto flex min-h-screen max-w-lg flex-col">
-            <div className="flex gap-1 px-3 pb-2 pt-3">
+        <div className="story-enter fixed inset-0 z-[80] bg-black text-white">
+          <div className="mx-auto flex min-h-[100dvh] max-w-lg flex-col">
+            <div className="flex gap-1 px-3 pb-2 pt-[max(env(safe-area-inset-top),0.75rem)]">
               {moments.map((moment, index) => (
                 <div key={moment.momentId} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/20">
                   <div className={`h-full bg-white ${index <= selectedIndex ? "w-full" : "w-0"}`} />
@@ -213,7 +222,7 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
               <button
                 type="button"
                 onClick={() => setSelectedIndex(null)}
-                className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl font-bold"
+                className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl font-bold transition active:scale-95"
                 aria-label="Close story viewer"
               >
                 ×
@@ -261,7 +270,7 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
               )}
             </div>
 
-            <div className="border-t border-white/10 px-5 pb-6 pt-4">
+            <div className="border-t border-white/10 px-5 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-4">
               <div className="flex items-center gap-2 text-[0.65rem] font-black uppercase tracking-[0.14em] text-white/45">
                 <span>{momentTypeLabel(selectedMoment.type)}</span>
                 {selectedMoment.playerName && <><span>•</span><span>{selectedMoment.playerName}</span></>}
