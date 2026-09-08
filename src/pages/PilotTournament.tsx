@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import { Link, useParams } from "react-router-dom";
 import { db } from "../firebase";
 import { formatPhase, PilotPhase } from "../pilot/clock";
@@ -15,15 +15,28 @@ type PilotMatchSummary = {
   phase: PilotPhase;
 };
 
+type PilotTournamentSummary = {
+  tournamentId: string;
+  name: string;
+  sport: "football";
+  defaultHalfMinutes?: number;
+};
+
 const PilotTournament = () => {
   const { tournamentId = "pilot0" } = useParams();
   const [matches, setMatches] = useState<PilotMatchSummary[]>([]);
+  const [tournament, setTournament] = useState<PilotTournamentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const tournamentRef = doc(db, "pilotTournaments", tournamentId);
+    const unsubscribeTournament = onSnapshot(tournamentRef, (snap) => {
+      setTournament(snap.exists() ? (snap.data() as PilotTournamentSummary) : null);
+    });
+
     const q = query(collection(db, "pilotMatches"), where("tournamentId", "==", tournamentId));
-    return onSnapshot(
+    const unsubscribeMatches = onSnapshot(
       q,
       (snap) => {
         const next = snap.docs
@@ -38,6 +51,11 @@ const PilotTournament = () => {
         setLoading(false);
       }
     );
+
+    return () => {
+      unsubscribeTournament();
+      unsubscribeMatches();
+    };
   }, [tournamentId]);
 
   const liveMatches = matches.filter((match) => match.status === "LIVE" && match.phase !== "FULLTIME");
@@ -61,12 +79,15 @@ const PilotTournament = () => {
     return <div className="min-h-screen bg-slate-950 p-8 text-center font-semibold text-red-300">{error}</div>;
   }
 
+  const displayName = tournament?.name || tournamentId;
+
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-6 text-white">
       <main className="mx-auto max-w-lg space-y-6">
         <header>
           <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-cyan-300">Pilot 0 · Tournament Live</p>
-          <h1 className="mt-2 text-3xl font-black">{tournamentId}</h1>
+          <h1 className="mt-2 text-3xl font-black">{displayName}</h1>
+          {displayName !== tournamentId && <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-600">{tournamentId}</p>}
           <p className="mt-2 text-sm text-slate-400">Live scores, recent results and upcoming matches in one public link.</p>
         </header>
 
@@ -136,7 +157,7 @@ const PilotTournament = () => {
           <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-center">
             <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Tournament QR</h2>
             <div className="mx-auto mt-4 w-fit rounded-2xl bg-white p-3">
-              <img src={qrUrl} alt={`QR for ${tournamentId} live tournament hub`} width={220} height={220} className="h-44 w-44 sm:h-52 sm:w-52" />
+              <img src={qrUrl} alt={`QR for ${displayName} live tournament hub`} width={220} height={220} className="h-44 w-44 sm:h-52 sm:w-52" />
             </div>
             <p className="mx-auto mt-3 max-w-xs text-xs leading-relaxed text-slate-500">This QR always opens the tournament hub, not one specific match.</p>
           </section>
