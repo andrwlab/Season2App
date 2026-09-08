@@ -21,6 +21,7 @@ import {
   PilotClockStatus,
   PilotPhase,
 } from "../pilot/clock";
+import { PilotPlayer } from "../pilot/players";
 
 type TeamSide = "HOME" | "AWAY";
 type MatchEventType = "GOAL" | "SHOT" | "FOUL" | "YELLOW_CARD" | "RED_CARD";
@@ -45,6 +46,10 @@ type PilotLastEvent = {
   eventId: string;
   type: StoredEventType;
   teamSide?: TeamSide;
+  playerId?: string;
+  playerName?: string;
+  assistPlayerId?: string;
+  assistPlayerName?: string;
   targetEventId?: string;
   targetEventType?: ScoringEventType;
   clientCreatedAt: number;
@@ -55,6 +60,8 @@ type PilotMatch = {
   matchId: string;
   homeName: string;
   awayName: string;
+  homePlayers?: PilotPlayer[];
+  awayPlayers?: PilotPlayer[];
   scoreHome: number;
   scoreAway: number;
   shotsHome: number;
@@ -80,6 +87,8 @@ type PilotMatch = {
   lastEvent?: PilotLastEvent | null;
 };
 
+type PendingEvent = { type: MatchEventType; teamSide: TeamSide };
+
 const getCounterField = (type: MatchEventType, side: TeamSide) => {
   const suffix = side === "HOME" ? "Home" : "Away";
   switch (type) {
@@ -90,6 +99,8 @@ const getCounterField = (type: MatchEventType, side: TeamSide) => {
     case "RED_CARD": return `red${suffix}` as const;
   }
 };
+
+const getShotsField = (side: TeamSide) => side === "HOME" ? "shotsHome" as const : "shotsAway" as const;
 
 const getEventLabel = (type: StoredEventType) => {
   switch (type) {
@@ -120,6 +131,9 @@ const PilotScorer = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [pendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState("");
+  const [assistPlayerId, setAssistPlayerId] = useState("");
 
   const matchRef = useMemo(() => doc(db, "pilotMatches", pilotMatchId), [pilotMatchId]);
 
@@ -153,6 +167,8 @@ const PilotScorer = () => {
         matchId,
         homeName: homeName.trim() || "Team A",
         awayName: awayName.trim() || "Team B",
+        homePlayers: [],
+        awayPlayers: [],
         scoreHome: 0,
         scoreAway: 0,
         shotsHome: 0,
@@ -192,7 +208,17 @@ const PilotScorer = () => {
   const extraTimePeriodDurationMs = match?.extraTimePeriodDurationMs ?? DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS;
   const canRecordLiveEvent = Boolean(match && clockStatus === "RUNNING" && isTimedPhase(match.phase));
 
-  const recordEvent = async (type: MatchEventType, teamSide: TeamSide) => {
+  const rosterForSide = (side: TeamSide) => side === "HOME" ? (match?.homePlayers ?? []) : (match?.awayPlayers ?? []);
+  const teamNameForSide = (side: TeamSide) => side === "HOME" ? match?.homeName ?? "Home" : match?.awayName ?? "Away";
+
+  const openEventComposer = (type: MatchEventType, teamSide: TeamSide) => {
+    if (!canRecordLiveEvent || busy) return;
+    setPendingEvent({ type, teamSide });
+    setSelectedPlayerId("");
+    setAssistPlayerId("");
+  };
+
+  const recordEvent = async (type: MatchEventType, teamSide: TeamSide, player?: PilotPlayer, assistPlayer?: PilotPlayer) => {
     if (!match || busy || !canRecordLiveEvent) return;
     setBusy(true);
     setError(null);
@@ -202,7 +228,16 @@ const PilotScorer = () => {
       const batch = writeBatch(db);
       const clientCreatedAt = Date.now();
       const matchClockMs = getVisibleMatchMs(match, clientCreatedAt);
-      const lastEvent: PilotLastEvent = { eventId: eventRef.id, type, teamSide, clientCreatedAt };
+      const lastEvent: PilotLastEvent = {
+        eventId: eventRef.id,
+        type,
+        teamSide,
+        playerId: player?.playerId,
+        playerName: player?.name,
+        assistPlayerId: type === "GOAL" ? assistPlayer?.playerId : undefined,
+        assistPlayerName: type === "GOAL" ? assistPlayer?.name : undefined,
+        clientCreatedAt,
+      };
 
       batch.set(eventRef, {
         version: 1,
@@ -213,6 +248,10 @@ const PilotScorer = () => {
         sport: "football",
         type,
         teamSide,
+        playerId: player?.playerId ?? null,
+        playerName: player?.name ?? null,
+        assistPlayerId: type === "GOAL" ? assistPlayer?.playerId ?? null : null,
+        assistPlayerName: type === "GOAL" ? assistPlayer?.name ?? null : null,
         phase: match.phase,
         matchClockMs,
         clientCreatedAt,
@@ -220,19 +259,32 @@ const PilotScorer = () => {
         status: "ACTIVE",
       });
 
-      batch.update(matchRef, {
+      const updates: Record<string, unknown> = {
         [getCounterField(type, teamSide)]: increment(1),
         lastEvent,
         updatedAt: serverTimestamp(),
-      });
+      };
+      if (type === "GOAL") updates[getShotsField(teamSide)] = increment(1);
 
+      batch.update(matchRef, updates);
       await batch.commit();
+      setPendingEvent(null);
+      setSelectedPlayerId("");
+      setAssistPlayerId("");
     } catch (err) {
       console.error(`Failed to record pilot ${type}`, err);
       setError(`${getEventLabel(type)} was not saved. Try again before continuing.`);
     } finally {
       setBusy(false);
     }
+  };
+
+  const savePendingEvent = async () => {
+    if (!pendingEvent) return;
+    const roster = rosterForSide(pendingEvent.teamSide);
+    const player = roster.find((item) => item.playerId === selectedPlayerId);
+    const assist = pendingEvent.type === "GOAL" ? roster.find((item) => item.playerId === assistPlayerId) : undefined;
+    await recordEvent(pendingEvent.type, pendingEvent.teamSide, player, assist);
   };
 
   const recordPenalty = async (type: PenaltyEventType, teamSide: TeamSide) => {
@@ -324,65 +376,33 @@ const PilotScorer = () => {
   const startMatch = async () => {
     if (!match || clockStatus !== "NOT_STARTED") return;
     const actionTime = Date.now();
-    await writeStateEvent(
-      "MATCH_START",
-      {
-        status: "LIVE",
-        phase: "FIRST_HALF",
-        clockStatus: "RUNNING",
-        phaseElapsedBaseMs: 0,
-        runningSinceMs: actionTime,
-        periodDurationMs,
-      },
-      "FIRST_HALF",
-      0
-    );
+    await writeStateEvent("MATCH_START", { status: "LIVE", phase: "FIRST_HALF", clockStatus: "RUNNING", phaseElapsedBaseMs: 0, runningSinceMs: actionTime, periodDurationMs }, "FIRST_HALF", 0);
   };
 
   const pauseClock = async () => {
     if (!match || clockStatus !== "RUNNING") return;
     const actionTime = Date.now();
     const phaseElapsedBaseMs = getPhaseElapsedMs(match, actionTime);
-    await writeStateEvent(
-      "CLOCK_PAUSE",
-      { clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null },
-      match.phase,
-      getVisibleMatchMs(match, actionTime)
-    );
+    await writeStateEvent("CLOCK_PAUSE", { clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null }, match.phase, getVisibleMatchMs(match, actionTime));
   };
 
   const resumeClock = async () => {
     if (!match || clockStatus !== "PAUSED" || !isTimedPhase(match.phase)) return;
     const actionTime = Date.now();
-    await writeStateEvent(
-      "CLOCK_RESUME",
-      { clockStatus: "RUNNING", runningSinceMs: actionTime },
-      match.phase,
-      getVisibleMatchMs(match, actionTime)
-    );
+    await writeStateEvent("CLOCK_RESUME", { clockStatus: "RUNNING", runningSinceMs: actionTime }, match.phase, getVisibleMatchMs(match, actionTime));
   };
 
   const endFirstHalf = async () => {
     if (!match || match.phase !== "FIRST_HALF") return;
     const actionTime = Date.now();
     const phaseElapsedBaseMs = getPhaseElapsedMs(match, actionTime);
-    await writeStateEvent(
-      "HALFTIME",
-      { phase: "HALFTIME", clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null, lastEvent: null },
-      "FIRST_HALF",
-      getVisibleMatchMs(match, actionTime)
-    );
+    await writeStateEvent("HALFTIME", { phase: "HALFTIME", clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null, lastEvent: null }, "FIRST_HALF", getVisibleMatchMs(match, actionTime));
   };
 
   const startSecondHalf = async () => {
     if (!match || match.phase !== "HALFTIME") return;
     const actionTime = Date.now();
-    await writeStateEvent(
-      "SECOND_HALF_START",
-      { status: "LIVE", phase: "SECOND_HALF", clockStatus: "RUNNING", phaseElapsedBaseMs: 0, runningSinceMs: actionTime, lastEvent: null },
-      "SECOND_HALF",
-      periodDurationMs
-    );
+    await writeStateEvent("SECOND_HALF_START", { status: "LIVE", phase: "SECOND_HALF", clockStatus: "RUNNING", phaseElapsedBaseMs: 0, runningSinceMs: actionTime, lastEvent: null }, "SECOND_HALF", periodDurationMs);
   };
 
   const endRegulation = async () => {
@@ -390,56 +410,27 @@ const PilotScorer = () => {
     const actionTime = Date.now();
     const phaseElapsedBaseMs = getPhaseElapsedMs(match, actionTime);
     const matchClockMs = getVisibleMatchMs(match, actionTime);
-    await writeStateEvent(
-      "REGULATION_END",
-      { phase: "REGULATION_END", clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null, completedMatchClockMs: matchClockMs, lastEvent: null },
-      "REGULATION_END",
-      matchClockMs
-    );
+    await writeStateEvent("REGULATION_END", { phase: "REGULATION_END", clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null, completedMatchClockMs: matchClockMs, lastEvent: null }, "REGULATION_END", matchClockMs);
   };
 
   const startExtraTime = async () => {
     if (!match || match.phase !== "REGULATION_END") return;
     const safeMinutes = Math.min(45, Math.max(1, Number(extraTimeMinutes) || 5));
     const actionTime = Date.now();
-    await writeStateEvent(
-      "EXTRA_TIME_START",
-      {
-        status: "LIVE",
-        phase: "EXTRA_TIME_FIRST_HALF",
-        clockStatus: "RUNNING",
-        phaseElapsedBaseMs: 0,
-        runningSinceMs: actionTime,
-        extraTimePeriodDurationMs: safeMinutes * 60 * 1000,
-        completedMatchClockMs: null,
-        lastEvent: null,
-      },
-      "EXTRA_TIME_FIRST_HALF",
-      periodDurationMs * 2
-    );
+    await writeStateEvent("EXTRA_TIME_START", { status: "LIVE", phase: "EXTRA_TIME_FIRST_HALF", clockStatus: "RUNNING", phaseElapsedBaseMs: 0, runningSinceMs: actionTime, extraTimePeriodDurationMs: safeMinutes * 60 * 1000, completedMatchClockMs: null, lastEvent: null }, "EXTRA_TIME_FIRST_HALF", periodDurationMs * 2);
   };
 
   const endExtraTimeFirstHalf = async () => {
     if (!match || match.phase !== "EXTRA_TIME_FIRST_HALF") return;
     const actionTime = Date.now();
     const phaseElapsedBaseMs = getPhaseElapsedMs(match, actionTime);
-    await writeStateEvent(
-      "EXTRA_TIME_HALFTIME",
-      { phase: "EXTRA_TIME_HALFTIME", clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null, lastEvent: null },
-      "EXTRA_TIME_HALFTIME",
-      getVisibleMatchMs(match, actionTime)
-    );
+    await writeStateEvent("EXTRA_TIME_HALFTIME", { phase: "EXTRA_TIME_HALFTIME", clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null, lastEvent: null }, "EXTRA_TIME_HALFTIME", getVisibleMatchMs(match, actionTime));
   };
 
   const startExtraTimeSecondHalf = async () => {
     if (!match || match.phase !== "EXTRA_TIME_HALFTIME") return;
     const actionTime = Date.now();
-    await writeStateEvent(
-      "EXTRA_TIME_SECOND_HALF_START",
-      { phase: "EXTRA_TIME_SECOND_HALF", clockStatus: "RUNNING", phaseElapsedBaseMs: 0, runningSinceMs: actionTime, lastEvent: null },
-      "EXTRA_TIME_SECOND_HALF",
-      periodDurationMs * 2 + extraTimePeriodDurationMs
-    );
+    await writeStateEvent("EXTRA_TIME_SECOND_HALF_START", { phase: "EXTRA_TIME_SECOND_HALF", clockStatus: "RUNNING", phaseElapsedBaseMs: 0, runningSinceMs: actionTime, lastEvent: null }, "EXTRA_TIME_SECOND_HALF", periodDurationMs * 2 + extraTimePeriodDurationMs);
   };
 
   const endExtraTime = async () => {
@@ -447,54 +438,21 @@ const PilotScorer = () => {
     const actionTime = Date.now();
     const phaseElapsedBaseMs = getPhaseElapsedMs(match, actionTime);
     const matchClockMs = getVisibleMatchMs(match, actionTime);
-    await writeStateEvent(
-      "EXTRA_TIME_END",
-      { phase: "EXTRA_TIME_END", clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null, completedMatchClockMs: matchClockMs, lastEvent: null },
-      "EXTRA_TIME_END",
-      matchClockMs
-    );
+    await writeStateEvent("EXTRA_TIME_END", { phase: "EXTRA_TIME_END", clockStatus: "PAUSED", phaseElapsedBaseMs, runningSinceMs: null, completedMatchClockMs: matchClockMs, lastEvent: null }, "EXTRA_TIME_END", matchClockMs);
   };
 
   const startPenalties = async () => {
     if (!match || (match.phase !== "REGULATION_END" && match.phase !== "EXTRA_TIME_END")) return;
     const actionTime = Date.now();
     const completedMatchClockMs = getVisibleMatchMs(match, actionTime);
-    await writeStateEvent(
-      "PENALTIES_START",
-      {
-        status: "LIVE",
-        phase: "PENALTIES",
-        clockStatus: "PAUSED",
-        runningSinceMs: null,
-        completedMatchClockMs,
-        penaltyHome: match.penaltyHome ?? 0,
-        penaltyAway: match.penaltyAway ?? 0,
-        penaltyAttemptsHome: match.penaltyAttemptsHome ?? 0,
-        penaltyAttemptsAway: match.penaltyAttemptsAway ?? 0,
-        lastEvent: null,
-      },
-      "PENALTIES",
-      completedMatchClockMs
-    );
+    await writeStateEvent("PENALTIES_START", { status: "LIVE", phase: "PENALTIES", clockStatus: "PAUSED", runningSinceMs: null, completedMatchClockMs, penaltyHome: match.penaltyHome ?? 0, penaltyAway: match.penaltyAway ?? 0, penaltyAttemptsHome: match.penaltyAttemptsHome ?? 0, penaltyAttemptsAway: match.penaltyAttemptsAway ?? 0, lastEvent: null }, "PENALTIES", completedMatchClockMs);
   };
 
   const finishMatch = async () => {
     if (!match || !["REGULATION_END", "EXTRA_TIME_END", "PENALTIES"].includes(match.phase)) return;
     const actionTime = Date.now();
     const completedMatchClockMs = match.completedMatchClockMs ?? getVisibleMatchMs(match, actionTime);
-    await writeStateEvent(
-      "FULLTIME",
-      {
-        status: "FULLTIME",
-        phase: "FULLTIME",
-        clockStatus: "ENDED",
-        runningSinceMs: null,
-        completedMatchClockMs,
-        lastEvent: null,
-      },
-      "FULLTIME",
-      completedMatchClockMs
-    );
+    await writeStateEvent("FULLTIME", { status: "FULLTIME", phase: "FULLTIME", clockStatus: "ENDED", runningSinceMs: null, completedMatchClockMs, lastEvent: null }, "FULLTIME", completedMatchClockMs);
   };
 
   const undoLastEvent = async () => {
@@ -521,6 +479,11 @@ const PilotScorer = () => {
       const currentValue = Number(match[field] ?? 0);
       if (currentValue <= 0) return;
       updates[field] = increment(-1);
+      if (targetType === "GOAL") {
+        const shotsField = getShotsField(target.teamSide);
+        const currentShots = Number(match[shotsField] ?? 0);
+        if (currentShots > 0) updates[shotsField] = increment(-1);
+      }
     }
 
     setBusy(true);
@@ -529,14 +492,7 @@ const PilotScorer = () => {
       const reversalRef = doc(collection(db, "pilotEvents"));
       const batch = writeBatch(db);
       const clientCreatedAt = Date.now();
-      const reversal: PilotLastEvent = {
-        eventId: reversalRef.id,
-        type: "REVERSAL",
-        targetEventId: target.eventId,
-        targetEventType: targetType,
-        teamSide: target.teamSide,
-        clientCreatedAt,
-      };
+      const reversal: PilotLastEvent = { eventId: reversalRef.id, type: "REVERSAL", targetEventId: target.eventId, targetEventType: targetType, teamSide: target.teamSide, clientCreatedAt };
 
       batch.set(reversalRef, {
         version: 1,
@@ -572,12 +528,7 @@ const PilotScorer = () => {
     return (
       <div className="min-h-screen bg-slate-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-md">
-          <div className="mb-6">
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-300">Pilot 0</p>
-            <h1 className="mt-2 text-3xl font-black">Create live match</h1>
-            <p className="mt-2 text-sm text-slate-400">Temporary football match, isolated from Season 2 players and rosters.</p>
-          </div>
-
+          <div className="mb-6"><p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-300">Pilot 0</p><h1 className="mt-2 text-3xl font-black">Create live match</h1><p className="mt-2 text-sm text-slate-400">Temporary football match, isolated from Season 2 players and rosters.</p></div>
           <form onSubmit={createPilotMatch} className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5">
             <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Home</span><input value={homeName} onChange={(e) => setHomeName(e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-lg outline-none focus:border-cyan-400" /></label>
             <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Away</span><input value={awayName} onChange={(e) => setAwayName(e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-lg outline-none focus:border-cyan-400" /></label>
@@ -597,7 +548,7 @@ const PilotScorer = () => {
     ? "No events yet"
     : match.lastEvent.type === "REVERSAL"
       ? `${getEventLabel(match.lastEvent.targetEventType ?? "GOAL")} corrected`
-      : `${getEventLabel(match.lastEvent.type)} · ${match.lastEvent.teamSide === "HOME" ? match.homeName : match.awayName}`;
+      : `${getEventLabel(match.lastEvent.type)}${match.lastEvent.playerName ? ` · ${match.lastEvent.playerName}` : ""} · ${match.lastEvent.teamSide === "HOME" ? match.homeName : match.awayName}`;
 
   const TeamLane = ({ side }: { side: TeamSide }) => {
     const isHome = side === "HOME";
@@ -607,12 +558,12 @@ const PilotScorer = () => {
     return (
       <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2.5">
         <div className="truncate px-1 text-center text-sm font-black">{teamName}</div>
-        <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => recordEvent("GOAL", side)} className={`${buttonBase} min-h-20 ${isHome ? "bg-blue-600" : "bg-fuchsia-700"} text-lg text-white`}>GOAL +1</button>
+        <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => openEventComposer("GOAL", side)} className={`${buttonBase} min-h-20 ${isHome ? "bg-blue-600" : "bg-fuchsia-700"} text-lg text-white`}>GOAL + SHOT</button>
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => recordEvent("SHOT", side)} className={`${buttonBase} min-h-14 bg-slate-800 text-sm text-white`}>SHOT +</button>
-          <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => recordEvent("FOUL", side)} className={`${buttonBase} min-h-14 bg-slate-800 text-sm text-white`}>FOUL +</button>
-          <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => recordEvent("YELLOW_CARD", side)} className={`${buttonBase} min-h-14 bg-amber-300 text-xs text-slate-950`}>YELLOW</button>
-          <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => recordEvent("RED_CARD", side)} className={`${buttonBase} min-h-14 bg-red-600 text-xs text-white`}>RED</button>
+          <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => openEventComposer("SHOT", side)} className={`${buttonBase} min-h-14 bg-slate-800 text-sm text-white`}>SHOT +</button>
+          <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => openEventComposer("FOUL", side)} className={`${buttonBase} min-h-14 bg-slate-800 text-sm text-white`}>FOUL +</button>
+          <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => openEventComposer("YELLOW_CARD", side)} className={`${buttonBase} min-h-14 bg-amber-300 text-xs text-slate-950`}>YELLOW</button>
+          <button type="button" disabled={busy || !canRecordLiveEvent} onClick={() => openEventComposer("RED_CARD", side)} className={`${buttonBase} min-h-14 bg-red-600 text-xs text-white`}>RED</button>
         </div>
       </div>
     );
@@ -626,10 +577,7 @@ const PilotScorer = () => {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
         <div className="text-center"><p className="truncate text-sm font-black">{teamName}</p><p className="mt-1 text-xs font-semibold text-slate-500">{scored} scored · {attempts} taken</p></div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button type="button" disabled={busy} onClick={() => recordPenalty("PENALTY_GOAL", side)} className="min-h-16 rounded-xl bg-emerald-400 px-2 font-black text-slate-950 active:scale-[0.98] disabled:opacity-40">GOAL</button>
-          <button type="button" disabled={busy} onClick={() => recordPenalty("PENALTY_MISS", side)} className="min-h-16 rounded-xl bg-slate-800 px-2 font-black text-white active:scale-[0.98] disabled:opacity-40">MISS</button>
-        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" disabled={busy} onClick={() => recordPenalty("PENALTY_GOAL", side)} className="min-h-16 rounded-xl bg-emerald-400 px-2 font-black text-slate-950 active:scale-[0.98] disabled:opacity-40">GOAL</button><button type="button" disabled={busy} onClick={() => recordPenalty("PENALTY_MISS", side)} className="min-h-16 rounded-xl bg-slate-800 px-2 font-black text-white active:scale-[0.98] disabled:opacity-40">MISS</button></div>
       </div>
     );
   };
@@ -646,94 +594,52 @@ const PilotScorer = () => {
   })();
 
   const showDecision = match.phase === "REGULATION_END" || match.phase === "EXTRA_TIME_END";
+  const pendingRoster = pendingEvent ? rosterForSide(pendingEvent.teamSide) : [];
+  const selectedPlayer = pendingRoster.find((item) => item.playerId === selectedPlayerId);
 
   return (
     <div className="min-h-screen bg-slate-950 px-3 py-4 text-white">
       <div className="mx-auto max-w-lg space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div><p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-cyan-300">Pilot 0 · Match Control</p><p className="mt-1 text-xs text-slate-500">{tournamentId} / {matchId}</p></div>
-          <span className={`rounded-full border px-3 py-1 text-xs font-black ${match.phase === "FULLTIME" ? "border-slate-500/30 bg-slate-500/10 text-slate-300" : match.phase === "PENALTIES" ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-200" : clockStatus === "RUNNING" ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-amber-400/30 bg-amber-400/10 text-amber-200"}`}>
-            {match.phase === "FULLTIME" ? "FULL TIME" : match.phase === "PENALTIES" ? "PENALTIES" : clockStatus}
-          </span>
-        </div>
+        <div className="flex items-center justify-between gap-3"><div><p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-cyan-300">Pilot 0 · Match Control</p><p className="mt-1 text-xs text-slate-500">{tournamentId} / {matchId}</p></div><span className={`rounded-full border px-3 py-1 text-xs font-black ${match.phase === "FULLTIME" ? "border-slate-500/30 bg-slate-500/10 text-slate-300" : match.phase === "PENALTIES" ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-200" : clockStatus === "RUNNING" ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-amber-400/30 bg-amber-400/10 text-amber-200"}`}>{match.phase === "FULLTIME" ? "FULL TIME" : match.phase === "PENALTIES" ? "PENALTIES" : clockStatus}</span></div>
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-          <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-            <div>
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-500">{formatPhase(match.phase)}</p>
-              {match.phase === "PENALTIES" ? (
-                <p className="mt-1 text-xl font-black text-cyan-300">Shootout</p>
-              ) : (
-                <p className="mt-1 font-mono text-3xl font-black text-white">
-                  <span className={clockParts.isAddedTime ? "text-slate-200" : "text-cyan-300"}>{formatClock(clockParts.mainMs)}</span>
-                  {clockParts.isAddedTime && <span className="ml-2 text-cyan-300">+ {formatClock(clockParts.addedMs)}</span>}
-                </p>
-              )}
-            </div>
-            {isTimedPhase(match.phase) && clockStatus !== "NOT_STARTED" && (
-              <button type="button" disabled={busy} onClick={clockStatus === "RUNNING" ? pauseClock : resumeClock} className="rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-black disabled:opacity-40">{clockStatus === "RUNNING" ? "PAUSE CLOCK" : "RESUME CLOCK"}</button>
-            )}
-          </div>
-          <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-            <div className="truncate text-sm font-black">{match.homeName}</div>
-            <div>
-              <div className="text-5xl font-black tracking-tight">{match.scoreHome}–{match.scoreAway}</div>
-              {(match.phase === "PENALTIES" || (match.penaltyAttemptsHome ?? 0) + (match.penaltyAttemptsAway ?? 0) > 0) && <div className="mt-1 text-sm font-black text-cyan-300">PEN {match.penaltyHome ?? 0}–{match.penaltyAway ?? 0}</div>}
-            </div>
-            <div className="truncate text-sm font-black">{match.awayName}</div>
-          </div>
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3"><div><p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-500">{formatPhase(match.phase)}</p>{match.phase === "PENALTIES" ? <p className="mt-1 text-xl font-black text-cyan-300">Shootout</p> : <p className="mt-1 font-mono text-3xl font-black text-white"><span className={clockParts.isAddedTime ? "text-slate-200" : "text-cyan-300"}>{formatClock(clockParts.mainMs)}</span>{clockParts.isAddedTime && <span className="ml-2 text-cyan-300">+ {formatClock(clockParts.addedMs)}</span>}</p>}</div>{isTimedPhase(match.phase) && clockStatus !== "NOT_STARTED" && <button type="button" disabled={busy} onClick={clockStatus === "RUNNING" ? pauseClock : resumeClock} className="rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs font-black disabled:opacity-40">{clockStatus === "RUNNING" ? "PAUSE CLOCK" : "RESUME CLOCK"}</button>}</div>
+          <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center"><div className="truncate text-sm font-black">{match.homeName}</div><div><div className="text-5xl font-black tracking-tight">{match.scoreHome}–{match.scoreAway}</div>{(match.phase === "PENALTIES" || (match.penaltyAttemptsHome ?? 0) + (match.penaltyAttemptsAway ?? 0) > 0) && <div className="mt-1 text-sm font-black text-cyan-300">PEN {match.penaltyHome ?? 0}–{match.penaltyAway ?? 0}</div>}</div><div className="truncate text-sm font-black">{match.awayName}</div></div>
         </div>
 
-        {!canRecordLiveEvent && isTimedPhase(match.phase) && (
-          <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-center text-xs font-semibold text-amber-100">Live event buttons are locked until the match clock is running.</div>
-        )}
+        {!canRecordLiveEvent && isTimedPhase(match.phase) && <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-center text-xs font-semibold text-amber-100">Live event buttons are locked until the match clock is running.</div>}
 
-        {match.phase === "PENALTIES" ? (
-          <div className="grid grid-cols-2 gap-3"><PenaltyLane side="HOME" /><PenaltyLane side="AWAY" /></div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3"><TeamLane side="HOME" /><TeamLane side="AWAY" /></div>
-        )}
+        {match.phase === "PENALTIES" ? <div className="grid grid-cols-2 gap-3"><PenaltyLane side="HOME" /><PenaltyLane side="AWAY" /></div> : <div className="grid grid-cols-2 gap-3"><TeamLane side="HOME" /><TeamLane side="AWAY" /></div>}
 
-        {match.phase !== "PENALTIES" && (
-          <div className="grid grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-center">
-            <div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Shots</div><div className="mt-1 font-black">{match.shotsHome ?? 0}–{match.shotsAway ?? 0}</div></div>
-            <div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Fouls</div><div className="mt-1 font-black">{match.foulsHome ?? 0}–{match.foulsAway ?? 0}</div></div>
-            <div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Yellow</div><div className="mt-1 font-black">{match.yellowHome ?? 0}–{match.yellowAway ?? 0}</div></div>
-            <div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Red</div><div className="mt-1 font-black">{match.redHome ?? 0}–{match.redAway ?? 0}</div></div>
-          </div>
-        )}
+        {match.phase !== "PENALTIES" && <div className="grid grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-center"><div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Shots</div><div className="mt-1 font-black">{match.shotsHome ?? 0}–{match.shotsAway ?? 0}</div></div><div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Fouls</div><div className="mt-1 font-black">{match.foulsHome ?? 0}–{match.foulsAway ?? 0}</div></div><div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Yellow</div><div className="mt-1 font-black">{match.yellowHome ?? 0}–{match.yellowAway ?? 0}</div></div><div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Red</div><div className="mt-1 font-black">{match.redHome ?? 0}–{match.redAway ?? 0}</div></div></div>}
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-500">Last reversible event</p>
-          <p className="mt-1 font-bold">{lastLabel}</p>
-          <button type="button" onClick={undoLastEvent} disabled={!canUndo || busy} className="mt-3 w-full rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-black text-red-200 disabled:cursor-not-allowed disabled:opacity-30">{canUndo ? `UNDO ${getEventLabel(match.lastEvent!.type)}` : "NOTHING TO UNDO"}</button>
-        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-500">Last reversible event</p><p className="mt-1 font-bold">{lastLabel}</p><button type="button" onClick={undoLastEvent} disabled={!canUndo || busy} className="mt-3 w-full rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-black text-red-200 disabled:cursor-not-allowed disabled:opacity-30">{canUndo ? `UNDO ${getEventLabel(match.lastEvent!.type)}` : "NOTHING TO UNDO"}</button></div>
 
         {stateAction && <button type="button" disabled={busy} onClick={stateAction.action} className={`w-full rounded-2xl px-4 py-4 text-base font-black active:scale-[0.99] disabled:opacity-50 ${stateAction.className}`}>{stateAction.label}</button>}
 
-        {showDecision && (
-          <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.05] p-4">
-            <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-cyan-300">What happens next?</p>
-            <div className="mt-3 space-y-2">
-              <button type="button" disabled={busy} onClick={finishMatch} className="w-full rounded-xl bg-slate-100 px-4 py-3 font-black text-slate-950 disabled:opacity-40">END MATCH</button>
-              {match.phase === "REGULATION_END" && (
-                <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Extra-time minutes per half</label>
-                  <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
-                    <input type="number" min={1} max={45} inputMode="numeric" value={extraTimeMinutes} onChange={(event) => setExtraTimeMinutes(Math.min(45, Math.max(1, Number(event.target.value) || 1)))} className="min-h-12 rounded-xl border border-white/10 bg-slate-950 px-3 text-center text-lg font-black outline-none focus:border-cyan-300" />
-                    <button type="button" disabled={busy} onClick={startExtraTime} className="rounded-xl bg-cyan-300 px-4 font-black text-slate-950 disabled:opacity-40">EXTRA TIME</button>
-                  </div>
-                </div>
-              )}
-              <button type="button" disabled={busy} onClick={startPenalties} className="w-full rounded-xl bg-amber-300 px-4 py-3 font-black text-slate-950 disabled:opacity-40">PENALTIES</button>
-            </div>
-          </div>
-        )}
+        {showDecision && <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.05] p-4"><p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-cyan-300">What happens next?</p><div className="mt-3 space-y-2"><button type="button" disabled={busy} onClick={finishMatch} className="w-full rounded-xl bg-slate-100 px-4 py-3 font-black text-slate-950 disabled:opacity-40">END MATCH</button>{match.phase === "REGULATION_END" && <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3"><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Extra-time minutes per half</label><div className="mt-2 grid grid-cols-[1fr_auto] gap-2"><input type="number" min={1} max={45} inputMode="numeric" value={extraTimeMinutes} onChange={(event) => setExtraTimeMinutes(Math.min(45, Math.max(1, Number(event.target.value) || 1)))} className="min-h-12 rounded-xl border border-white/10 bg-slate-950 px-3 text-center text-lg font-black outline-none focus:border-cyan-300" /><button type="button" disabled={busy} onClick={startExtraTime} className="rounded-xl bg-cyan-300 px-4 font-black text-slate-950 disabled:opacity-40">EXTRA TIME</button></div></div>}<button type="button" disabled={busy} onClick={startPenalties} className="w-full rounded-xl bg-amber-300 px-4 py-3 font-black text-slate-950 disabled:opacity-40">PENALTIES</button></div></div>}
 
         {match.phase === "PENALTIES" && <button type="button" disabled={busy} onClick={finishMatch} className="w-full rounded-2xl bg-red-500 px-4 py-4 text-base font-black text-white active:scale-[0.99] disabled:opacity-50">END SHOOTOUT</button>}
-
         {error && <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm font-semibold text-red-200">{error}</div>}
       </div>
+
+      {pendingEvent && (
+        <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/80 px-3 py-4 backdrop-blur-sm">
+          <div className="mx-auto flex min-h-full max-w-lg items-end sm:items-center">
+            <div className="w-full rounded-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-4"><div><p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-cyan-300">Record event</p><h2 className="mt-1 text-2xl font-black">{getEventLabel(pendingEvent.type)} · {teamNameForSide(pendingEvent.teamSide)}</h2>{pendingEvent.type === "GOAL" && <p className="mt-1 text-xs font-semibold text-slate-400">A goal automatically adds +1 shot.</p>}</div><button type="button" onClick={() => setPendingEvent(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl">×</button></div>
+
+              <div className="mt-5"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">Player</p>{pendingRoster.length === 0 ? <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-100">No roster loaded. You can save this as a team event, or add players from Tournament Setup before kickoff.</div> : <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1"><button type="button" onClick={() => { setSelectedPlayerId(""); setAssistPlayerId(""); }} className={`rounded-xl border px-3 py-3 text-left text-sm font-bold ${selectedPlayerId === "" ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-300"}`}>Team event / unknown</button>{pendingRoster.map((player) => <button key={player.playerId} type="button" onClick={() => { setSelectedPlayerId(player.playerId); if (assistPlayerId === player.playerId) setAssistPlayerId(""); }} className={`rounded-xl border px-3 py-3 text-left text-sm font-bold ${selectedPlayerId === player.playerId ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-200"}`}>{player.name}</button>)}</div>}</div>
+
+              {pendingEvent.type === "GOAL" && pendingRoster.length > 0 && (
+                <div className="mt-5"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">Assist <span className="normal-case tracking-normal text-slate-600">(optional)</span></p><select value={assistPlayerId} onChange={(event) => setAssistPlayerId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold outline-none focus:border-cyan-300"><option value="">No assist / none recorded</option>{pendingRoster.filter((player) => player.playerId !== selectedPlayer?.playerId).map((player) => <option key={player.playerId} value={player.playerId}>{player.name}</option>)}</select></div>
+              )}
+
+              <div className="mt-5 grid grid-cols-[1fr_2fr] gap-2"><button type="button" onClick={() => setPendingEvent(null)} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-black text-slate-300">CANCEL</button><button type="button" disabled={busy} onClick={savePendingEvent} className="rounded-xl bg-cyan-300 px-4 py-3 font-black text-slate-950 disabled:opacity-40">{busy ? "SAVING…" : `SAVE ${getEventLabel(pendingEvent.type)}`}</button></div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
