@@ -23,6 +23,22 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
   const [moments, setMoments] = useState<PilotMoment[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewedMomentIds, setViewedMomentIds] = useState<Set<string>>(new Set());
+
+  const storageKey = useMemo(() => `livescore:viewed-moments:${pilotMatchId}`, [pilotMatchId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      const parsed = stored ? JSON.parse(stored) : [];
+      setViewedMomentIds(new Set(Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : []));
+    } catch (err) {
+      console.warn("Could not restore viewed moments", err);
+      setViewedMomentIds(new Set());
+    }
+  }, [storageKey]);
 
   useEffect(() => {
     const q = query(
@@ -52,6 +68,36 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
     [moments, selectedIndex]
   );
 
+  const unseenCount = useMemo(
+    () => moments.filter((moment) => !viewedMomentIds.has(moment.momentId)).length,
+    [moments, viewedMomentIds]
+  );
+
+  const markViewed = (momentId: string) => {
+    setViewedMomentIds((current) => {
+      if (current.has(momentId)) return current;
+      const next = new Set(current);
+      next.add(momentId);
+
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify(Array.from(next)));
+        } catch (err) {
+          console.warn("Could not persist viewed moment", err);
+        }
+      }
+
+      return next;
+    });
+  };
+
+  const selectMoment = (index: number) => {
+    const moment = moments[index];
+    if (!moment) return;
+    markViewed(moment.momentId);
+    setSelectedIndex(index);
+  };
+
   useEffect(() => {
     if (selectedIndex !== null && !moments[selectedIndex]) {
       setSelectedIndex(null);
@@ -63,13 +109,19 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
 
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setSelectedIndex(null);
-      if (event.key === "ArrowRight") setSelectedIndex((current) => current === null ? null : Math.min(moments.length - 1, current + 1));
-      if (event.key === "ArrowLeft") setSelectedIndex((current) => current === null ? null : Math.max(0, current - 1));
+      if (event.key === "ArrowRight") {
+        const nextIndex = Math.min(moments.length - 1, selectedIndex + 1);
+        if (nextIndex !== selectedIndex) selectMoment(nextIndex);
+      }
+      if (event.key === "ArrowLeft") {
+        const nextIndex = Math.max(0, selectedIndex - 1);
+        if (nextIndex !== selectedIndex) selectMoment(nextIndex);
+      }
     };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedIndex, moments.length]);
+  }, [selectedIndex, moments]);
 
   if (loading) {
     return (
@@ -91,7 +143,14 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
       <section className="mt-5">
         <div className="mb-3 flex items-end justify-between gap-3 px-1">
           <div>
-            <h2 className="text-base font-black tracking-tight">Moments</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-black tracking-tight">Moments</h2>
+              {unseenCount > 0 && (
+                <span className="rounded-full bg-red-500 px-2 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.1em] text-white">
+                  {unseenCount} new
+                </span>
+              )}
+            </div>
             <p className="mt-0.5 text-xs text-white/35">Photos, goals and highlights from this match</p>
           </div>
           <span className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-white/30">{moments.length} live</span>
@@ -100,14 +159,16 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
         <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {moments.map((moment, index) => {
             const minute = formatMomentMinute(moment.matchClockMs);
+            const isUnseen = !viewedMomentIds.has(moment.momentId);
+
             return (
               <button
                 key={moment.momentId}
                 type="button"
-                onClick={() => setSelectedIndex(index)}
+                onClick={() => selectMoment(index)}
                 className="w-[5.4rem] shrink-0 text-left active:scale-[0.98]"
               >
-                <div className="relative h-28 overflow-hidden rounded-2xl border border-white/10 bg-[#151515]">
+                <div className={`relative h-28 overflow-hidden rounded-2xl bg-[#151515] transition ${isUnseen ? "border-2 border-red-400/80" : "border border-white/10"}`}>
                   {moment.mediaUrl && moment.mediaType === "IMAGE" ? (
                     <img src={moment.mediaUrl} alt={moment.title} className="h-full w-full object-cover" />
                   ) : moment.mediaUrl && moment.mediaType === "VIDEO" ? (
@@ -121,8 +182,10 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
                   <div className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.58rem] font-black uppercase tracking-wide text-white">
                     {minute || typeShortLabel(moment)}
                   </div>
+
+                  {isUnseen && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-400 shadow-[0_0_0_3px_rgba(0,0,0,0.45)]" />}
                 </div>
-                <p className="mt-2 line-clamp-2 text-xs font-bold leading-tight text-white/85">{moment.title}</p>
+                <p className={`mt-2 line-clamp-2 text-xs font-bold leading-tight ${isUnseen ? "text-white" : "text-white/60"}`}>{moment.title}</p>
               </button>
             );
           })}
@@ -183,7 +246,7 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
               {selectedIndex > 0 && (
                 <button
                   type="button"
-                  onClick={() => setSelectedIndex(selectedIndex - 1)}
+                  onClick={() => selectMoment(selectedIndex - 1)}
                   className="absolute inset-y-0 left-0 w-1/4"
                   aria-label="Previous moment"
                 />
@@ -191,7 +254,7 @@ const PilotMomentsRail = ({ pilotMatchId }: Props) => {
               {selectedIndex < moments.length - 1 && (
                 <button
                   type="button"
-                  onClick={() => setSelectedIndex(selectedIndex + 1)}
+                  onClick={() => selectMoment(selectedIndex + 1)}
                   className="absolute inset-y-0 right-0 w-1/4"
                   aria-label="Next moment"
                 />
