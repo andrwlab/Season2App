@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { Link, useParams } from "react-router-dom";
+import PilotMatchTimeline from "../components/PilotMatchTimeline";
 import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
 import { formatClock, formatPhase, getVisibleMatchMs, PilotClockStatus, PilotPhase } from "../pilot/clock";
@@ -259,6 +260,8 @@ const PilotLive = () => {
         </section>
 
         <PilotMomentsRail pilotMatchId={pilotMatchId} />
+
+        <PilotMatchTimeline pilotMatchId={pilotMatchId} />
 
         <section className="mt-5 rounded-3xl border border-white/[0.07] bg-[#101010] px-5 py-5">
           <div className="mb-5 flex items-center justify-between">
