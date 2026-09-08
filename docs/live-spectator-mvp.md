@@ -38,11 +38,11 @@ The MVP is successful when an organizer can:
 
 ### P1 — Spectator retention
 
-- [ ] Track viewed Moment IDs locally
-- [ ] Show new/unseen Moment state
-- [ ] Tournament Home hierarchy: LIVE → Moments → Up Next → Latest Results → Standings preview
-- [ ] Previous/upcoming match cards
-- [ ] Bottom navigation: Home / Matches / Standings / Teams
+- [x] Track viewed Moment IDs locally
+- [x] Show new/unseen Moment state
+- [x] Tournament Home hierarchy: LIVE → Moments → Up Next → Latest Results → Standings preview
+- [x] Previous/upcoming match cards
+- [x] Bottom navigation: Home / Matches / Standings / Teams
 
 ### P2 — Polish
 
@@ -80,4 +80,4 @@ The MVP is successful when an organizer can:
 
 ## Current implementation state
 
-P0 is implemented in `feature/live-spectator-mvp`. Before merging to `main`, run the production build and perform the two-phone acceptance test described above. Storage rules must also be deployed to Firebase for media uploads to work in production.
+P0 and P1 are implemented in `feature/live-spectator-mvp`. The production build passed in GitHub Actions after P0. Re-run CI after the P1 changes and perform the two-phone acceptance test before merging to `main`. Storage rules must also be deployed to Firebase for media uploads to work in production.
