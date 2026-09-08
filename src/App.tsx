@@ -18,7 +18,7 @@ const TeamDetail = lazy(() => import('./pages/TeamDetail'));
 const PlayerProfile = lazy(() => import('./pages/PlayerProfile'));
 const AdminRosters = lazy(() => import('./pages/AdminRosters'));
 const CumulativeStats = lazy(() => import('./pages/CumulativeStats'));
-const PilotScorer = lazy(() => import('./pages/PilotScorer'));
+const PilotScorerSurface = lazy(() => import('./pages/PilotScorerSurface'));
 const PilotLive = lazy(() => import('./pages/PilotLive'));
 const PilotTournament = lazy(() => import('./pages/PilotTournament'));
 
@@ -43,7 +43,7 @@ function AppShell() {
           <Route path="/admin-match/:id" element={<AdminMatch />} />
           <Route path="/admin/rosters" element={<AdminRosters />} />
 
-          <Route path="/scorer/:tournamentId/:matchId" element={<PilotScorer />} />
+          <Route path="/scorer/:tournamentId/:matchId" element={<PilotScorerSurface />} />
           <Route path="/live/:tournamentId" element={<PilotTournament />} />
           <Route path="/live/:tournamentId/match/:matchId" element={<PilotLive />} />
 
