@@ -90,11 +90,11 @@ const PilotScorerSurface = () => {
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/95 px-3 py-2.5 backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-2">
-          <Link to={`/live/${tournamentId}`} className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-200 active:scale-[0.98]">
-            ← TOURNAMENT HUB
+          <Link to={`/pilot/${tournamentId}`} className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-200 active:scale-[0.98]">
+            ← TOURNAMENT DASHBOARD
           </Link>
-          <Link to={`/pilot/${tournamentId}/setup`} className="rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-black text-slate-300 active:scale-[0.98]">
-            SETUP
+          <Link to={`/live/${tournamentId}/match/${matchId}`} className="rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-black text-slate-300 active:scale-[0.98]">
+            PUBLIC VIEW
           </Link>
         </div>
       </div>

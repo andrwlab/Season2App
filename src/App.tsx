@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Routes, Route, useLocation, useParams } from 'react-router-dom';
 
 // Páginas principales
 import ProtectedRoute from './ProtectedRoute';
@@ -19,15 +19,23 @@ const PlayerProfile = lazy(() => import('./pages/PlayerProfile'));
 const AdminRosters = lazy(() => import('./pages/AdminRosters'));
 const CumulativeStats = lazy(() => import('./pages/CumulativeStats'));
 
-// Pilot surfaces stay in the main bundle on purpose. During live use, a GitHub
-// Pages deployment can replace lazy-loaded chunk filenames while an older scorer
-// tab is still open. Keeping these routes eagerly loaded prevents navigation to
-// Setup/Hub/Live from turning into a blank screen after a deployment.
+// Pilot/admin surfaces stay in the main bundle so navigation remains reliable
+// during long scorer sessions and GitHub Pages deployments.
 import PilotScorerSurface from './pages/PilotScorerSurface';
 import PilotLive from './pages/PilotLive';
 import PilotTournament from './pages/PilotTournament';
 import PilotSetup from './pages/PilotSetup';
 import PilotAdminHome from './pages/PilotAdminHome';
+
+const LegacyScorerRedirect = () => {
+  const { tournamentId = '', matchId = '' } = useParams();
+  return <Navigate to={`/pilot/${tournamentId}/match/${matchId}`} replace />;
+};
+
+const LegacySetupRedirect = () => {
+  const { tournamentId = '' } = useParams();
+  return <Navigate to={`/pilot/${tournamentId}`} replace />;
+};
 
 function AppShell() {
   const location = useLocation();
@@ -50,11 +58,18 @@ function AppShell() {
           <Route path="/admin-match/:id" element={<AdminMatch />} />
           <Route path="/admin/rosters" element={<AdminRosters />} />
 
-          <Route path="/scorer/:tournamentId/:matchId" element={<PilotScorerSurface />} />
+          {/* Public spectator flow */}
           <Route path="/live/:tournamentId" element={<PilotTournament />} />
           <Route path="/live/:tournamentId/match/:matchId" element={<PilotLive />} />
+
+          {/* Single admin namespace: /pilot */}
           <Route path="/pilot" element={<PilotAdminHome />} />
-          <Route path="/pilot/:tournamentId/setup" element={<PilotSetup />} />
+          <Route path="/pilot/:tournamentId" element={<PilotSetup />} />
+          <Route path="/pilot/:tournamentId/match/:matchId" element={<PilotScorerSurface />} />
+
+          {/* Legacy links remain valid and immediately resolve to the clean URLs. */}
+          <Route path="/pilot/:tournamentId/setup" element={<LegacySetupRedirect />} />
+          <Route path="/scorer/:tournamentId/:matchId" element={<LegacyScorerRedirect />} />
 
           <Route
             path="/matches"
