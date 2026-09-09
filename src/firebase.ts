@@ -23,6 +23,12 @@ export const db = initializeFirestore(app, {
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
+// Do not leave the scorer stuck in an upload retry loop for Firebase Storage's
+// default 10-minute retry window. The composer surfaces the concrete error and
+// lets the operator retry instead.
+storage.maxUploadRetryTime = 15_000;
+storage.maxOperationRetryTime = 10_000;
+
 // Analytics is optional at runtime (for example, some browsers/ad blockers disable it).
 // Audience heartbeat tracking still works through Firestore when GA4 is unavailable.
 export const analyticsPromise: Promise<Analytics | null> =

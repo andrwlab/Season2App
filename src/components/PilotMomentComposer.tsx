@@ -1,4 +1,5 @@
 import React, { FormEvent, useMemo, useState } from "react";
+import { FirebaseError } from "firebase/app";
 import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../firebase";
@@ -17,6 +18,8 @@ type Props = {
   homeName: string;
   awayName: string;
 };
+
+type PublishStage = "IDLE" | "UPLOADING" | "SAVING";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -37,6 +40,32 @@ const safeExtension = (file: File) => {
   return file.type.startsWith("video/") ? "mp4" : "jpg";
 };
 
+const publishErrorMessage = (error: unknown) => {
+  if (!(error instanceof FirebaseError)) {
+    return "Moment could not be published. Check your connection and try again.";
+  }
+
+  switch (error.code) {
+    case "storage/quota-exceeded":
+      return "Media upload is unavailable for this Firebase Storage plan or quota. Firebase Storage now requires the Blaze plan; publish without media or enable Storage billing before retrying.";
+    case "storage/retry-limit-exceeded":
+      return "Media upload timed out. If this Firebase project is on Spark, Storage will not accept uploads; otherwise check Storage access and try again.";
+    case "storage/unauthorized":
+      return "Storage denied this upload. Confirm you are signed in as an admin and that storage.rules are deployed.";
+    case "storage/bucket-not-found":
+      return "No Firebase Storage bucket is available for this project.";
+    case "storage/project-not-found":
+      return "Firebase Storage could not find the configured project.";
+    case "storage/unknown":
+      return `Firebase Storage could not complete the upload${error.message ? `: ${error.message}` : "."}`;
+    case "permission-denied":
+    case "firestore/permission-denied":
+      return "Firestore denied the Moment record. Confirm your admin session and Firestore rules.";
+    default:
+      return `Moment could not be published (${error.code}). ${error.message || "Please try again."}`;
+  }
+};
+
 const PilotMomentComposer = ({
   tournamentId,
   matchId,
@@ -51,10 +80,11 @@ const PilotMomentComposer = ({
   const [playerName, setPlayerName] = useState("");
   const [caption, setCaption] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [publishStage, setPublishStage] = useState<PublishStage>("IDLE");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const busy = publishStage !== "IDLE";
   const minuteLabel = useMemo(() => formatMomentMinute(matchClockMs), [matchClockMs]);
 
   const clearForm = () => {
@@ -81,8 +111,6 @@ const PilotMomentComposer = ({
       return;
     }
 
-    setBusy(true);
-
     try {
       const momentRef = doc(collection(db, PILOT_MOMENTS_COLLECTION));
       let mediaUrl: string | undefined;
@@ -90,12 +118,15 @@ const PilotMomentComposer = ({
       let mediaType: PilotMomentMediaType | undefined;
 
       if (file) {
+        setPublishStage("UPLOADING");
         mediaType = file.type.startsWith("video/") ? "VIDEO" : "IMAGE";
         storagePath = `pilotMoments/${tournamentId}/${matchId}/${momentRef.id}.${safeExtension(file)}`;
         const mediaRef = ref(storage, storagePath);
         await uploadBytes(mediaRef, file, { contentType: file.type });
         mediaUrl = await getDownloadURL(mediaRef);
       }
+
+      setPublishStage("SAVING");
 
       const defaultTitle =
         type === "GOAL"
@@ -127,11 +158,18 @@ const PilotMomentComposer = ({
       clearForm();
     } catch (err) {
       console.error("Failed to publish pilot moment", err);
-      setError("Moment could not be published. Check Storage rules and admin access, then try again.");
+      setError(publishErrorMessage(err));
     } finally {
-      setBusy(false);
+      setPublishStage("IDLE");
     }
   };
+
+  const buttonLabel =
+    publishStage === "UPLOADING"
+      ? "UPLOADING MEDIA…"
+      : publishStage === "SAVING"
+        ? "SAVING MOMENT…"
+        : "PUBLISH MOMENT";
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -225,7 +263,7 @@ const PilotMomentComposer = ({
           disabled={busy}
           className="w-full rounded-xl bg-cyan-300 px-4 py-3.5 text-sm font-black text-slate-950 active:scale-[0.99] disabled:opacity-50"
         >
-          {busy ? "PUBLISHING…" : "PUBLISH MOMENT"}
+          {buttonLabel}
         </button>
       </form>
     </section>
