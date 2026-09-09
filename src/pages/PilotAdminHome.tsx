@@ -39,7 +39,7 @@ const PilotAdminHome = () => {
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authLoading || !user || role !== "admin") return undefined;
+    if (authLoading || !user || user.isAnonymous || role !== "admin") return undefined;
     return onSnapshot(collection(db, "pilotTournaments"), (snapshot) => {
       const next = snapshot.docs
         .map((item) => item.data() as TournamentSummary)
@@ -109,7 +109,7 @@ const PilotAdminHome = () => {
     return <div className="min-h-screen bg-slate-950 px-4 py-10 text-center text-sm text-slate-400">Checking admin session…</div>;
   }
 
-  if (!user) {
+  if (!user || user.isAnonymous) {
     return (
       <div className="min-h-screen bg-slate-950 px-4 py-10 text-white">
         <main className="mx-auto max-w-md space-y-5">
