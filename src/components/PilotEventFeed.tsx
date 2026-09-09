@@ -90,6 +90,8 @@ const minutePartsFor = (
   return { base: String(Math.max(1, Math.ceil(matchClockMs / 60000))) };
 };
 
+const isFirstHalfEvent = (event: PilotEvent) => event.phase === "FIRST_HALF";
+
 const PilotEventFeed = ({
   pilotMatchId,
   homeName,
@@ -134,23 +136,38 @@ const PilotEventFeed = ({
         <p className="text-sm font-bold text-white/65">Waiting for the first event</p>
       ) : (
         <div className="divide-y divide-white/[0.06]">
-          {visibleEvents.map((event) => {
+          {visibleEvents.map((event, index) => {
             const type = event.type as VisibleEventType;
             const teamName = event.teamSide === "HOME" ? homeName : event.teamSide === "AWAY" ? awayName : "";
             const minute = minutePartsFor(event, periodDurationMs, extraTimePeriodDurationMs);
             const subject = event.playerName || teamName;
+            const nextEvent = visibleEvents[index + 1];
+            const showHalftimeDivider = Boolean(
+              nextEvent && !isFirstHalfEvent(event) && isFirstHalfEvent(nextEvent)
+            );
+
             return (
-              <div key={event.eventId} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-                <span className="w-14 shrink-0 pt-0.5 text-sm font-black tabular-nums text-white/80">
-                  {minute.base}{minute.penalty ? "" : "'"}
-                  {minute.added && <span className="ml-0.5 text-cyan-300">{minute.added}'</span>}
-                </span>
-                <span className="pt-0.5 text-base" aria-hidden="true">{iconFor(type)}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white/90">{labelFor(type)}{subject ? ` · ${subject}` : ""}{event.playerName && teamName ? <span className="font-semibold text-white/45"> · {teamName}</span> : null}</p>
-                  {type === "GOAL" && event.assistPlayerName && <p className="mt-1 text-xs font-semibold text-cyan-200/70">Assist · {event.assistPlayerName}</p>}
+              <React.Fragment key={event.eventId}>
+                <div className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                  <span className="w-14 shrink-0 pt-0.5 text-sm font-black tabular-nums text-white/80">
+                    {minute.base}{minute.penalty ? "" : "'"}
+                    {minute.added && <span className="ml-0.5 text-cyan-300">{minute.added}'</span>}
+                  </span>
+                  <span className="pt-0.5 text-base" aria-hidden="true">{iconFor(type)}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white/90">{labelFor(type)}{subject ? ` · ${subject}` : ""}{event.playerName && teamName ? <span className="font-semibold text-white/45"> · {teamName}</span> : null}</p>
+                    {type === "GOAL" && event.assistPlayerName && <p className="mt-1 text-xs font-semibold text-cyan-200/70">Assist · {event.assistPlayerName}</p>}
+                  </div>
                 </div>
-              </div>
+
+                {showHalftimeDivider && (
+                  <div className="flex items-center gap-3 py-3" aria-label="Halftime">
+                    <div className="h-px flex-1 bg-white/10" />
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[0.62rem] font-black uppercase tracking-[0.18em] text-white/45">HT</span>
+                    <div className="h-px flex-1 bg-white/10" />
+                  </div>
+                )}
+              </React.Fragment>
             );
           })}
         </div>
