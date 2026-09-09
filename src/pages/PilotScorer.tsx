@@ -21,7 +21,7 @@ import {
   PilotClockStatus,
   PilotPhase,
 } from "../pilot/clock";
-import { PilotPlayer } from "../pilot/players";
+import { PilotPlayer, sortPilotPlayers } from "../pilot/players";
 
 type TeamSide = "HOME" | "AWAY";
 type MatchEventType = "GOAL" | "SHOT" | "FOUL" | "YELLOW_CARD" | "RED_CARD";
@@ -208,7 +208,7 @@ const PilotScorer = () => {
   const extraTimePeriodDurationMs = match?.extraTimePeriodDurationMs ?? DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS;
   const canRecordLiveEvent = Boolean(match && clockStatus === "RUNNING" && isTimedPhase(match.phase));
 
-  const rosterForSide = (side: TeamSide) => side === "HOME" ? (match?.homePlayers ?? []) : (match?.awayPlayers ?? []);
+  const rosterForSide = (side: TeamSide) => sortPilotPlayers(side === "HOME" ? match?.homePlayers : match?.awayPlayers);
   const teamNameForSide = (side: TeamSide) => side === "HOME" ? match?.homeName ?? "Home" : match?.awayName ?? "Away";
 
   const openEventComposer = (type: MatchEventType, teamSide: TeamSide) => {
