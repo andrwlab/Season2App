@@ -5,6 +5,7 @@ import PilotEventFeed from "../components/PilotEventFeed";
 import PilotMatchTimeline from "../components/PilotMatchTimeline";
 import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
+import useAudienceTracking from "../hooks/useAudienceTracking";
 import {
   DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
   DEFAULT_PERIOD_DURATION_MS,
@@ -82,6 +83,8 @@ const PilotLive = () => {
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
 
+  useAudienceTracking({ tournamentId, matchId, scope: "MATCH" });
+
   const matchRef = useMemo(() => doc(db, "pilotMatches", pilotMatchId), [pilotMatchId]);
   const tournamentRef = useMemo(() => doc(db, "pilotTournaments", tournamentId), [tournamentId]);
 
@@ -135,8 +138,9 @@ const PilotLive = () => {
   const tournamentHubUrl = typeof window === "undefined"
     ? ""
     : `${window.location.origin}${window.location.pathname.split("/live/")[0]}/live/${encodeURIComponent(tournamentId)}`;
-  const tournamentQrUrl = tournamentHubUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(tournamentHubUrl)}`
+  const tournamentQrTargetUrl = tournamentHubUrl ? `${tournamentHubUrl}?src=qr` : "";
+  const tournamentQrUrl = tournamentQrTargetUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(tournamentQrTargetUrl)}`
     : "";
 
   return (

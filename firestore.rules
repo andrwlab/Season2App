@@ -104,6 +104,38 @@ service cloud.firestore {
         && request.resource.data["service"] is int;
     }
 
+    function isValidAudienceHeartbeat() {
+      return request.auth != null
+        && request.resource.data.keys().hasOnly([
+          "version",
+          "authUid",
+          "visitorId",
+          "sessionId",
+          "scope",
+          "tournamentId",
+          "matchId",
+          "source",
+          "minuteBucket",
+          "clientSeenAt",
+          "serverSeenAt"
+        ])
+        && request.resource.data.version == 1
+        && request.resource.data.authUid == request.auth.uid
+        && request.resource.data.visitorId is string
+        && request.resource.data.visitorId.size() <= 80
+        && request.resource.data.sessionId is string
+        && request.resource.data.sessionId.size() <= 80
+        && request.resource.data.scope in ["TOURNAMENT", "MATCH"]
+        && request.resource.data.tournamentId is string
+        && request.resource.data.tournamentId.size() <= 120
+        && (request.resource.data.matchId == null || request.resource.data.matchId is string)
+        && request.resource.data.source is string
+        && request.resource.data.source.size() <= 40
+        && request.resource.data.minuteBucket is int
+        && request.resource.data.clientSeenAt is int
+        && request.resource.data.serverSeenAt is timestamp;
+    }
+
     match /matches/{matchId} {
       allow read: if true;
       allow create, delete: if isAdmin();
@@ -134,8 +166,22 @@ service cloud.firestore {
       allow delete: if isAdmin() || isScorekeeper();
     }
 
+    match /pilotAudienceHeartbeats/{heartbeatId} {
+      allow read: if isAdmin();
+      allow create: if isValidAudienceHeartbeat();
+      allow update: if isValidAudienceHeartbeat()
+        && resource.data.authUid == request.auth.uid
+        && request.resource.data.authUid == resource.data.authUid
+        && request.resource.data.visitorId == resource.data.visitorId
+        && request.resource.data.scope == resource.data.scope
+        && request.resource.data.tournamentId == resource.data.tournamentId
+        && request.resource.data.matchId == resource.data.matchId
+        && request.resource.data.minuteBucket == resource.data.minuteBucket;
+      allow delete: if isAdmin();
+    }
+
     match /{collection}/{docId} {
-      allow read: if true;
+      allow read: if collection != "pilotAudienceHeartbeats";
       allow write: if isAdmin();
     }
   }

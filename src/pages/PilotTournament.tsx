@@ -3,6 +3,7 @@ import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import { Link, useParams } from "react-router-dom";
 import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
+import useAudienceTracking from "../hooks/useAudienceTracking";
 import { formatPhase, PilotPhase } from "../pilot/clock";
 
 type PilotMatchSummary = {
@@ -115,6 +116,8 @@ const PilotTournament = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  useAudienceTracking({ tournamentId, scope: "TOURNAMENT" });
+
   useEffect(() => {
     const tournamentRef = doc(db, "pilotTournaments", tournamentId);
     const unsubscribeTournament = onSnapshot(tournamentRef, (snap) => {
@@ -147,7 +150,6 @@ const PilotTournament = () => {
   const liveMatches = matches.filter((match) => match.status === "LIVE" && match.phase !== "FULLTIME");
   const previousMatches = matches.filter((match) => match.status === "FULLTIME" || match.phase === "FULLTIME").reverse();
   const upcomingMatches = matches.filter((match) => match.status === "READY");
-  const featuredMatch = liveMatches[0] ?? previousMatches[0] ?? upcomingMatches[0] ?? null;
   const momentMatch = liveMatches[0] ?? previousMatches[0] ?? null;
   const standings = useMemo(() => buildStandings(previousMatches), [previousMatches]);
   const teams = useMemo(() => {
@@ -164,8 +166,9 @@ const PilotTournament = () => {
     return `${window.location.origin}${window.location.pathname}`;
   }, []);
 
-  const qrUrl = hubUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(hubUrl)}`
+  const qrTargetUrl = hubUrl ? `${hubUrl}?src=qr` : "";
+  const qrUrl = qrTargetUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(qrTargetUrl)}`
     : "";
 
   if (loading) {

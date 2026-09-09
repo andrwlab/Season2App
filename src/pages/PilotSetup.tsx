@@ -3,6 +3,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signO
 import { collection, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import PilotAudienceAnalytics from "../components/PilotAudienceAnalytics";
 import { db } from "../firebase";
 import { parseRosterText, PilotPlayer, rosterToText } from "../pilot/players";
 
@@ -320,6 +321,8 @@ const PilotSetup = () => {
           <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-cyan-300">Pilot 0 · Setup</p><h1 className="mt-2 text-3xl font-black">{tournament?.name || name || tournamentId}</h1><p className="mt-1 text-sm text-slate-500">{tournamentId}</p></div><button onClick={logout} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-slate-400">SIGN OUT</button></div>
           <div className="grid grid-cols-2 gap-2 sm:flex"><Link to="/pilot" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-center text-xs font-black text-slate-300">← ALL TOURNAMENTS</Link><Link to={`/live/${tournamentId}`} className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-center text-xs font-black text-cyan-200">PUBLIC HUB →</Link></div>
         </header>
+
+        <PilotAudienceAnalytics tournamentId={tournamentId} />
 
         <form onSubmit={saveTournament} className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
           <div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Tournament</p><p className="mt-1 text-sm text-slate-500">Settings for this tournament only.</p></div>
