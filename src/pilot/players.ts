@@ -11,9 +11,14 @@ const slugifyPlayerName = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "player";
 
+export const sortPilotPlayers = (players?: PilotPlayer[]) =>
+  [...(players ?? [])].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+  );
+
 export const parseRosterText = (text: string, side: "HOME" | "AWAY"): PilotPlayer[] => {
   const seen = new Map<string, number>();
-  return text
+  const players = text
     .split(/\r?\n/)
     .map((name) => name.trim())
     .filter(Boolean)
@@ -26,7 +31,9 @@ export const parseRosterText = (text: string, side: "HOME" | "AWAY"): PilotPlaye
         name,
       };
     });
+
+  return sortPilotPlayers(players);
 };
 
 export const rosterToText = (players?: PilotPlayer[]) =>
-  (players ?? []).map((player) => player.name).join("\n");
+  sortPilotPlayers(players).map((player) => player.name).join("\n");
