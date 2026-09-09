@@ -132,6 +132,12 @@ const PilotLive = () => {
   const hasPenalties = (match.penaltyAttemptsHome ?? 0) + (match.penaltyAttemptsAway ?? 0) > 0 || match.phase === "PENALTIES";
   const periodDurationMs = match.periodDurationMs ?? DEFAULT_PERIOD_DURATION_MS;
   const extraTimePeriodDurationMs = match.extraTimePeriodDurationMs ?? DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS;
+  const tournamentHubUrl = typeof window === "undefined"
+    ? ""
+    : `${window.location.origin}${window.location.pathname.split("/live/")[0]}/live/${encodeURIComponent(tournamentId)}`;
+  const tournamentQrUrl = tournamentHubUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(tournamentHubUrl)}`
+    : "";
 
   return (
     <div className="min-h-[100dvh] bg-[#070707] text-white">
@@ -141,6 +147,20 @@ const PilotLive = () => {
           <div className="min-w-0 flex-1 text-center"><p className="truncate text-sm font-black tracking-tight">{tournamentName}</p><p className="mt-0.5 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/35">{match.matchId}</p></div>
           <div className="h-10 w-10" aria-hidden="true" />
         </header>
+
+        {tournamentQrUrl && (
+          <Link to={`/live/${tournamentId}`} className="mt-3 flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-[#101010] p-3 active:scale-[0.99]" aria-label="Open tournament home">
+            <div className="shrink-0 rounded-xl bg-white p-1.5">
+              <img src={tournamentQrUrl} alt={`QR code for ${tournamentName} tournament home`} className="h-20 w-20" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.62rem] font-black uppercase tracking-[0.18em] text-cyan-300">Tournament QR</p>
+              <p className="mt-1 text-sm font-black">Scan to open {tournamentName}</p>
+              <p className="mt-1 text-xs leading-relaxed text-white/40">Same QR as the tournament home. It opens the tournament hub, not this individual match.</p>
+            </div>
+            <span className="text-xl text-white/25">›</span>
+          </Link>
+        )}
 
         <section className="mt-4 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#111111]">
           <div className="px-5 pb-8 pt-5 sm:px-7">
