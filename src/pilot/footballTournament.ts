@@ -14,10 +14,13 @@ export type PilotTeam = {
 
 export type PilotScheduledMatch = {
   matchId: string;
-  matchday: number;
+  stage: "GROUP" | "SEMIFINAL" | "FINAL";
+  matchday?: number;
   order: number;
-  homeTeamId: string;
-  awayTeamId: string;
+  homeTeamId?: string;
+  awayTeamId?: string;
+  tieId?: "SF1" | "SF2";
+  leg?: 1 | 2;
 };
 
 const playerIdFor = (fullName: string) =>
@@ -118,12 +121,17 @@ export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
 ];
 
 export const FOOTBALL_2026_SCHEDULE: PilotScheduledMatch[] = [
-  { matchId: "group-01", matchday: 1, order: 1, homeTeamId: "real-madrid", awayTeamId: "fc-barcelona" },
-  { matchId: "group-02", matchday: 1, order: 2, homeTeamId: "paris-saint-germain", awayTeamId: "slovan-bratislava" },
-  { matchId: "group-03", matchday: 2, order: 1, homeTeamId: "paris-saint-germain", awayTeamId: "real-madrid" },
-  { matchId: "group-04", matchday: 2, order: 2, homeTeamId: "slovan-bratislava", awayTeamId: "fc-barcelona" },
-  { matchId: "group-05", matchday: 3, order: 1, homeTeamId: "real-madrid", awayTeamId: "slovan-bratislava" },
-  { matchId: "group-06", matchday: 3, order: 2, homeTeamId: "fc-barcelona", awayTeamId: "paris-saint-germain" },
+  { matchId: "group-01", stage: "GROUP", matchday: 1, order: 1, homeTeamId: "real-madrid", awayTeamId: "fc-barcelona" },
+  { matchId: "group-02", stage: "GROUP", matchday: 1, order: 2, homeTeamId: "paris-saint-germain", awayTeamId: "slovan-bratislava" },
+  { matchId: "group-03", stage: "GROUP", matchday: 2, order: 1, homeTeamId: "paris-saint-germain", awayTeamId: "real-madrid" },
+  { matchId: "group-04", stage: "GROUP", matchday: 2, order: 2, homeTeamId: "slovan-bratislava", awayTeamId: "fc-barcelona" },
+  { matchId: "group-05", stage: "GROUP", matchday: 3, order: 1, homeTeamId: "real-madrid", awayTeamId: "slovan-bratislava" },
+  { matchId: "group-06", stage: "GROUP", matchday: 3, order: 2, homeTeamId: "fc-barcelona", awayTeamId: "paris-saint-germain" },
+  { matchId: "semi-1-leg-1", stage: "SEMIFINAL", tieId: "SF1", leg: 1, order: 1 },
+  { matchId: "semi-2-leg-1", stage: "SEMIFINAL", tieId: "SF2", leg: 1, order: 2 },
+  { matchId: "semi-1-leg-2", stage: "SEMIFINAL", tieId: "SF1", leg: 2, order: 3 },
+  { matchId: "semi-2-leg-2", stage: "SEMIFINAL", tieId: "SF2", leg: 2, order: 4 },
+  { matchId: "final", stage: "FINAL", order: 5 },
 ];
 
 export const assetUrl = (path?: string) => {

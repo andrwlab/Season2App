@@ -8,6 +8,7 @@ import { canScoreMatches, isAdminRole } from "../auth/roles";
 import { getFirebaseErrorCode } from "../auth/errors";
 import PilotAudienceAnalytics from "../components/PilotAudienceAnalytics";
 import PilotTeamManager from "../components/PilotTeamManager";
+import PilotFootballBracketControl from "../components/PilotFootballBracketControl";
 import { db } from "../firebase";
 import { PilotTeam } from "../pilot/footballTournament";
 import { parseRosterText, PilotPlayer, rosterToText } from "../pilot/players";
@@ -33,6 +34,9 @@ type PilotMatchSummary = {
   scoreAway: number;
   status: "READY" | "LIVE" | "FULLTIME";
   phase: string;
+  stage?: "GROUP" | "SEMIFINAL" | "FINAL";
+  tieId?: "SF1" | "SF2";
+  leg?: 1 | 2;
   clockStatus?: "NOT_STARTED" | "RUNNING" | "PAUSED" | "ENDED";
   periodDurationMs?: number;
 };
@@ -339,6 +343,13 @@ const PilotSetup = () => {
         </form>}
 
         {isAdmin && (tournament?.teams?.length ?? 0) > 0 && <PilotTeamManager tournamentId={tournamentId} teams={tournament!.teams!} />}
+
+        {isAdmin && tournament?.sport === "football" && (tournament?.teams?.length ?? 0) === 4 && <PilotFootballBracketControl
+          tournamentId={tournamentId}
+          teams={tournament!.teams!}
+          matches={matches}
+          suggestedSeeds={tournament!.teams!.map((team) => team.teamId)}
+        />}
 
         <form onSubmit={createMatch} className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
           <div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Add match</p><p className="mt-1 text-sm text-slate-500">Create a match and paste each roster with one player per line.</p></div>

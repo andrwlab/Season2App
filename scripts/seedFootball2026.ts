@@ -25,13 +25,16 @@ const cleanRoster = (teamId: string) => {
 };
 
 const matchPayload = (scheduled: (typeof FOOTBALL_2026_SCHEDULE)[number], createdAt: unknown) => {
-  const home = FOOTBALL_2026_TEAMS.find((team) => team.teamId === scheduled.homeTeamId)!;
-  const away = FOOTBALL_2026_TEAMS.find((team) => team.teamId === scheduled.awayTeamId)!;
+  const home = FOOTBALL_2026_TEAMS.find((team) => team.teamId === scheduled.homeTeamId);
+  const away = FOOTBALL_2026_TEAMS.find((team) => team.teamId === scheduled.awayTeamId);
+  const pendingName = scheduled.stage === "FINAL" ? "Winner of semifinal" : "To be confirmed";
   return {
-    tournamentId: FOOTBALL_2026_TOURNAMENT_ID, matchId: scheduled.matchId, stage: "GROUP",
-    matchday: scheduled.matchday, order: scheduled.order, homeTeamId: home.teamId, awayTeamId: away.teamId,
-    homeName: home.name, awayName: away.name, homeLogoUrl: home.logoPath, awayLogoUrl: away.logoPath,
-    homePlayers: cleanRoster(home.teamId), awayPlayers: cleanRoster(away.teamId),
+    tournamentId: FOOTBALL_2026_TOURNAMENT_ID, matchId: scheduled.matchId, stage: scheduled.stage,
+    matchday: scheduled.matchday ?? null, order: scheduled.order, tieId: scheduled.tieId ?? null, leg: scheduled.leg ?? null,
+    homeTeamId: home?.teamId ?? null, awayTeamId: away?.teamId ?? null,
+    homeName: home?.name ?? pendingName, awayName: away?.name ?? pendingName,
+    homeLogoUrl: home?.logoPath ?? null, awayLogoUrl: away?.logoPath ?? null,
+    homePlayers: home ? cleanRoster(home.teamId) : [], awayPlayers: away ? cleanRoster(away.teamId) : [],
     scoreHome: 0, scoreAway: 0, shotsHome: 0, shotsAway: 0, foulsHome: 0, foulsAway: 0,
     yellowHome: 0, yellowAway: 0, redHome: 0, redAway: 0, penaltyHome: 0, penaltyAway: 0,
     penaltyAttemptsHome: 0, penaltyAttemptsAway: 0, status: "READY", phase: "FIRST_HALF",
@@ -60,12 +63,12 @@ async function mainAdmin() {
   for (const scheduled of FOOTBALL_2026_SCHEDULE) {
     const matchRef = db.collection("pilotMatches").doc(`${FOOTBALL_2026_TOURNAMENT_ID}__${scheduled.matchId}`);
     const existing = await matchRef.get();
-    if (existing.exists && !["READY", undefined].includes(existing.data()?.status)) {
-      console.log(`[skip] ${scheduled.matchId} already started`);
+    if (existing.exists) {
+      console.log(`[skip] ${scheduled.matchId} already exists`);
       continue;
     }
 
-    await matchRef.set(matchPayload(scheduled, existing.exists ? existing.data()?.createdAt ?? FieldValue.serverTimestamp() : FieldValue.serverTimestamp()), { merge: true });
+    await matchRef.set(matchPayload(scheduled, FieldValue.serverTimestamp()), { merge: true });
     written += 1;
   }
 
@@ -118,13 +121,11 @@ async function mainRest() {
   for (const scheduled of FOOTBALL_2026_SCHEDULE) {
     const path = `pilotMatches/${FOOTBALL_2026_TOURNAMENT_ID}__${scheduled.matchId}`;
     const existing = await restGet(path);
-    const status = existing?.fields?.status?.stringValue;
-    if (existing && status && status !== "READY") {
-      console.log(`[skip] ${scheduled.matchId} already started`);
+    if (existing) {
+      console.log(`[skip] ${scheduled.matchId} already exists`);
       continue;
     }
-    const createdAt = existing?.fields?.createdAt?.timestampValue ? new Date(existing.fields.createdAt.timestampValue) : now;
-    await restPut(path, matchPayload(scheduled, createdAt));
+    await restPut(path, matchPayload(scheduled, now));
     written += 1;
   }
   console.log(`Football 2026 ready: ${FOOTBALL_2026_TEAMS.length} teams, ${written} matches written.`);

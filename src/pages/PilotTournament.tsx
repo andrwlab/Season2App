@@ -21,6 +21,10 @@ type PilotMatchSummary = {
   stage?: "GROUP" | "SEMIFINAL" | "FINAL";
   matchday?: number;
   order?: number;
+  tieId?: "SF1" | "SF2";
+  leg?: 1 | 2;
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
 };
 
 type PilotTournamentSummary = {
@@ -41,6 +45,9 @@ type StandingRow = {
   ga: number;
   points: number;
 };
+
+type FootballEvent = { eventId?: string; type: string; status?: string; revertsEventId?: string; playerId?: string | null; playerName?: string | null; assistPlayerId?: string | null; assistPlayerName?: string | null };
+type PlayerStat = { playerId: string; name: string; goals: number; assists: number; yellow: number; red: number };
 
 const teamInitials = (name: string) =>
   name
@@ -118,6 +125,7 @@ const PilotTournament = () => {
   const { tournamentId = "pilot0" } = useParams();
   const [matches, setMatches] = useState<PilotMatchSummary[]>([]);
   const [tournament, setTournament] = useState<PilotTournamentSummary | null>(null);
+  const [footballEvents, setFootballEvents] = useState<FootballEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -145,10 +153,13 @@ const PilotTournament = () => {
         setLoading(false);
       }
     );
+    const eventsQuery = query(collection(db, "pilotEvents"), where("tournamentId", "==", tournamentId));
+    const unsubscribeEvents = onSnapshot(eventsQuery, (snap) => setFootballEvents(snap.docs.map((item) => item.data() as FootballEvent)));
 
     return () => {
       unsubscribeTournament();
       unsubscribeMatches();
+      unsubscribeEvents();
     };
   }, [tournamentId]);
 
@@ -169,6 +180,27 @@ const PilotTournament = () => {
     () => buildStandings(previousMatches.filter((match) => !match.stage || match.stage === "GROUP"), tournamentTeams.map((team) => team.name)),
     [previousMatches, tournamentTeams]
   );
+  const knockoutMatches = useMemo(() => matches.filter((match) => match.stage === "SEMIFINAL" || match.stage === "FINAL"), [matches]);
+  const semifinalTies = useMemo(() => (["SF1", "SF2"] as const).map((tieId) => knockoutMatches.filter((match) => match.tieId === tieId).sort((a, b) => (a.leg ?? 0) - (b.leg ?? 0))), [knockoutMatches]);
+  const finalMatch = knockoutMatches.find((match) => match.stage === "FINAL");
+  const playerStats = useMemo(() => {
+    const stats = new Map<string, PlayerStat>();
+    const ensure = (id?: string | null, name?: string | null) => {
+      if (!id || !name) return null;
+      if (!stats.has(id)) stats.set(id, { playerId: id, name, goals: 0, assists: 0, yellow: 0, red: 0 });
+      return stats.get(id)!;
+    };
+    const reversed = new Set(footballEvents.filter((event) => event.type === "REVERSAL" && event.revertsEventId).map((event) => event.revertsEventId));
+    footballEvents.filter((event) => event.type !== "REVERSAL" && event.status !== "REVERSED" && !reversed.has(event.eventId)).forEach((event) => {
+      const player = ensure(event.playerId, event.playerName);
+      if (player && (event.type === "GOAL" || event.type === "PENALTY_GOAL")) player.goals += 1;
+      if (player && event.type === "YELLOW_CARD") player.yellow += 1;
+      if (player && event.type === "RED_CARD") player.red += 1;
+      const assister = ensure(event.assistPlayerId, event.assistPlayerName);
+      if (assister && event.type === "GOAL") assister.assists += 1;
+    });
+    return Array.from(stats.values()).sort((a, b) => b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name));
+  }, [footballEvents]);
 
   const hubUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -346,6 +378,36 @@ const PilotTournament = () => {
             </div>
           )}
         </section>
+
+        {knockoutMatches.length > 0 && <section className="scroll-mt-6 pt-7">
+          <div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black tracking-tight">Knockout stage</h2><span className="text-xs font-bold text-white/30">Semi-finals · Final</span></div>
+          <div className="space-y-3">
+            <div className="grid gap-2 sm:grid-cols-2">{semifinalTies.map((tie, index) => {
+              const completed = tie.filter((match) => match.status === "FULLTIME");
+              const teamIds = Array.from(new Set(tie.flatMap((match) => [match.homeTeamId, match.awayTeamId]).filter(Boolean))) as string[];
+              const aggregate = new Map(teamIds.map((teamId) => [teamId, 0]));
+              completed.forEach((match) => {
+                if (match.homeTeamId) aggregate.set(match.homeTeamId, (aggregate.get(match.homeTeamId) ?? 0) + match.scoreHome);
+                if (match.awayTeamId) aggregate.set(match.awayTeamId, (aggregate.get(match.awayTeamId) ?? 0) + match.scoreAway);
+              });
+              const first = tie[0];
+              const second = tie[1];
+              const teamsSet = Array.from(new Set(tie.flatMap((match) => [match.homeName, match.awayName]))).filter((name) => name !== "To be confirmed");
+              return <div key={`SF${index + 1}`} className="rounded-2xl border border-white/[0.07] bg-[#101010] p-4">
+                <p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-cyan-300/70">Semi-final {index + 1} · two legs</p>
+                <p className="mt-2 truncate text-sm font-black">{teamsSet.length === 2 ? `${teamsSet[0]} vs ${teamsSet[1]}` : "Group positions to be confirmed"}</p>
+                <p className="mt-2 text-xs font-bold text-white/40">Aggregate {completed.length && teamIds.length === 2 ? `${aggregate.get(teamIds[0])}–${aggregate.get(teamIds[1])}` : "—"} · {completed.length}/2 played</p>
+                <div className="mt-3 space-y-1 border-t border-white/[0.06] pt-2">{[first, second].filter(Boolean).map((match) => <Link key={match.matchId} to={`/live/${tournamentId}/match/${match.matchId}`} className="flex items-center justify-between text-xs font-semibold text-white/55"><span>Leg {match.leg}</span><span className="truncate px-2">{match.homeName} – {match.awayName}</span><span>{match.status === "FULLTIME" ? `${match.scoreHome}–${match.scoreAway}` : "vs"}</span></Link>)}</div>
+              </div>;
+            })}</div>
+            {finalMatch && <Link to={`/live/${tournamentId}/match/${finalMatch.matchId}`} className="block rounded-2xl border border-amber-300/20 bg-amber-300/[0.05] p-4 text-center"><p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-amber-200">Final</p><p className="mt-2 text-sm font-black">{finalMatch.homeName} <span className="text-white/30">vs</span> {finalMatch.awayName}</p>{finalMatch.status === "FULLTIME" && <p className="mt-2 text-lg font-black">{finalMatch.scoreHome}–{finalMatch.scoreAway}</p>}</Link>}
+          </div>
+        </section>}
+
+        {tournament?.sport === "football" && <section className="scroll-mt-6 pt-7">
+          <div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black tracking-tight">Player stats</h2><span className="text-xs font-bold text-white/30">Football only</span></div>
+          {playerStats.length === 0 ? <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">Player statistics will appear with the first recorded event.</div> : <div className="overflow-hidden rounded-3xl border border-white/[0.07] bg-[#101010]"><div className="grid grid-cols-[1fr_2.5rem_2.5rem_2.5rem] gap-2 border-b border-white/[0.06] px-4 py-3 text-[0.6rem] font-black uppercase tracking-[0.1em] text-white/25"><span>Player</span><span className="text-center">G</span><span className="text-center">A</span><span className="text-center">Cards</span></div>{playerStats.slice(0, 10).map((player, index) => <div key={player.playerId} className={`grid grid-cols-[1fr_2.5rem_2.5rem_2.5rem] items-center gap-2 px-4 py-3 text-sm ${index ? "border-t border-white/[0.05]" : ""}`}><span className="truncate font-black">{player.name}</span><span className="text-center font-black">{player.goals}</span><span className="text-center text-cyan-200">{player.assists}</span><span className="text-center text-xs">{player.yellow > 0 && <span>🟨{player.yellow}</span>}{player.red > 0 && <span> 🟥{player.red}</span>}</span></div>)}</div>}
+        </section>}
 
         <section id="teams" className="scroll-mt-6 pt-7">
           <div className="mb-3 px-1">
