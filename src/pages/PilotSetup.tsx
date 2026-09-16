@@ -7,7 +7,9 @@ import { useAuth } from "../AuthContext";
 import { canScoreMatches, isAdminRole } from "../auth/roles";
 import { getFirebaseErrorCode } from "../auth/errors";
 import PilotAudienceAnalytics from "../components/PilotAudienceAnalytics";
+import PilotTeamManager from "../components/PilotTeamManager";
 import { db } from "../firebase";
+import { PilotTeam } from "../pilot/footballTournament";
 import { parseRosterText, PilotPlayer, rosterToText } from "../pilot/players";
 
 const clampMinutes = (value: number) => Math.min(90, Math.max(1, Number(value) || 10));
@@ -17,6 +19,7 @@ type PilotTournamentDoc = {
   name: string;
   sport: "football";
   defaultHalfMinutes: number;
+  teams?: PilotTeam[];
 };
 
 type PilotMatchSummary = {
@@ -334,6 +337,8 @@ const PilotSetup = () => {
           <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Default minutes per half</span><div className="grid grid-cols-[48px_1fr_48px] gap-2"><button type="button" onClick={() => setDefaultHalfMinutes((v) => clampMinutes(v - 1))} className="rounded-xl bg-slate-800 text-xl font-black">−</button><input type="number" min={1} max={90} value={defaultHalfMinutes} onChange={(e) => setDefaultHalfMinutes(Number(e.target.value))} className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-center text-lg font-black outline-none focus:border-cyan-400" /><button type="button" onClick={() => setDefaultHalfMinutes((v) => clampMinutes(v + 1))} className="rounded-xl bg-slate-800 text-xl font-black">+</button></div></label>
           <button disabled={busy} className="w-full rounded-xl bg-cyan-300 px-4 py-3 font-black text-slate-950 disabled:opacity-50">SAVE TOURNAMENT SETTINGS</button>
         </form>}
+
+        {isAdmin && (tournament?.teams?.length ?? 0) > 0 && <PilotTeamManager tournamentId={tournamentId} teams={tournament!.teams!} />}
 
         <form onSubmit={createMatch} className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
           <div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Add match</p><p className="mt-1 text-sm text-slate-500">Create a match and paste each roster with one player per line.</p></div>

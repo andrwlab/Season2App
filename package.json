@@ -14,7 +14,8 @@
     "sync:roster": "tsx scripts/syncSeasonRoster.ts",
     "import:stats:s1": "tsx scripts/importSeason1Stats.ts",
     "dedupe:players": "tsx scripts/dedupePlayers.ts",
-    "set:user-role": "tsx scripts/setUserRole.ts"
+    "set:user-role": "tsx scripts/setUserRole.ts",
+    "seed:football-2026": "tsx scripts/seedFootball2026.ts"
   },
   "dependencies": {
     "chart.js": "^4.4.9",

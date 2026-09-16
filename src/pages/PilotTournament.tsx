@@ -5,6 +5,7 @@ import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
 import useAudienceTracking from "../hooks/useAudienceTracking";
 import { formatPhase, PilotPhase } from "../pilot/clock";
+import { assetUrl, PilotTeam } from "../pilot/footballTournament";
 
 type PilotMatchSummary = {
   matchId: string;
@@ -17,6 +18,9 @@ type PilotMatchSummary = {
   scoreAway: number;
   status: "READY" | "LIVE" | "FULLTIME";
   phase: PilotPhase;
+  stage?: "GROUP" | "SEMIFINAL" | "FINAL";
+  matchday?: number;
+  order?: number;
 };
 
 type PilotTournamentSummary = {
@@ -24,6 +28,7 @@ type PilotTournamentSummary = {
   name: string;
   sport: "football";
   defaultHalfMinutes?: number;
+  teams?: PilotTeam[];
 };
 
 type StandingRow = {
@@ -51,7 +56,7 @@ const TeamBadge = ({ name, logoUrl, size = "md" }: { name: string; logoUrl?: str
   if (logoUrl) {
     return (
       <div className={`flex ${dimension} shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white`}>
-        <img src={logoUrl} alt={`${name} logo`} className="h-full w-full object-contain p-1.5" />
+        <img src={assetUrl(logoUrl)} alt={`${name} logo`} className="h-full w-full object-contain p-1.5" />
       </div>
     );
   }
@@ -63,7 +68,7 @@ const TeamBadge = ({ name, logoUrl, size = "md" }: { name: string; logoUrl?: str
   );
 };
 
-const buildStandings = (completedMatches: PilotMatchSummary[]): StandingRow[] => {
+const buildStandings = (completedMatches: PilotMatchSummary[], teamNames: string[] = []): StandingRow[] => {
   const table = new Map<string, StandingRow>();
 
   const ensure = (team: string) => {
@@ -72,6 +77,8 @@ const buildStandings = (completedMatches: PilotMatchSummary[]): StandingRow[] =>
     }
     return table.get(team)!;
   };
+
+  teamNames.forEach(ensure);
 
   completedMatches.forEach((match) => {
     const home = ensure(match.homeName);
@@ -149,10 +156,9 @@ const PilotTournament = () => {
 
   const liveMatches = matches.filter((match) => match.status === "LIVE" && match.phase !== "FULLTIME");
   const previousMatches = matches.filter((match) => match.status === "FULLTIME" || match.phase === "FULLTIME").reverse();
-  const upcomingMatches = matches.filter((match) => match.status === "READY");
+  const upcomingMatches = matches.filter((match) => match.status === "READY").sort((a, b) => (a.matchday ?? 99) - (b.matchday ?? 99) || (a.order ?? 99) - (b.order ?? 99));
   const momentMatch = liveMatches[0] ?? previousMatches[0] ?? null;
-  const standings = useMemo(() => buildStandings(previousMatches), [previousMatches]);
-  const teams = useMemo(() => {
+  const fallbackTeams = useMemo(() => {
     const names = new Set<string>();
     matches.forEach((match) => {
       names.add(match.homeName);
@@ -160,6 +166,11 @@ const PilotTournament = () => {
     });
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [matches]);
+  const tournamentTeams = useMemo(() => tournament?.teams ?? [], [tournament?.teams]);
+  const standings = useMemo(
+    () => buildStandings(previousMatches.filter((match) => !match.stage || match.stage === "GROUP"), tournamentTeams.map((team) => team.name)),
+    [previousMatches, tournamentTeams]
+  );
 
   const hubUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -267,12 +278,13 @@ const PilotTournament = () => {
             <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">No upcoming matches configured.</div>
           ) : (
             <div className="space-y-2">
-              {upcomingMatches.slice(0, 3).map((match) => (
+              {upcomingMatches.map((match) => (
                 <Link
                   key={match.matchId}
                   to={`/live/${tournamentId}/match/${match.matchId}`}
                   className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl border border-white/[0.07] bg-[#101010] px-4 py-4"
                 >
+                  {match.matchday && <span className="col-span-3 -mb-1 text-center text-[0.58rem] font-black uppercase tracking-[0.14em] text-cyan-300/70">Matchday {match.matchday}</span>}
                   <div className="flex min-w-0 items-center gap-2">
                     <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl} size="sm" />
                     <span className="truncate text-sm font-black">{match.homeName}</span>
@@ -341,15 +353,17 @@ const PilotTournament = () => {
           <div className="mb-3 px-1">
             <h2 className="text-base font-black tracking-tight">Teams</h2>
           </div>
-          {teams.length === 0 ? (
+          {tournamentTeams.length === 0 && fallbackTeams.length === 0 ? (
             <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">Teams will appear when matches are configured.</div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              {teams.map((team) => (
-                <div key={team} className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-[#101010] p-3">
-                  <TeamBadge name={team} size="sm" />
-                  <span className="min-w-0 truncate text-sm font-black">{team}</span>
-                </div>
+              {tournamentTeams.length > 0 ? tournamentTeams.map((team) => (
+                <details key={team.teamId} className="rounded-2xl border border-white/[0.07] bg-[#101010] p-3 open:col-span-2">
+                  <summary className="flex cursor-pointer list-none items-center gap-3"><TeamBadge name={team.name} logoUrl={team.logoPath} size="sm" /><span className="min-w-0 flex-1 truncate text-sm font-black">{team.name}</span><span className="text-xs font-bold text-white/30">{team.players.length}</span></summary>
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-3">{team.players.map((player) => <div key={player.playerId} className="rounded-lg bg-white/[0.04] px-3 py-2"><p className="text-sm font-black">{player.name}</p><p className="truncate text-[0.65rem] text-white/35">{player.fullName}</p></div>)}</div>
+                </details>
+              )) : fallbackTeams.map((team) => (
+                <div key={team} className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-[#101010] p-3"><TeamBadge name={team} size="sm" /><span className="min-w-0 truncate text-sm font-black">{team}</span></div>
               ))}
             </div>
           )}
