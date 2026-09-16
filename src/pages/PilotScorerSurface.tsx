@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
+import { getAuth, signOut } from "firebase/auth";
+import { signInWithGoogle } from "../auth/googleSignIn";
 import { doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../AuthContext";
@@ -97,14 +98,13 @@ const PilotScorerSurface = () => {
   };
 
   const login = async () => {
-    const provider = new GoogleAuthProvider();
     setAuthError(null);
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithGoogle(auth);
     } catch (error: unknown) {
       const code = getFirebaseErrorCode(error);
-      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request" || code === "auth/operation-not-supported-in-this-environment") {
-        await signInWithRedirect(auth, provider);
+      if (code === "auth/popup-blocked") {
+        setAuthError("Allow pop-ups for this site, then tap Sign in again.");
         return;
       }
       if (code === "auth/popup-closed-by-user") {

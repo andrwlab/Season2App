@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { getAuth, signOut } from 'firebase/auth';
+import { signInWithGoogle } from './auth/googleSignIn';
 import { useAuth } from './AuthContext';
 import { useSeason } from './hooks/useSeason';
 import { canScoreMatches } from './auth/roles';
@@ -21,17 +22,15 @@ const Navbar = () => {
   }, [role, activeSeason, selectedSeasonId, setSelectedSeasonId]);
 
   const login = async () => {
-    const provider = new GoogleAuthProvider();
     setAuthError(null);
 
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithGoogle(auth);
     } catch (error: unknown) {
       console.error(error);
       const errorCode = getFirebaseErrorCode(error);
       if (errorCode === 'auth/popup-blocked') {
-        setAuthError('Popup blocked. Redirecting to the sign-in page...');
-        await signInWithRedirect(auth, provider);
+        setAuthError('Allow pop-ups for this site, then tap Sign in again.');
         return;
       }
       if (errorCode === 'auth/unauthorized-domain') {

@@ -1,7 +1,7 @@
 import { logEvent } from "firebase/analytics";
-import { signInAnonymously } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { analyticsPromise, auth, db } from "../firebase";
+import { analyticsPromise } from "../firebase";
+import { audienceDb, getAudienceAuthUid } from "./audienceFirebase";
 
 export type AudienceScope = "TOURNAMENT" | "MATCH";
 
@@ -69,12 +69,6 @@ export const getAudienceSource = () => {
   return safeStorageGet(window.sessionStorage, SOURCE_KEY) || "direct";
 };
 
-const ensureAudienceAuth = async () => {
-  if (auth.currentUser) return auth.currentUser;
-  const credential = await signInAnonymously(auth);
-  return credential.user;
-};
-
 const scopeKeyFor = ({ tournamentId, matchId, scope }: AudienceContext) => {
   const raw = scope === "MATCH" ? `${tournamentId}__${matchId || "unknown"}` : `${tournamentId}__hub`;
   return encodeURIComponent(raw);
@@ -85,16 +79,16 @@ export const recordAudienceHeartbeat = async (
   identity: { visitorId: string; sessionId: string; source: string },
   minuteBucket = Math.floor(Date.now() / 60000)
 ) => {
-  const user = await ensureAudienceAuth();
+  const authUid = await getAudienceAuthUid();
   const clientSeenAt = Date.now();
   const scopeKey = scopeKeyFor(context);
-  const heartbeatId = `${scopeKey}__${user.uid}__${minuteBucket}`;
+  const heartbeatId = `${scopeKey}__${authUid}__${minuteBucket}`;
 
   await setDoc(
-    doc(db, "pilotAudienceHeartbeats", heartbeatId),
+    doc(audienceDb, "pilotAudienceHeartbeats", heartbeatId),
     {
       version: 1,
-      authUid: user.uid,
+      authUid,
       visitorId: identity.visitorId,
       sessionId: identity.sessionId,
       scope: context.scope,
