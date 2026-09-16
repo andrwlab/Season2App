@@ -48,13 +48,15 @@ const matchPayload = (scheduled: (typeof FOOTBALL_2026_SCHEDULE)[number], create
 async function mainAdmin() {
   if (!db) throw new Error("Firestore Admin client unavailable.");
   const tournamentRef = db.collection("pilotTournaments").doc(FOOTBALL_2026_TOURNAMENT_ID);
+  const existingTournament = await tournamentRef.get();
   await tournamentRef.set({
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID,
     name: "Sabis Champions League",
     sport: "football",
     format: "ROUND_ROBIN_SEMIS_FINAL",
+    knockoutTieBreak: "EXTRA_TIME_THEN_PENALTIES_IN_SECOND_LEG",
     defaultHalfMinutes: 10,
-    teams: FOOTBALL_2026_TEAMS,
+    ...(existingTournament.exists ? {} : { teams: FOOTBALL_2026_TEAMS }),
     updatedAt: FieldValue.serverTimestamp(),
     createdAt: FieldValue.serverTimestamp(),
   }, { merge: true });
@@ -112,7 +114,8 @@ async function mainRest() {
   const existingTournament = await restGet(tournamentPath);
   await restPut(tournamentPath, {
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID, name: "Sabis Champions League", sport: "football",
-    format: "ROUND_ROBIN_SEMIS_FINAL", defaultHalfMinutes: 10, teams: FOOTBALL_2026_TEAMS,
+    format: "ROUND_ROBIN_SEMIS_FINAL", knockoutTieBreak: "EXTRA_TIME_THEN_PENALTIES_IN_SECOND_LEG", defaultHalfMinutes: 10,
+    ...(existingTournament ? {} : { teams: FOOTBALL_2026_TEAMS }),
     createdAt: existingTournament?.fields?.createdAt?.timestampValue ? new Date(existingTournament.fields.createdAt.timestampValue) : now,
     updatedAt: now,
   });
