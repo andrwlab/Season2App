@@ -55,6 +55,17 @@ type PilotLastEvent = {
   clientCreatedAt: number;
 };
 
+type PilotLastSubstitution = {
+  eventId: string;
+  teamSide: TeamSide;
+  playerOutId: string;
+  playerOutName: string;
+  playerInId: string;
+  playerInName: string;
+  previousPlayerIds: string[];
+  clientCreatedAt: number;
+};
+
 type PilotMatch = {
   tournamentId: string;
   matchId: string;
@@ -62,6 +73,14 @@ type PilotMatch = {
   awayName: string;
   homePlayers?: PilotPlayer[];
   awayPlayers?: PilotPlayer[];
+  homeStarterIds?: string[];
+  awayStarterIds?: string[];
+  currentHomePlayerIds?: string[];
+  currentAwayPlayerIds?: string[];
+  lineupsConfirmed?: boolean;
+  substitutionCountHome?: number;
+  substitutionCountAway?: number;
+  lastSubstitution?: PilotLastSubstitution | null;
   scoreHome: number;
   scoreAway: number;
   shotsHome: number;
@@ -87,7 +106,20 @@ type PilotMatch = {
   lastEvent?: PilotLastEvent | null;
 };
 
-type PendingEvent = { type: MatchEventType; teamSide: TeamSide };
+type PendingEvent = {
+  type: MatchEventType;
+  teamSide: TeamSide;
+  capturedAt: number;
+  capturedPhase: PilotPhase;
+  capturedMatchClockMs: number;
+};
+
+type PendingSubstitution = {
+  teamSide: TeamSide;
+  capturedAt: number;
+  capturedPhase: PilotPhase;
+  capturedMatchClockMs: number;
+};
 
 const getCounterField = (type: MatchEventType, side: TeamSide) => {
   const suffix = side === "HOME" ? "Home" : "Away";
@@ -134,6 +166,11 @@ const PilotScorer = () => {
   const [pendingEvent, setPendingEvent] = useState<PendingEvent | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [assistPlayerId, setAssistPlayerId] = useState("");
+  const [homeStarterIds, setHomeStarterIds] = useState<string[]>([]);
+  const [awayStarterIds, setAwayStarterIds] = useState<string[]>([]);
+  const [pendingSubstitution, setPendingSubstitution] = useState<PendingSubstitution | null>(null);
+  const [playerOutId, setPlayerOutId] = useState("");
+  const [playerInId, setPlayerInId] = useState("");
 
   const matchRef = useMemo(() => doc(db, "pilotMatches", pilotMatchId), [pilotMatchId]);
 
@@ -150,6 +187,12 @@ const PilotScorer = () => {
       }
     );
   }, [matchRef]);
+
+  useEffect(() => {
+    if (!match || match.status !== "READY") return;
+    setHomeStarterIds(match.homeStarterIds ?? []);
+    setAwayStarterIds(match.awayStarterIds ?? []);
+  }, [match, pilotMatchId]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 500);
@@ -211,22 +254,36 @@ const PilotScorer = () => {
   const teamNameForSide = (side: TeamSide) => side === "HOME" ? match?.homeName ?? "Home" : match?.awayName ?? "Away";
 
   const openEventComposer = (type: MatchEventType, teamSide: TeamSide) => {
-    if (!canRecordLiveEvent || busy) return;
-    setPendingEvent({ type, teamSide });
+    if (!match || !canRecordLiveEvent || busy) return;
+    const capturedAt = Date.now();
+    setPendingEvent({
+      type,
+      teamSide,
+      capturedAt,
+      capturedPhase: match.phase,
+      capturedMatchClockMs: getVisibleMatchMs(match, capturedAt),
+    });
     setSelectedPlayerId("");
     setAssistPlayerId("");
   };
 
-  const recordEvent = async (type: MatchEventType, teamSide: TeamSide, player?: PilotPlayer, assistPlayer?: PilotPlayer) => {
-    if (!match || busy || !canRecordLiveEvent) return;
+  const recordEvent = async (
+    pending: PendingEvent,
+    player?: PilotPlayer,
+    assistPlayer?: PilotPlayer
+  ) => {
+    if (!match || busy) return;
+    const { type, teamSide } = pending;
     setBusy(true);
     setError(null);
 
     try {
       const eventRef = doc(collection(db, "pilotEvents"));
       const batch = writeBatch(db);
-      const clientCreatedAt = Date.now();
-      const matchClockMs = getVisibleMatchMs(match, clientCreatedAt);
+      // The event belongs to the instant the stat button was tapped. Player and
+      // assist selection can take several seconds and must not move its minute.
+      const clientCreatedAt = pending.capturedAt;
+      const matchClockMs = pending.capturedMatchClockMs;
       const lastEvent: PilotLastEvent = {
         eventId: eventRef.id,
         type,
@@ -251,7 +308,7 @@ const PilotScorer = () => {
         playerName: player?.name ?? null,
         assistPlayerId: type === "GOAL" ? assistPlayer?.playerId ?? null : null,
         assistPlayerName: type === "GOAL" ? assistPlayer?.name ?? null : null,
-        phase: match.phase,
+        phase: pending.capturedPhase,
         matchClockMs,
         clientCreatedAt,
         serverReceivedAt: serverTimestamp(),
@@ -283,7 +340,175 @@ const PilotScorer = () => {
     const roster = rosterForSide(pendingEvent.teamSide);
     const player = roster.find((item) => item.playerId === selectedPlayerId);
     const assist = pendingEvent.type === "GOAL" ? roster.find((item) => item.playerId === assistPlayerId) : undefined;
-    await recordEvent(pendingEvent.type, pendingEvent.teamSide, player, assist);
+    await recordEvent(pendingEvent, player, assist);
+  };
+
+  const toggleStarter = (side: TeamSide, playerId: string) => {
+    const setter = side === "HOME" ? setHomeStarterIds : setAwayStarterIds;
+    setter((current) => current.includes(playerId) ? current.filter((id) => id !== playerId) : [...current, playerId]);
+  };
+
+  const saveLineups = async () => {
+    if (!match || busy || match.status !== "READY") return;
+    const homeRosterIds = new Set((match.homePlayers ?? []).map((player) => player.playerId));
+    const awayRosterIds = new Set((match.awayPlayers ?? []).map((player) => player.playerId));
+    const hasRosters = homeRosterIds.size > 0 || awayRosterIds.size > 0;
+    if (hasRosters && (homeStarterIds.length === 0 || awayStarterIds.length === 0)) {
+      setError("Choose the starters for both teams before saving the lineups.");
+      return;
+    }
+    if (homeStarterIds.some((id) => !homeRosterIds.has(id)) || awayStarterIds.some((id) => !awayRosterIds.has(id))) {
+      setError("A selected starter is no longer on that roster. Review and save the lineups again.");
+      return;
+    }
+    if (homeStarterIds.length !== awayStarterIds.length) {
+      setError("Both teams must start with the same number of players.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await setDoc(matchRef, {
+        homeStarterIds,
+        awayStarterIds,
+        currentHomePlayerIds: homeStarterIds,
+        currentAwayPlayerIds: awayStarterIds,
+        lineupsConfirmed: true,
+        substitutionCountHome: 0,
+        substitutionCountAway: 0,
+        lastSubstitution: null,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to save lineups", err);
+      setError("The lineups were not saved. Try again before kickoff.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openSubstitutionComposer = (teamSide: TeamSide) => {
+    if (!match || busy || match.status !== "LIVE" || match.phase === "PENALTIES" || match.phase === "FULLTIME") return;
+    const capturedAt = Date.now();
+    setPendingSubstitution({
+      teamSide,
+      capturedAt,
+      capturedPhase: match.phase,
+      capturedMatchClockMs: getVisibleMatchMs(match, capturedAt),
+    });
+    setPlayerOutId("");
+    setPlayerInId("");
+  };
+
+  const saveSubstitution = async () => {
+    if (!match || !pendingSubstitution || busy) return;
+    const { teamSide, capturedAt, capturedPhase, capturedMatchClockMs } = pendingSubstitution;
+    const roster = rosterForSide(teamSide);
+    const currentKey = teamSide === "HOME" ? "currentHomePlayerIds" : "currentAwayPlayerIds";
+    const countKey = teamSide === "HOME" ? "substitutionCountHome" : "substitutionCountAway";
+    const currentIds = [...(match[currentKey] ?? [])];
+    const playerOut = roster.find((player) => player.playerId === playerOutId);
+    const playerIn = roster.find((player) => player.playerId === playerInId);
+    if (!playerOut || !playerIn || !currentIds.includes(playerOut.playerId) || currentIds.includes(playerIn.playerId)) {
+      setError("Choose one player on the field and one player from the bench.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const eventRef = doc(collection(db, "pilotEvents"));
+      const batch = writeBatch(db);
+      const nextIds = currentIds.map((id) => id === playerOut.playerId ? playerIn.playerId : id);
+      const lastSubstitution: PilotLastSubstitution = {
+        eventId: eventRef.id,
+        teamSide,
+        playerOutId: playerOut.playerId,
+        playerOutName: playerOut.name,
+        playerInId: playerIn.playerId,
+        playerInName: playerIn.name,
+        previousPlayerIds: currentIds,
+        clientCreatedAt: capturedAt,
+      };
+
+      batch.set(eventRef, {
+        version: 1,
+        eventId: eventRef.id,
+        tournamentId,
+        matchId,
+        pilotMatchId,
+        sport: "football",
+        type: "SUBSTITUTION",
+        teamSide,
+        playerOutId: playerOut.playerId,
+        playerOutName: playerOut.name,
+        playerInId: playerIn.playerId,
+        playerInName: playerIn.name,
+        phase: capturedPhase,
+        matchClockMs: capturedMatchClockMs,
+        clientCreatedAt: capturedAt,
+        serverReceivedAt: serverTimestamp(),
+        status: "ACTIVE",
+      });
+      batch.update(matchRef, {
+        [currentKey]: nextIds,
+        [countKey]: increment(1),
+        lastSubstitution,
+        updatedAt: serverTimestamp(),
+      });
+      await batch.commit();
+      setPendingSubstitution(null);
+      setPlayerOutId("");
+      setPlayerInId("");
+    } catch (err) {
+      console.error("Failed to save substitution", err);
+      setError("The substitution was not saved. Try again before continuing.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const undoLastSubstitution = async () => {
+    if (!match?.lastSubstitution || busy) return;
+    const target = match.lastSubstitution;
+    const currentKey = target.teamSide === "HOME" ? "currentHomePlayerIds" : "currentAwayPlayerIds";
+    const countKey = target.teamSide === "HOME" ? "substitutionCountHome" : "substitutionCountAway";
+    setBusy(true);
+    setError(null);
+    try {
+      const reversalRef = doc(collection(db, "pilotEvents"));
+      const batch = writeBatch(db);
+      const clientCreatedAt = Date.now();
+      batch.set(reversalRef, {
+        version: 1,
+        eventId: reversalRef.id,
+        tournamentId,
+        matchId,
+        pilotMatchId,
+        sport: "football",
+        type: "REVERSAL",
+        revertsEventId: target.eventId,
+        revertsEventType: "SUBSTITUTION",
+        teamSide: target.teamSide,
+        phase: match.phase,
+        matchClockMs: getVisibleMatchMs(match, clientCreatedAt),
+        clientCreatedAt,
+        serverReceivedAt: serverTimestamp(),
+        status: "ACTIVE",
+      });
+      batch.update(matchRef, {
+        [currentKey]: target.previousPlayerIds,
+        [countKey]: increment(-1),
+        lastSubstitution: null,
+        updatedAt: serverTimestamp(),
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error("Failed to undo substitution", err);
+      setError("The substitution could not be undone.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const recordPenalty = async (type: PenaltyEventType, teamSide: TeamSide) => {
@@ -374,8 +599,22 @@ const PilotScorer = () => {
 
   const startMatch = async () => {
     if (!match || clockStatus !== "NOT_STARTED") return;
+    const hasRosters = (match.homePlayers?.length ?? 0) > 0 || (match.awayPlayers?.length ?? 0) > 0;
+    if (hasRosters && !match.lineupsConfirmed) {
+      setError("Save both starting lineups before kickoff.");
+      return;
+    }
     const actionTime = Date.now();
-    await writeStateEvent("MATCH_START", { status: "LIVE", phase: "FIRST_HALF", clockStatus: "RUNNING", phaseElapsedBaseMs: 0, runningSinceMs: actionTime, periodDurationMs }, "FIRST_HALF", 0);
+    await writeStateEvent("MATCH_START", {
+      status: "LIVE",
+      phase: "FIRST_HALF",
+      clockStatus: "RUNNING",
+      phaseElapsedBaseMs: 0,
+      runningSinceMs: actionTime,
+      periodDurationMs,
+      currentHomePlayerIds: match.homeStarterIds ?? [],
+      currentAwayPlayerIds: match.awayStarterIds ?? [],
+    }, "FIRST_HALF", 0);
   };
 
   const pauseClock = async () => {
@@ -593,8 +832,34 @@ const PilotScorer = () => {
   })();
 
   const showDecision = match.phase === "REGULATION_END" || match.phase === "EXTRA_TIME_END";
-  const pendingRoster = pendingEvent ? rosterForSide(pendingEvent.teamSide) : [];
+  const pendingFullRoster = pendingEvent ? rosterForSide(pendingEvent.teamSide) : [];
+  const pendingCurrentIds = pendingEvent
+    ? (pendingEvent.teamSide === "HOME" ? match.currentHomePlayerIds : match.currentAwayPlayerIds) ?? []
+    : [];
+  const pendingRoster = pendingCurrentIds.length > 0
+    ? pendingFullRoster.filter((player) => pendingCurrentIds.includes(player.playerId))
+    : pendingFullRoster;
   const selectedPlayer = pendingRoster.find((item) => item.playerId === selectedPlayerId);
+  const substitutionRoster = pendingSubstitution ? rosterForSide(pendingSubstitution.teamSide) : [];
+  const substitutionCurrentIds = pendingSubstitution
+    ? (pendingSubstitution.teamSide === "HOME" ? match.currentHomePlayerIds : match.currentAwayPlayerIds) ?? []
+    : [];
+  const substitutionOnField = substitutionRoster.filter((player) => substitutionCurrentIds.includes(player.playerId));
+  const substitutionBench = substitutionRoster.filter((player) => !substitutionCurrentIds.includes(player.playerId));
+
+  const LineupPicker = ({ side }: { side: TeamSide }) => {
+    const roster = rosterForSide(side);
+    const selectedIds = side === "HOME" ? homeStarterIds : awayStarterIds;
+    return (
+      <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2"><p className="truncate text-sm font-black">{teamNameForSide(side)}</p><span className="text-xs font-bold text-cyan-300">{selectedIds.length} starters</span></div>
+        {roster.length === 0 ? <p className="text-xs text-slate-500">No roster loaded.</p> : <div className="grid grid-cols-2 gap-2">{roster.map((player) => {
+          const selected = selectedIds.includes(player.playerId);
+          return <button key={player.playerId} type="button" onClick={() => toggleStarter(side, player.playerId)} className={`rounded-lg border px-2 py-2 text-left text-xs font-bold ${selected ? "border-cyan-300 bg-cyan-300/15 text-cyan-100" : "border-white/10 bg-white/[0.03] text-slate-400"}`}>{player.name}</button>;
+        })}</div>}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 px-3 py-4 text-white">
@@ -606,9 +871,15 @@ const PilotScorer = () => {
           <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center"><div className="truncate text-sm font-black">{match.homeName}</div><div><div className="text-5xl font-black tracking-tight">{match.scoreHome}–{match.scoreAway}</div>{(match.phase === "PENALTIES" || (match.penaltyAttemptsHome ?? 0) + (match.penaltyAttemptsAway ?? 0) > 0) && <div className="mt-1 text-sm font-black text-cyan-300">PEN {match.penaltyHome ?? 0}–{match.penaltyAway ?? 0}</div>}</div><div className="truncate text-sm font-black">{match.awayName}</div></div>
         </div>
 
+        {match.status === "READY" && ((match.homePlayers?.length ?? 0) > 0 || (match.awayPlayers?.length ?? 0) > 0) && <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.04] p-3"><div className="mb-3"><p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-cyan-300">Starting lineups</p><p className="mt-1 text-xs text-slate-400">Select the players who will begin on the field. The number is defined by this selection until the tournament rule is confirmed.</p></div><div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><LineupPicker side="HOME" /><LineupPicker side="AWAY" /></div><button type="button" disabled={busy} onClick={saveLineups} className="mt-3 w-full rounded-xl bg-cyan-300 px-4 py-3 font-black text-slate-950 disabled:opacity-40">{match.lineupsConfirmed ? "UPDATE LINEUPS" : "SAVE LINEUPS"}</button>{match.lineupsConfirmed && <p className="mt-2 text-center text-xs font-bold text-emerald-300">Lineups ready for kickoff.</p>}</div>}
+
         {!canRecordLiveEvent && isTimedPhase(match.phase) && <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-center text-xs font-semibold text-amber-100">Live event buttons are locked until the match clock is running.</div>}
 
         {match.phase === "PENALTIES" ? <div className="grid grid-cols-2 gap-3"><PenaltyLane side="HOME" /><PenaltyLane side="AWAY" /></div> : <div className="grid grid-cols-2 gap-3"><TeamLane side="HOME" /><TeamLane side="AWAY" /></div>}
+
+        {match.status === "LIVE" && match.phase !== "PENALTIES" && <div className="grid grid-cols-2 gap-3"><button type="button" disabled={busy || (match.currentHomePlayerIds?.length ?? 0) === 0} onClick={() => openSubstitutionComposer("HOME")} className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-3 text-sm font-black text-cyan-100 disabled:opacity-30">SUB · {match.homeName}<span className="mt-1 block text-[0.65rem] text-cyan-200/60">{match.substitutionCountHome ?? 0} recorded</span></button><button type="button" disabled={busy || (match.currentAwayPlayerIds?.length ?? 0) === 0} onClick={() => openSubstitutionComposer("AWAY")} className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-3 text-sm font-black text-cyan-100 disabled:opacity-30">SUB · {match.awayName}<span className="mt-1 block text-[0.65rem] text-cyan-200/60">{match.substitutionCountAway ?? 0} recorded</span></button></div>}
+
+        {match.lastSubstitution && <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-500">Last substitution</p><p className="mt-1 text-sm font-bold"><span className="text-emerald-300">IN {match.lastSubstitution.playerInName}</span><span className="mx-2 text-slate-600">·</span><span className="text-red-300">OUT {match.lastSubstitution.playerOutName}</span></p><button type="button" disabled={busy} onClick={undoLastSubstitution} className="mt-3 w-full rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-xs font-black text-red-200 disabled:opacity-30">UNDO SUBSTITUTION</button></div>}
 
         {match.phase !== "PENALTIES" && <div className="grid grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-center"><div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Shots</div><div className="mt-1 font-black">{match.shotsHome ?? 0}–{match.shotsAway ?? 0}</div></div><div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Fouls</div><div className="mt-1 font-black">{match.foulsHome ?? 0}–{match.foulsAway ?? 0}</div></div><div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Yellow</div><div className="mt-1 font-black">{match.yellowHome ?? 0}–{match.yellowAway ?? 0}</div></div><div><div className="text-[0.6rem] font-bold uppercase text-slate-500">Red</div><div className="mt-1 font-black">{match.redHome ?? 0}–{match.redAway ?? 0}</div></div></div>}
 
@@ -626,7 +897,7 @@ const PilotScorer = () => {
         <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/80 px-3 py-4 backdrop-blur-sm">
           <div className="mx-auto flex min-h-full max-w-lg items-end sm:items-center">
             <div className="w-full rounded-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl">
-              <div className="flex items-start justify-between gap-4"><div><p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-cyan-300">Record event</p><h2 className="mt-1 text-2xl font-black">{getEventLabel(pendingEvent.type)} · {teamNameForSide(pendingEvent.teamSide)}</h2>{pendingEvent.type === "GOAL" && <p className="mt-1 text-xs font-semibold text-slate-400">A goal automatically adds +1 shot.</p>}</div><button type="button" onClick={() => setPendingEvent(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl">×</button></div>
+              <div className="flex items-start justify-between gap-4"><div><p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-cyan-300">Record event</p><h2 className="mt-1 text-2xl font-black">{getEventLabel(pendingEvent.type)} · {teamNameForSide(pendingEvent.teamSide)}</h2><p className="mt-1 text-xs font-semibold text-cyan-200/80">Time captured at {formatClock(pendingEvent.capturedMatchClockMs)}</p>{pendingEvent.type === "GOAL" && <p className="mt-1 text-xs font-semibold text-slate-400">A goal automatically adds +1 shot.</p>}</div><button type="button" onClick={() => setPendingEvent(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl">×</button></div>
 
               <div className="mt-5"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">Player</p>{pendingRoster.length === 0 ? <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-100">No roster loaded. You can save this as a team event, or add players from Tournament Setup before kickoff.</div> : <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1"><button type="button" onClick={() => { setSelectedPlayerId(""); setAssistPlayerId(""); }} className={`rounded-xl border px-3 py-3 text-left text-sm font-bold ${selectedPlayerId === "" ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-300"}`}>Team event / unknown</button>{pendingRoster.map((player) => <button key={player.playerId} type="button" onClick={() => { setSelectedPlayerId(player.playerId); if (assistPlayerId === player.playerId) setAssistPlayerId(""); }} className={`rounded-xl border px-3 py-3 text-left text-sm font-bold ${selectedPlayerId === player.playerId ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-200"}`}>{player.name}</button>)}</div>}</div>
 
@@ -635,6 +906,19 @@ const PilotScorer = () => {
               )}
 
               <div className="mt-5 grid grid-cols-[1fr_2fr] gap-2"><button type="button" onClick={() => setPendingEvent(null)} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-black text-slate-300">CANCEL</button><button type="button" disabled={busy} onClick={savePendingEvent} className="rounded-xl bg-cyan-300 px-4 py-3 font-black text-slate-950 disabled:opacity-40">{busy ? "SAVING…" : `SAVE ${getEventLabel(pendingEvent.type)}`}</button></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingSubstitution && (
+        <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/80 px-3 py-4 backdrop-blur-sm">
+          <div className="mx-auto flex min-h-full max-w-lg items-end sm:items-center">
+            <div className="w-full rounded-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-4"><div><p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-cyan-300">Substitution</p><h2 className="mt-1 text-2xl font-black">{teamNameForSide(pendingSubstitution.teamSide)}</h2><p className="mt-1 text-xs font-semibold text-cyan-200/80">Time captured at {formatClock(pendingSubstitution.capturedMatchClockMs)}</p></div><button type="button" onClick={() => setPendingSubstitution(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl">×</button></div>
+              <div className="mt-5"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-red-300">Player out · on field</p><div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto">{substitutionOnField.map((player) => <button key={player.playerId} type="button" onClick={() => setPlayerOutId(player.playerId)} className={`rounded-xl border px-3 py-3 text-left text-sm font-bold ${playerOutId === player.playerId ? "border-red-300 bg-red-400/15 text-red-100" : "border-white/10 bg-white/[0.04] text-slate-300"}`}>{player.name}</button>)}</div></div>
+              <div className="mt-5"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-300">Player in · bench</p><div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto">{substitutionBench.map((player) => <button key={player.playerId} type="button" onClick={() => setPlayerInId(player.playerId)} className={`rounded-xl border px-3 py-3 text-left text-sm font-bold ${playerInId === player.playerId ? "border-emerald-300 bg-emerald-400/15 text-emerald-100" : "border-white/10 bg-white/[0.04] text-slate-300"}`}>{player.name}</button>)}</div></div>
+              <div className="mt-5 grid grid-cols-[1fr_2fr] gap-2"><button type="button" onClick={() => setPendingSubstitution(null)} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-black text-slate-300">CANCEL</button><button type="button" disabled={busy || !playerOutId || !playerInId} onClick={saveSubstitution} className="rounded-xl bg-cyan-300 px-4 py-3 font-black text-slate-950 disabled:opacity-40">{busy ? "SAVING…" : "SAVE SUBSTITUTION"}</button></div>
             </div>
           </div>
         </div>

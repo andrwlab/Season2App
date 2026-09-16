@@ -12,7 +12,7 @@ import {
 type TeamSide = "HOME" | "AWAY";
 type MatchEventType = "GOAL" | "SHOT" | "FOUL" | "YELLOW_CARD" | "RED_CARD";
 type PenaltyEventType = "PENALTY_GOAL" | "PENALTY_MISS";
-type VisibleEventType = MatchEventType | PenaltyEventType;
+type VisibleEventType = MatchEventType | PenaltyEventType | "SUBSTITUTION";
 
 type PilotEvent = {
   eventId: string;
@@ -22,6 +22,10 @@ type PilotEvent = {
   playerName?: string | null;
   assistPlayerId?: string | null;
   assistPlayerName?: string | null;
+  playerOutId?: string | null;
+  playerOutName?: string | null;
+  playerInId?: string | null;
+  playerInName?: string | null;
   phase?: PilotPhase;
   matchClockMs?: number;
   clientCreatedAt?: number;
@@ -37,6 +41,7 @@ const visibleTypes = new Set<VisibleEventType>([
   "RED_CARD",
   "PENALTY_GOAL",
   "PENALTY_MISS",
+  "SUBSTITUTION",
 ]);
 
 const labelFor = (type: VisibleEventType) => {
@@ -48,6 +53,7 @@ const labelFor = (type: VisibleEventType) => {
     case "RED_CARD": return "Red card";
     case "PENALTY_GOAL": return "Penalty scored";
     case "PENALTY_MISS": return "Penalty missed";
+    case "SUBSTITUTION": return "Substitution";
   }
 };
 
@@ -60,6 +66,7 @@ const iconFor = (type: VisibleEventType) => {
     case "RED_CARD": return "🟥";
     case "PENALTY_GOAL": return "✅";
     case "PENALTY_MISS": return "❌";
+    case "SUBSTITUTION": return "🔁";
   }
 };
 
@@ -140,7 +147,7 @@ const PilotEventFeed = ({
             const type = event.type as VisibleEventType;
             const teamName = event.teamSide === "HOME" ? homeName : event.teamSide === "AWAY" ? awayName : "";
             const minute = minutePartsFor(event, periodDurationMs, extraTimePeriodDurationMs);
-            const subject = event.playerName || teamName;
+            const subject = event.type === "SUBSTITUTION" ? teamName : event.playerName || teamName;
             const nextEvent = visibleEvents[index + 1];
             const showHalftimeDivider = Boolean(
               nextEvent && !isFirstHalfEvent(event) && isFirstHalfEvent(nextEvent)
@@ -157,6 +164,7 @@ const PilotEventFeed = ({
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-white/90">{labelFor(type)}{subject ? ` · ${subject}` : ""}{event.playerName && teamName ? <span className="font-semibold text-white/45"> · {teamName}</span> : null}</p>
                     {type === "GOAL" && event.assistPlayerName && <p className="mt-1 text-xs font-semibold text-cyan-200/70">Assist · {event.assistPlayerName}</p>}
+                    {type === "SUBSTITUTION" && <p className="mt-1 text-xs font-semibold"><span className="text-emerald-300/80">IN · {event.playerInName ?? "Unknown"}</span><span className="mx-2 text-white/20">|</span><span className="text-red-300/80">OUT · {event.playerOutName ?? "Unknown"}</span></p>}
                   </div>
                 </div>
 
