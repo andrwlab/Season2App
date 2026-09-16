@@ -55,7 +55,7 @@ const teamInitials = (name: string) =>
 
 const TeamMark = ({ name, logoUrl }: { name: string; logoUrl?: string }) => {
   if (logoUrl) {
-    return <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white sm:h-24 sm:w-24"><img src={assetUrl(logoUrl)} alt={`${name} logo`} className="h-full w-full object-contain p-2" /></div>;
+    return <img src={assetUrl(logoUrl)} alt={`${name} logo`} className="mx-auto h-20 w-20 object-contain sm:h-24 sm:w-24" />;
   }
   return <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-xl font-black tracking-tight text-white sm:h-24 sm:w-24 sm:text-2xl">{teamInitials(name)}</div>;
 };

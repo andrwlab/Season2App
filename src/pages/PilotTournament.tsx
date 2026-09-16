@@ -55,9 +55,7 @@ const TeamBadge = ({ name, logoUrl, size = "md" }: { name: string; logoUrl?: str
 
   if (logoUrl) {
     return (
-      <div className={`flex ${dimension} shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white`}>
-        <img src={assetUrl(logoUrl)} alt={`${name} logo`} className="h-full w-full object-contain p-1.5" />
-      </div>
+      <img src={assetUrl(logoUrl)} alt={`${name} logo`} className={`${dimension} shrink-0 object-contain`} />
     );
   }
 

@@ -47,7 +47,7 @@ async function mainAdmin() {
   const tournamentRef = db.collection("pilotTournaments").doc(FOOTBALL_2026_TOURNAMENT_ID);
   await tournamentRef.set({
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID,
-    name: "Fútbol 2026",
+    name: "Sabis Champions League",
     sport: "football",
     format: "ROUND_ROBIN_SEMIS_FINAL",
     defaultHalfMinutes: 10,
@@ -108,7 +108,7 @@ async function mainRest() {
   const tournamentPath = `pilotTournaments/${FOOTBALL_2026_TOURNAMENT_ID}`;
   const existingTournament = await restGet(tournamentPath);
   await restPut(tournamentPath, {
-    tournamentId: FOOTBALL_2026_TOURNAMENT_ID, name: "Fútbol 2026", sport: "football",
+    tournamentId: FOOTBALL_2026_TOURNAMENT_ID, name: "Sabis Champions League", sport: "football",
     format: "ROUND_ROBIN_SEMIS_FINAL", defaultHalfMinutes: 10, teams: FOOTBALL_2026_TEAMS,
     createdAt: existingTournament?.fields?.createdAt?.timestampValue ? new Date(existingTournament.fields.createdAt.timestampValue) : now,
     updatedAt: now,
