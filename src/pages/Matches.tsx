@@ -5,6 +5,7 @@ import { useAuth } from "../AuthContext";
 import { useSeason } from "../hooks/useSeason";
 import { Match, Team, subscribeMatches, subscribeTeams } from "../firebase/queries";
 import { Link } from "react-router-dom";
+import { canScoreMatches } from "../auth/roles";
 
 type MatchPhase = "semifinal" | "third" | "final";
 type MatchWithPhase = Match & { phase?: MatchPhase };
@@ -68,7 +69,7 @@ const Matches = () => {
         <p className="text-sm text-muted mb-4">Select a season to view matches.</p>
       )}
 
-      {user && role === "admin" && (
+      {user && canScoreMatches(role) && (
         <>
           <h3 className="text-xl font-semibold mb-2">Register new match</h3>
           <form onSubmit={handleSubmit} className="space-y-4 max-w-xl mb-6">

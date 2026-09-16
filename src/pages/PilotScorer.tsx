@@ -195,13 +195,12 @@ const PilotScorer = () => {
       });
     } catch (err) {
       console.error("Failed to create pilot match", err);
-      setError("Could not create the match. Make sure you are signed in as admin.");
+      setError("Could not create the match. Make sure you have admin or scorekeeper access.");
     } finally {
       setBusy(false);
     }
   };
 
-  const visibleMatchMs = match ? getVisibleMatchMs(match, now) : 0;
   const clockParts = match ? getClockDisplayParts(match, now) : { mainMs: 0, addedMs: 0, isAddedTime: false };
   const clockStatus: PilotClockStatus = match?.clockStatus ?? "NOT_STARTED";
   const periodDurationMs = match?.periodDurationMs ?? DEFAULT_PERIOD_DURATION_MS;

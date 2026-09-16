@@ -4,10 +4,11 @@ import { useAuth } from './AuthContext';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRole: string;
+  requiredRole?: string;
+  allowedRoles?: string[];
 }
 
-const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRole, allowedRoles }: ProtectedRouteProps) => {
   const { user, role, loading } = useAuth();
 
   if (loading) {
@@ -18,7 +19,8 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     );
   }
 
-  if (!user || role !== requiredRole) {
+  const roles = allowedRoles ?? (requiredRole ? [requiredRole] : []);
+  if (!user || !role || !roles.includes(role)) {
     return <Navigate to="/" replace />;
   }
 

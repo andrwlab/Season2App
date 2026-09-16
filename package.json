@@ -13,7 +13,8 @@
     "import:roster": "tsx scripts/importRoster.ts",
     "sync:roster": "tsx scripts/syncSeasonRoster.ts",
     "import:stats:s1": "tsx scripts/importSeason1Stats.ts",
-    "dedupe:players": "tsx scripts/dedupePlayers.ts"
+    "dedupe:players": "tsx scripts/dedupePlayers.ts",
+    "set:user-role": "tsx scripts/setUserRole.ts"
   },
   "dependencies": {
     "chart.js": "^4.4.9",

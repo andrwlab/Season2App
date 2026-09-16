@@ -2,11 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function hasRole(role) {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
       return request.auth != null
         && (
-          request.auth.token.role == role
-          || (userDoc.data != null && userDoc.data.role == role)
+          request.auth.token.get('role', '') == role
+          || (
+            exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == role
+          )
         );
     }
 
@@ -26,7 +28,8 @@ service cloud.firestore {
         && request.time < matchDoc.data.fanVoteCloseAt
         && (
           matchDoc.data.status == "finished" ||
-          matchDoc.data.status == "completed"
+          matchDoc.data.status == "completed" ||
+          matchDoc.data.status == "Semifinals"
         );
     }
 
@@ -49,10 +52,13 @@ service cloud.firestore {
     }
 
     function isScorekeeperMatchUpdate() {
-      let changed = request.resource.data.diff(resource.data).changedKeys();
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
       return changed.hasOnly([
           "scores",
           "status",
+          "setScores",
+          "bestOf",
+          "seasonId",
           "playersStats",
           "endedAt",
           "fanVoteEnabled",
@@ -62,7 +68,19 @@ service cloud.firestore {
         && request.resource.data.scores is map
         && request.resource.data.scores.home is int
         && request.resource.data.scores.away is int
-        && request.resource.data.status in ["finished", "completed"]
+        && request.resource.data.status in ["finished", "completed", "Semifinals"]
+        && (
+          !request.resource.data.keys().hasAny(["setScores"]) ||
+          request.resource.data.setScores is list
+        )
+        && (
+          !request.resource.data.keys().hasAny(["bestOf"]) ||
+          request.resource.data.bestOf is int
+        )
+        && (
+          !request.resource.data.keys().hasAny(["seasonId"]) ||
+          request.resource.data.seasonId is string
+        )
         && (
           !request.resource.data.keys().hasAny(["playersStats"]) ||
           request.resource.data.playersStats is map
@@ -90,18 +108,28 @@ service cloud.firestore {
           "seasonId",
           "matchId",
           "playerId",
+          "playerName",
           "attack",
           "blocks",
           "assists",
-          "service"
+          "service",
+          "updatedAt"
         ])
         && request.resource.data.seasonId is string
         && request.resource.data.matchId is string
         && request.resource.data.playerId is string
+        && (
+          !request.resource.data.keys().hasAny(["playerName"]) ||
+          request.resource.data.playerName is string
+        )
         && request.resource.data.attack is int
         && request.resource.data.blocks is int
         && request.resource.data.assists is int
-        && request.resource.data["service"] is int;
+        && request.resource.data["service"] is int
+        && (
+          !request.resource.data.keys().hasAny(["updatedAt"]) ||
+          request.resource.data.updatedAt is timestamp
+        );
     }
 
     function isValidAudienceHeartbeat() {
@@ -138,7 +166,8 @@ service cloud.firestore {
 
     match /matches/{matchId} {
       allow read: if true;
-      allow create, delete: if isAdmin();
+      allow create: if isAdmin() || isScorekeeper();
+      allow delete: if isAdmin();
       allow update: if isAdmin() || (isScorekeeper() && isScorekeeperMatchUpdate());
 
       match /fanVotes/{uid} {
@@ -166,6 +195,31 @@ service cloud.firestore {
       allow delete: if isAdmin() || isScorekeeper();
     }
 
+    // Tournament settings remain admin-only. Scorekeepers can open existing
+    // tournaments, create/edit matches and write the event stream used by the
+    // live scorer, but cannot delete matches or change global configuration.
+    match /pilotTournaments/{tournamentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /pilotMatches/{matchId} {
+      allow read: if true;
+      allow create, update: if isAdmin() || isScorekeeper();
+      allow delete: if isAdmin();
+    }
+
+    match /pilotEvents/{eventId} {
+      allow read: if true;
+      allow create, update: if isAdmin() || isScorekeeper();
+      allow delete: if isAdmin();
+    }
+
+    match /pilotMoments/{momentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /pilotAudienceHeartbeats/{heartbeatId} {
       allow read: if isAdmin();
       allow create: if isValidAudienceHeartbeat();
@@ -180,9 +234,38 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    match /{collection}/{docId} {
-      allow read: if collection != "pilotAudienceHeartbeats";
+    // Preserve the access boundaries already deployed in production.
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /seasons/{docId} {
+      allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /teams/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /players/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /rosters/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /trades/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

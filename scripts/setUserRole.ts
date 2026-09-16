@@ -3,9 +3,15 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
 const uid = process.env.USER_UID || process.argv[2];
 const role = process.env.USER_ROLE || process.argv[3] || "scorekeeper";
+const allowedRoles = new Set(["admin", "scorekeeper"]);
 
 if (!uid) {
   console.error("Usage: USER_UID=<uid> [USER_ROLE=scorekeeper] tsx scripts/setUserRole.ts");
+  process.exit(1);
+}
+
+if (!allowedRoles.has(role)) {
+  console.error(`Invalid role "${role}". Allowed roles: admin, scorekeeper.`);
   process.exit(1);
 }
 

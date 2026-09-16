@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
 import { doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Link, useParams } from "react-router-dom";
+import { useAuth } from "../AuthContext";
+import { canScoreMatches, isAdminRole } from "../auth/roles";
+import { getFirebaseErrorCode } from "../auth/errors";
 import PilotMomentComposer from "../components/PilotMomentComposer";
 import { db } from "../firebase";
 import {
@@ -18,6 +22,13 @@ type MomentMatchState = PilotClockState & { homeName: string; awayName: string }
 
 const PilotScorerSurface = () => {
   const { tournamentId = "pilot0", matchId = "match-001" } = useParams();
+  const auth = getAuth();
+  const authState = useAuth();
+  const user = authState?.user ?? null;
+  const role = authState?.role ?? null;
+  const authLoading = authState?.loading ?? true;
+  const canOperate = canScoreMatches(role);
+  const canManageMoments = isAdminRole(role);
   const pilotMatchId = `${tournamentId}__${matchId}`;
   const matchRef = useMemo(() => doc(db, "pilotMatches", pilotMatchId), [pilotMatchId]);
 
@@ -29,8 +40,10 @@ const PilotScorerSurface = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showMomentComposer, setShowMomentComposer] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading || !user || !canOperate) return undefined;
     return onSnapshot(matchRef, (snap) => {
       if (!snap.exists()) {
         setExists(false);
@@ -59,7 +72,7 @@ const PilotScorerSurface = () => {
         setMinutes(clampMinutes(storedMinutes));
       }
     });
-  }, [matchRef]);
+  }, [authLoading, canOperate, matchRef, user]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 500);
@@ -82,6 +95,55 @@ const PilotScorerSurface = () => {
       setSaving(false);
     }
   };
+
+  const login = async () => {
+    const provider = new GoogleAuthProvider();
+    setAuthError(null);
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error: unknown) {
+      const code = getFirebaseErrorCode(error);
+      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request" || code === "auth/operation-not-supported-in-this-environment") {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      if (code === "auth/popup-closed-by-user") {
+        setAuthError("Sign-in was closed before it finished.");
+        return;
+      }
+      setAuthError("Could not sign in. Try again in Safari or Chrome.");
+    }
+  };
+
+  if (authLoading) {
+    return <div className="min-h-screen bg-slate-950 px-4 py-10 text-center text-sm text-slate-400">Checking scorekeeper access…</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <main className="mx-auto max-w-md space-y-5">
+          <div><p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Match Control</p><h1 className="mt-2 text-3xl font-black">Scorekeeper sign-in</h1><p className="mt-2 text-sm text-slate-400">Sign in with an authorized admin or scorekeeper account.</p></div>
+          <button onClick={login} className="w-full rounded-xl bg-cyan-300 px-4 py-4 font-black text-slate-950">SIGN IN WITH GOOGLE</button>
+          {authError && <p className="text-sm font-semibold text-red-300">{authError}</p>}
+        </main>
+      </div>
+    );
+  }
+
+  if (!canOperate) {
+    return (
+      <div className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <main className="mx-auto max-w-md rounded-3xl border border-red-400/20 bg-red-500/[0.06] p-6 text-center">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-red-300">Access blocked</p>
+          <h1 className="mt-3 text-2xl font-black">Scorekeeper access required</h1>
+          <p className="mt-2 text-sm text-slate-400">Ask an administrator to assign this account the scorekeeper role.</p>
+          <p className="mt-3 break-all font-mono text-[0.65rem] text-slate-500">UID: {user.uid}</p>
+          <button onClick={() => signOut(auth)} className="mt-5 w-full rounded-xl bg-slate-800 px-4 py-3 font-black">SIGN OUT</button>
+        </main>
+      </div>
+    );
+  }
 
   const showSetup = exists && clockStatus === "NOT_STARTED";
   const visibleMatchMs = momentMatch ? getVisibleMatchMs(momentMatch, now) : 0;
@@ -124,9 +186,9 @@ const PilotScorerSurface = () => {
 
       <PilotScorer />
 
-      {exists && momentMatch && <button type="button" onClick={() => setShowMomentComposer(true)} className="fixed bottom-4 right-4 z-40 rounded-full bg-cyan-300 px-5 py-3.5 text-sm font-black text-slate-950 shadow-2xl shadow-black/40 active:scale-[0.98]">+ MOMENT</button>}
+      {canManageMoments && exists && momentMatch && <button type="button" onClick={() => setShowMomentComposer(true)} className="fixed bottom-4 right-4 z-40 rounded-full bg-cyan-300 px-5 py-3.5 text-sm font-black text-slate-950 shadow-2xl shadow-black/40 active:scale-[0.98]">+ MOMENT</button>}
 
-      {showMomentComposer && momentMatch && (
+      {canManageMoments && showMomentComposer && momentMatch && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 px-3 py-4 backdrop-blur-sm">
           <div className="mx-auto max-w-lg">
             <div className="mb-3 flex items-center justify-between">

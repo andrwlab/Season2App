@@ -74,7 +74,7 @@ function AppShell() {
           <Route
             path="/matches"
             element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute allowedRoles={["admin", "scorekeeper"]}>
                 <Matches />
               </ProtectedRoute>
             }

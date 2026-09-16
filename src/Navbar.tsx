@@ -3,6 +3,8 @@ import { NavLink } from 'react-router-dom';
 import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { useAuth } from './AuthContext';
 import { useSeason } from './hooks/useSeason';
+import { canScoreMatches } from './auth/roles';
+import { getFirebaseErrorCode } from './auth/errors';
 
 const Navbar = () => {
   const auth = getAuth();
@@ -24,9 +26,9 @@ const Navbar = () => {
 
     try {
       await signInWithPopup(auth, provider);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      const errorCode = error?.code as string | undefined;
+      const errorCode = getFirebaseErrorCode(error);
       if (errorCode === 'auth/popup-blocked') {
         setAuthError('Popup blocked. Redirecting to the sign-in page...');
         await signInWithRedirect(auth, provider);
@@ -181,7 +183,7 @@ const Navbar = () => {
               Cumulative
             </NavLink>
           </li>
-          {user && role === 'admin' && (
+          {user && canScoreMatches(role) && (
             <>
               <li>
                 <NavLink
@@ -192,15 +194,17 @@ const Navbar = () => {
                   Matches
                 </NavLink>
               </li>
-              <li>
-                <NavLink
-                  to="/admin/rosters"
-                  onClick={closeMenu}
-                  className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
-                >
-                  Rosters
-                </NavLink>
-              </li>
+              {role === 'admin' && (
+                <li>
+                  <NavLink
+                    to="/admin/rosters"
+                    onClick={closeMenu}
+                    className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
+                  >
+                    Rosters
+                  </NavLink>
+                </li>
+              )}
             </>
           )}
         </ul>
