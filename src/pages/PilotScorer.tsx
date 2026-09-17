@@ -5,8 +5,10 @@ import {
   doc,
   increment,
   onSnapshot,
+  query,
   serverTimestamp,
   setDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -69,6 +71,11 @@ type PilotLastSubstitution = {
 type PilotMatch = {
   tournamentId: string;
   matchId: string;
+  stage?: "GROUP" | "SEMIFINAL" | "FINAL";
+  tieId?: "SF1" | "SF2";
+  leg?: 1 | 2;
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
   homeName: string;
   awayName: string;
   homePlayers?: PilotPlayer[];
@@ -155,6 +162,7 @@ const PilotScorer = () => {
   const { tournamentId = "pilot0", matchId = "match-001" } = useParams();
   const pilotMatchId = `${tournamentId}__${matchId}`;
   const [match, setMatch] = useState<PilotMatch | null>(null);
+  const [tournamentMatches, setTournamentMatches] = useState<PilotMatch[]>([]);
   const [exists, setExists] = useState<boolean | null>(null);
   const [homeName, setHomeName] = useState("Team A");
   const [awayName, setAwayName] = useState("Team B");
@@ -187,6 +195,11 @@ const PilotScorer = () => {
       }
     );
   }, [matchRef]);
+
+  useEffect(() => {
+    const matchesQuery = query(collection(db, "pilotMatches"), where("tournamentId", "==", tournamentId));
+    return onSnapshot(matchesQuery, (snap) => setTournamentMatches(snap.docs.map((item) => item.data() as PilotMatch)));
+  }, [tournamentId]);
 
   useEffect(() => {
     if (!match || match.status !== "READY") return;
@@ -249,6 +262,34 @@ const PilotScorer = () => {
   const periodDurationMs = match?.periodDurationMs ?? DEFAULT_PERIOD_DURATION_MS;
   const extraTimePeriodDurationMs = match?.extraTimePeriodDurationMs ?? DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS;
   const canRecordLiveEvent = Boolean(match && clockStatus === "RUNNING" && isTimedPhase(match.phase));
+  const isSecondLegSemifinal = match?.stage === "SEMIFINAL" && match.leg === 2;
+  const isFirstLegSemifinal = match?.stage === "SEMIFINAL" && match.leg === 1;
+  const isFinal = match?.stage === "FINAL";
+  const firstLeg = isSecondLegSemifinal
+    ? tournamentMatches.find((item) => item.stage === "SEMIFINAL" && item.tieId === match?.tieId && item.leg === 1)
+    : null;
+  const scoreForTeam = (item: PilotMatch, teamId?: string | null) => {
+    if (!teamId) return 0;
+    if (item.homeTeamId === teamId) return item.scoreHome ?? 0;
+    if (item.awayTeamId === teamId) return item.scoreAway ?? 0;
+    return 0;
+  };
+  const knockoutIsTied = Boolean(match && (
+    isFinal
+      ? match.scoreHome === match.scoreAway
+      : isSecondLegSemifinal && firstLeg?.status === "FULLTIME"
+        ? scoreForTeam(firstLeg, match.homeTeamId) + match.scoreHome === scoreForTeam(firstLeg, match.awayTeamId) + match.scoreAway
+        : false
+  ));
+  const knockoutContextMissing = Boolean(isSecondLegSemifinal && firstLeg?.status !== "FULLTIME");
+  const managedKnockout = Boolean(isFirstLegSemifinal || isSecondLegSemifinal || isFinal);
+  const canStartExtraTime = Boolean(match?.phase === "REGULATION_END" && !knockoutContextMissing && (managedKnockout ? !isFirstLegSemifinal && knockoutIsTied : true));
+  const canStartPenalties = Boolean(match?.phase === "EXTRA_TIME_END" && (managedKnockout ? knockoutIsTied : true));
+  const canFinishDecision = Boolean(match && (
+    match.phase === "PENALTIES"
+      ? (match.penaltyHome ?? 0) !== (match.penaltyAway ?? 0)
+      : ["REGULATION_END", "EXTRA_TIME_END"].includes(match.phase) && !knockoutContextMissing && (managedKnockout ? !knockoutIsTied : true)
+  ));
 
   const rosterForSide = (side: TeamSide) => sortPilotPlayers(side === "HOME" ? match?.homePlayers : match?.awayPlayers);
   const teamNameForSide = (side: TeamSide) => side === "HOME" ? match?.homeName ?? "Home" : match?.awayName ?? "Away";
@@ -652,7 +693,7 @@ const PilotScorer = () => {
   };
 
   const startExtraTime = async () => {
-    if (!match || match.phase !== "REGULATION_END") return;
+    if (!match || !canStartExtraTime) return;
     const safeMinutes = Math.min(45, Math.max(1, Number(extraTimeMinutes) || 5));
     const actionTime = Date.now();
     await writeStateEvent("EXTRA_TIME_START", { status: "LIVE", phase: "EXTRA_TIME_FIRST_HALF", clockStatus: "RUNNING", phaseElapsedBaseMs: 0, runningSinceMs: actionTime, extraTimePeriodDurationMs: safeMinutes * 60 * 1000, completedMatchClockMs: null, lastEvent: null }, "EXTRA_TIME_FIRST_HALF", periodDurationMs * 2);
@@ -680,14 +721,14 @@ const PilotScorer = () => {
   };
 
   const startPenalties = async () => {
-    if (!match || (match.phase !== "REGULATION_END" && match.phase !== "EXTRA_TIME_END")) return;
+    if (!match || !canStartPenalties) return;
     const actionTime = Date.now();
     const completedMatchClockMs = getVisibleMatchMs(match, actionTime);
     await writeStateEvent("PENALTIES_START", { status: "LIVE", phase: "PENALTIES", clockStatus: "PAUSED", runningSinceMs: null, completedMatchClockMs, penaltyHome: match.penaltyHome ?? 0, penaltyAway: match.penaltyAway ?? 0, penaltyAttemptsHome: match.penaltyAttemptsHome ?? 0, penaltyAttemptsAway: match.penaltyAttemptsAway ?? 0, lastEvent: null }, "PENALTIES", completedMatchClockMs);
   };
 
   const finishMatch = async () => {
-    if (!match || !["REGULATION_END", "EXTRA_TIME_END", "PENALTIES"].includes(match.phase)) return;
+    if (!match || !canFinishDecision) return;
     const actionTime = Date.now();
     const completedMatchClockMs = match.completedMatchClockMs ?? getVisibleMatchMs(match, actionTime);
     await writeStateEvent("FULLTIME", { status: "FULLTIME", phase: "FULLTIME", clockStatus: "ENDED", runningSinceMs: null, completedMatchClockMs, lastEvent: null }, "FULLTIME", completedMatchClockMs);
@@ -832,6 +873,21 @@ const PilotScorer = () => {
   })();
 
   const showDecision = match.phase === "REGULATION_END" || match.phase === "EXTRA_TIME_END";
+  const secondLegAggregate = isSecondLegSemifinal && firstLeg?.status === "FULLTIME"
+    ? {
+      home: scoreForTeam(firstLeg, match.homeTeamId) + match.scoreHome,
+      away: scoreForTeam(firstLeg, match.awayTeamId) + match.scoreAway,
+    }
+    : null;
+  const decisionMessage = knockoutContextMissing
+    ? "The first leg must be completed before this result can be decided."
+    : secondLegAggregate
+      ? `Aggregate: ${match.homeName} ${secondLegAggregate.home}–${secondLegAggregate.away} ${match.awayName}.`
+      : isFirstLegSemifinal
+        ? "First leg: finish after regulation. Extra time and penalties are only available in leg two."
+        : isFinal
+          ? "The final must produce a winner: extra time, then penalties if still tied."
+          : null;
   const pendingFullRoster = pendingEvent ? rosterForSide(pendingEvent.teamSide) : [];
   const pendingCurrentIds = pendingEvent
     ? (pendingEvent.teamSide === "HOME" ? match.currentHomePlayerIds : match.currentAwayPlayerIds) ?? []
@@ -887,9 +943,17 @@ const PilotScorer = () => {
 
         {stateAction && <button type="button" disabled={busy} onClick={stateAction.action} className={`w-full rounded-2xl px-4 py-4 text-base font-black active:scale-[0.99] disabled:opacity-50 ${stateAction.className}`}>{stateAction.label}</button>}
 
-        {showDecision && <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.05] p-4"><p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-cyan-300">What happens next?</p><div className="mt-3 space-y-2"><button type="button" disabled={busy} onClick={finishMatch} className="w-full rounded-xl bg-slate-100 px-4 py-3 font-black text-slate-950 disabled:opacity-40">END MATCH</button>{match.phase === "REGULATION_END" && <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3"><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Extra-time minutes per half</label><div className="mt-2 grid grid-cols-[1fr_auto] gap-2"><input type="number" min={1} max={45} inputMode="numeric" value={extraTimeMinutes} onChange={(event) => setExtraTimeMinutes(Math.min(45, Math.max(1, Number(event.target.value) || 1)))} className="min-h-12 rounded-xl border border-white/10 bg-slate-950 px-3 text-center text-lg font-black outline-none focus:border-cyan-300" /><button type="button" disabled={busy} onClick={startExtraTime} className="rounded-xl bg-cyan-300 px-4 font-black text-slate-950 disabled:opacity-40">EXTRA TIME</button></div></div>}<button type="button" disabled={busy} onClick={startPenalties} className="w-full rounded-xl bg-amber-300 px-4 py-3 font-black text-slate-950 disabled:opacity-40">PENALTIES</button></div></div>}
+        {showDecision && <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.05] p-4">
+          <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-cyan-300">What happens next?</p>
+          {decisionMessage && <p className="mt-2 text-sm font-semibold text-slate-300">{decisionMessage}</p>}
+          <div className="mt-3 space-y-2">
+            {canFinishDecision && <button type="button" disabled={busy} onClick={finishMatch} className="w-full rounded-xl bg-slate-100 px-4 py-3 font-black text-slate-950 disabled:opacity-40">END MATCH</button>}
+            {canStartExtraTime && <div className="rounded-xl border border-white/10 bg-slate-900/70 p-3"><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Extra-time minutes per half</label><div className="mt-2 grid grid-cols-[1fr_auto] gap-2"><input type="number" min={1} max={45} inputMode="numeric" value={extraTimeMinutes} onChange={(event) => setExtraTimeMinutes(Math.min(45, Math.max(1, Number(event.target.value) || 1)))} className="min-h-12 rounded-xl border border-white/10 bg-slate-950 px-3 text-center text-lg font-black outline-none focus:border-cyan-300" /><button type="button" disabled={busy} onClick={startExtraTime} className="rounded-xl bg-cyan-300 px-4 font-black text-slate-950 disabled:opacity-40">EXTRA TIME</button></div></div>}
+            {canStartPenalties && <button type="button" disabled={busy} onClick={startPenalties} className="w-full rounded-xl bg-amber-300 px-4 py-3 font-black text-slate-950 disabled:opacity-40">PENALTIES</button>}
+          </div>
+        </div>}
 
-        {match.phase === "PENALTIES" && <button type="button" disabled={busy} onClick={finishMatch} className="w-full rounded-2xl bg-red-500 px-4 py-4 text-base font-black text-white active:scale-[0.99] disabled:opacity-50">END SHOOTOUT</button>}
+        {match.phase === "PENALTIES" && <button type="button" disabled={busy || !canFinishDecision} onClick={finishMatch} className="w-full rounded-2xl bg-red-500 px-4 py-4 text-base font-black text-white active:scale-[0.99] disabled:opacity-50">{canFinishDecision ? "END SHOOTOUT" : "SHOOTOUT MUST HAVE A WINNER"}</button>}
         {error && <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm font-semibold text-red-200">{error}</div>}
       </div>
 

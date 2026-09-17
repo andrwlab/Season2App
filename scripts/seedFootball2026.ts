@@ -49,6 +49,7 @@ async function mainAdmin() {
   if (!db) throw new Error("Firestore Admin client unavailable.");
   const tournamentRef = db.collection("pilotTournaments").doc(FOOTBALL_2026_TOURNAMENT_ID);
   const existingTournament = await tournamentRef.get();
+  const needsTeams = !existingTournament.exists || !Array.isArray(existingTournament.data()?.teams);
   await tournamentRef.set({
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID,
     name: "Sabis Champions League",
@@ -56,9 +57,9 @@ async function mainAdmin() {
     format: "ROUND_ROBIN_SEMIS_FINAL",
     knockoutTieBreak: "EXTRA_TIME_THEN_PENALTIES_IN_SECOND_LEG",
     defaultHalfMinutes: 10,
-    ...(existingTournament.exists ? {} : { teams: FOOTBALL_2026_TEAMS }),
+    ...(needsTeams ? { teams: FOOTBALL_2026_TEAMS } : {}),
     updatedAt: FieldValue.serverTimestamp(),
-    createdAt: FieldValue.serverTimestamp(),
+    ...(!existingTournament.exists ? { createdAt: FieldValue.serverTimestamp() } : {}),
   }, { merge: true });
 
   let written = 0;
@@ -100,11 +101,13 @@ async function restGet(path: string) {
   const response = await fetch(`${restBase}/${path}`, { headers: restHeaders() });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Firestore read failed (${response.status}): ${await response.text()}`);
-  return response.json() as Promise<{ fields?: Record<string, { stringValue?: string; timestampValue?: string }> }>;
+  return response.json() as Promise<{ fields?: Record<string, FirestoreValue> }>;
 }
 
-async function restPut(path: string, data: Record<string, unknown>) {
-  const response = await fetch(`${restBase}/${path}`, { method: "PATCH", headers: restHeaders(), body: JSON.stringify(documentBody(data)) });
+async function restPut(path: string, data: Record<string, unknown>, mergeFields?: string[]) {
+  const mask = mergeFields?.map((field) => `updateMask.fieldPaths=${encodeURIComponent(field)}`).join("&");
+  const url = `${restBase}/${path}${mask ? `?${mask}` : ""}`;
+  const response = await fetch(url, { method: "PATCH", headers: restHeaders(), body: JSON.stringify(documentBody(data)) });
   if (!response.ok) throw new Error(`Firestore write failed (${response.status}): ${await response.text()}`);
 }
 
@@ -112,13 +115,15 @@ async function mainRest() {
   const now = new Date();
   const tournamentPath = `pilotTournaments/${FOOTBALL_2026_TOURNAMENT_ID}`;
   const existingTournament = await restGet(tournamentPath);
-  await restPut(tournamentPath, {
+  const needsTeams = !existingTournament?.fields?.teams;
+  const tournamentData = {
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID, name: "Sabis Champions League", sport: "football",
     format: "ROUND_ROBIN_SEMIS_FINAL", knockoutTieBreak: "EXTRA_TIME_THEN_PENALTIES_IN_SECOND_LEG", defaultHalfMinutes: 10,
-    ...(existingTournament ? {} : { teams: FOOTBALL_2026_TEAMS }),
-    createdAt: existingTournament?.fields?.createdAt?.timestampValue ? new Date(existingTournament.fields.createdAt.timestampValue) : now,
+    ...(needsTeams ? { teams: FOOTBALL_2026_TEAMS } : {}),
+    ...(!existingTournament ? { createdAt: now } : {}),
     updatedAt: now,
-  });
+  };
+  await restPut(tournamentPath, tournamentData, existingTournament ? Object.keys(tournamentData) : undefined);
 
   let written = 0;
   for (const scheduled of FOOTBALL_2026_SCHEDULE) {

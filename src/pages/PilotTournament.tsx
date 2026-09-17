@@ -165,7 +165,9 @@ const PilotTournament = () => {
 
   const liveMatches = matches.filter((match) => match.status === "LIVE" && match.phase !== "FULLTIME");
   const previousMatches = matches.filter((match) => match.status === "FULLTIME" || match.phase === "FULLTIME").reverse();
-  const upcomingMatches = matches.filter((match) => match.status === "READY").sort((a, b) => (a.matchday ?? 99) - (b.matchday ?? 99) || (a.order ?? 99) - (b.order ?? 99));
+  const upcomingMatches = matches
+    .filter((match) => match.status === "READY" && match.homeTeamId && match.awayTeamId)
+    .sort((a, b) => (a.matchday ?? 99) - (b.matchday ?? 99) || (a.order ?? 99) - (b.order ?? 99));
   const momentMatch = liveMatches[0] ?? previousMatches[0] ?? null;
   const fallbackTeams = useMemo(() => {
     const names = new Set<string>();
