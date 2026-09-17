@@ -52,7 +52,7 @@ async function mainAdmin() {
   const needsTeams = !existingTournament.exists || !Array.isArray(existingTournament.data()?.teams);
   await tournamentRef.set({
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID,
-    name: "Sabis Champions League",
+    name: "Champions League",
     sport: "football",
     format: "ROUND_ROBIN_SEMIS_FINAL",
     knockoutTieBreak: "EXTRA_TIME_THEN_PENALTIES_IN_SECOND_LEG",
@@ -117,7 +117,7 @@ async function mainRest() {
   const existingTournament = await restGet(tournamentPath);
   const needsTeams = !existingTournament?.fields?.teams;
   const tournamentData = {
-    tournamentId: FOOTBALL_2026_TOURNAMENT_ID, name: "Sabis Champions League", sport: "football",
+    tournamentId: FOOTBALL_2026_TOURNAMENT_ID, name: "Champions League", sport: "football",
     format: "ROUND_ROBIN_SEMIS_FINAL", knockoutTieBreak: "EXTRA_TIME_THEN_PENALTIES_IN_SECOND_LEG", defaultHalfMinutes: 10,
     ...(needsTeams ? { teams: FOOTBALL_2026_TEAMS } : {}),
     ...(!existingTournament ? { createdAt: now } : {}),

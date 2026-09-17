@@ -61,6 +61,7 @@ function AppShell() {
           {/* Public spectator flow */}
           <Route path="/live/:tournamentId" element={<PilotTournament />} />
           <Route path="/live/:tournamentId/match/:matchId" element={<PilotLive />} />
+          <Route path="/live/:tournamentId/:section" element={<PilotTournament />} />
 
           {/* Single admin namespace: /pilot */}
           <Route path="/pilot" element={<PilotAdminHome />} />

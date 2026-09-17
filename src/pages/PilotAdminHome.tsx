@@ -7,6 +7,7 @@ import { useAuth } from "../AuthContext";
 import { canScoreMatches, isAdminRole } from "../auth/roles";
 import { getFirebaseErrorCode } from "../auth/errors";
 import { db } from "../firebase";
+import { FOOTBALL_2026_TOURNAMENT_ID } from "../pilot/footballTournament";
 
 const clampMinutes = (value: number) => Math.min(90, Math.max(1, Math.round(Number(value) || 10)));
 const cleanTournamentId = (value: string) =>
@@ -47,7 +48,10 @@ const PilotAdminHome = () => {
     if (authLoading || !user || user.isAnonymous || !canOperate) return undefined;
     return onSnapshot(collection(db, "pilotTournaments"), (snapshot) => {
       const next = snapshot.docs
-        .map((item) => item.data() as TournamentSummary)
+        .map((item) => {
+          const tournament = item.data() as TournamentSummary;
+          return tournament.tournamentId === FOOTBALL_2026_TOURNAMENT_ID ? { ...tournament, name: "Champions League" } : tournament;
+        })
         .filter((item) => item.tournamentId)
         .sort((a, b) => (a.name || a.tournamentId).localeCompare(b.name || b.tournamentId));
       setTournaments(next);

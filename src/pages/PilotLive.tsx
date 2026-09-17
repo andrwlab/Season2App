@@ -5,7 +5,7 @@ import PilotEventFeed from "../components/PilotEventFeed";
 import PilotMatchTimeline from "../components/PilotMatchTimeline";
 import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
-import { assetUrl } from "../pilot/footballTournament";
+import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID } from "../pilot/footballTournament";
 import useAudienceTracking from "../hooks/useAudienceTracking";
 import {
   DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
@@ -110,6 +110,26 @@ const PilotLive = () => {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const name = tournamentId === FOOTBALL_2026_TOURNAMENT_ID ? "Champions League" : tournament?.name || tournamentId;
+    const previousTitle = document.title;
+    const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const previousThemeColor = themeColor?.content;
+    const favicon = document.createElement("link");
+    favicon.rel = "icon";
+    favicon.type = "image/png";
+    favicon.href = assetUrl("champions-league-emblem.png") || "";
+    favicon.dataset.championsFavicon = "true";
+    document.head.appendChild(favicon);
+    document.title = match ? `${match.homeName} vs ${match.awayName} | ${name}` : `Partido | ${name}`;
+    if (themeColor) themeColor.content = "#020817";
+    return () => {
+      document.title = previousTitle;
+      if (themeColor && previousThemeColor) themeColor.content = previousThemeColor;
+      favicon.remove();
+    };
+  }, [match, tournament?.name, tournamentId]);
+
   if (loading) return <div className="min-h-[100dvh] bg-[#070707] px-4 py-6 text-white"><div className="mx-auto max-w-lg animate-pulse space-y-5"><div className="h-8 w-40 rounded-lg bg-white/10" /><div className="h-[420px] rounded-[2rem] bg-white/[0.05]" /><div className="h-40 rounded-3xl bg-white/[0.05]" /></div></div>;
   if (error) return <div className="min-h-[100dvh] bg-[#070707] p-8 text-center font-semibold text-red-300">{error}</div>;
   if (!match) return <div className="min-h-[100dvh] bg-[#070707] px-5 py-10 text-white"><div className="mx-auto max-w-md text-center"><Link to={`/live/${tournamentId}`} className="text-sm font-bold text-white/60">← Tournament</Link><h1 className="mt-8 text-3xl font-black tracking-tight">Match not live yet</h1><p className="mt-3 text-sm leading-relaxed text-white/45">The scorer has not created this match yet. This page will become available as soon as the match is ready.</p></div></div>;
@@ -132,7 +152,7 @@ const PilotLive = () => {
     ["Yellow cards", match.yellowHome ?? 0, match.yellowAway ?? 0],
     ["Red cards", match.redHome ?? 0, match.redAway ?? 0],
   ] as const;
-  const tournamentName = tournament?.name || tournamentId;
+  const tournamentName = tournamentId === FOOTBALL_2026_TOURNAMENT_ID ? "Champions League" : tournament?.name || tournamentId;
   const hasPenalties = (match.penaltyAttemptsHome ?? 0) + (match.penaltyAttemptsAway ?? 0) > 0 || match.phase === "PENALTIES";
   const periodDurationMs = match.periodDurationMs ?? DEFAULT_PERIOD_DURATION_MS;
   const extraTimePeriodDurationMs = match.extraTimePeriodDurationMs ?? DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS;
@@ -145,11 +165,11 @@ const PilotLive = () => {
     : "";
 
   return (
-    <div className="min-h-[100dvh] bg-[#070707] text-white">
-      <main className="mx-auto max-w-lg px-4 pb-[max(env(safe-area-inset-bottom),3rem)] pt-[max(env(safe-area-inset-top),1rem)] sm:pt-6">
+    <div className="champions-shell min-h-[100dvh] text-white">
+      <main className="relative z-10 mx-auto max-w-lg px-4 pb-[max(env(safe-area-inset-bottom),3rem)] pt-[max(env(safe-area-inset-top),1rem)] sm:pt-6">
         <header className="flex min-h-12 items-center justify-between gap-3">
           <Link to={`/live/${tournamentId}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-xl text-white/80 transition active:scale-95" aria-label="Back to tournament">←</Link>
-          <div className="min-w-0 flex-1 text-center"><p className="truncate text-sm font-black tracking-tight">{tournamentName}</p><p className="mt-0.5 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/35">{match.matchId}</p></div>
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2 text-center"><img src={assetUrl("champions-league-emblem.png")} alt="" className="h-9 w-9 shrink-0 object-contain"/><div className="min-w-0"><p className="champions-wordmark truncate text-sm font-black tracking-tight">{tournamentName}</p><p className="mt-0.5 text-[0.6rem] font-bold uppercase tracking-[0.16em] text-white/35">{match.matchId}</p></div></div>
           <div className="h-10 w-10" aria-hidden="true" />
         </header>
 

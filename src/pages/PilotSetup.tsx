@@ -10,7 +10,7 @@ import PilotAudienceAnalytics from "../components/PilotAudienceAnalytics";
 import PilotTeamManager from "../components/PilotTeamManager";
 import PilotFootballBracketControl from "../components/PilotFootballBracketControl";
 import { db } from "../firebase";
-import { PilotTeam } from "../pilot/footballTournament";
+import { FOOTBALL_2026_TOURNAMENT_ID, PilotTeam } from "../pilot/footballTournament";
 import { parseRosterText, PilotPlayer, rosterToText } from "../pilot/players";
 
 const clampMinutes = (value: number) => Math.min(90, Math.max(1, Number(value) || 10));
@@ -80,7 +80,7 @@ const PilotSetup = () => {
       if (!snap.exists()) return;
       const data = snap.data() as PilotTournamentDoc;
       setTournament(data);
-      setName(data.name || tournamentId);
+      setName(tournamentId === FOOTBALL_2026_TOURNAMENT_ID ? "Champions League" : data.name || tournamentId);
       setDefaultHalfMinutes(data.defaultHalfMinutes || 10);
       setHalfMinutes(data.defaultHalfMinutes || 10);
     });
