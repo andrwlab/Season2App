@@ -41,6 +41,18 @@ type PilotMatchSummary = {
   periodDurationMs?: number;
 };
 
+type DestructiveMatchAction = {
+  kind: "RESET" | "DELETE";
+  match: PilotMatchSummary;
+  confirmationCode: string;
+};
+
+const createConfirmationCode = () => {
+  const values = new Uint32Array(1);
+  window.crypto.getRandomValues(values);
+  return String(100000 + (values[0] % 900000));
+};
+
 const PilotSetup = () => {
   const { tournamentId = "pilot0" } = useParams();
   const auth = getAuth();
@@ -72,6 +84,8 @@ const PilotSetup = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [destructiveAction, setDestructiveAction] = useState<DestructiveMatchAction | null>(null);
+  const [confirmationInput, setConfirmationInput] = useState("");
 
   useEffect(() => {
     if (authLoading || !user || !canOperate) return undefined;
@@ -269,40 +283,119 @@ const PilotSetup = () => {
     }
   };
 
-  const deleteMatch = async (item: PilotMatchSummary) => {
-    const confirmed = window.confirm(`Delete ${item.matchId}: ${item.homeName} vs ${item.awayName}? This also removes its live event and moment metadata.`);
-    if (!confirmed) return;
+  const openDestructiveAction = (kind: DestructiveMatchAction["kind"], match: PilotMatchSummary) => {
+    setDestructiveAction({ kind, match, confirmationCode: createConfirmationCode() });
+    setConfirmationInput("");
+    setError(null);
+    setMessage(null);
+  };
 
+  const closeDestructiveAction = () => {
+    if (busy) return;
+    setDestructiveAction(null);
+    setConfirmationInput("");
+  };
+
+  const getRelatedMatchData = async (pilotMatchId: string) => {
+    const [eventsSnapshot, momentsSnapshot] = await Promise.all([
+      getDocs(query(collection(db, "pilotEvents"), where("pilotMatchId", "==", pilotMatchId))),
+      getDocs(query(collection(db, "pilotMoments"), where("pilotMatchId", "==", pilotMatchId))),
+    ]);
+    return { eventsSnapshot, momentsSnapshot };
+  };
+
+  const deleteDocuments = async (refs: Array<ReturnType<typeof doc>>) => {
+    for (let index = 0; index < refs.length; index += 450) {
+      const batch = writeBatch(db);
+      refs.slice(index, index + 450).forEach((documentRef) => batch.delete(documentRef));
+      await batch.commit();
+    }
+  };
+
+  const resetMatch = async (item: PilotMatchSummary) => {
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
       const pilotMatchId = `${tournamentId}__${item.matchId}`;
-      const [eventsSnapshot, momentsSnapshot] = await Promise.all([
-        getDocs(query(collection(db, "pilotEvents"), where("pilotMatchId", "==", pilotMatchId))),
-        getDocs(query(collection(db, "pilotMoments"), where("pilotMatchId", "==", pilotMatchId))),
-      ]);
-
-      const refs = [
-        doc(db, "pilotMatches", pilotMatchId),
+      const { eventsSnapshot, momentsSnapshot } = await getRelatedMatchData(pilotMatchId);
+      await deleteDocuments([
         ...eventsSnapshot.docs.map((eventDoc) => eventDoc.ref),
         ...momentsSnapshot.docs.map((momentDoc) => momentDoc.ref),
-      ];
+      ]);
+      await updateDoc(doc(db, "pilotMatches", pilotMatchId), {
+        scoreHome: 0,
+        scoreAway: 0,
+        shotsHome: 0,
+        shotsAway: 0,
+        foulsHome: 0,
+        foulsAway: 0,
+        yellowHome: 0,
+        yellowAway: 0,
+        redHome: 0,
+        redAway: 0,
+        penaltyHome: 0,
+        penaltyAway: 0,
+        penaltyAttemptsHome: 0,
+        penaltyAttemptsAway: 0,
+        status: "READY",
+        phase: "FIRST_HALF",
+        clockStatus: "NOT_STARTED",
+        phaseElapsedBaseMs: 0,
+        runningSinceMs: null,
+        completedMatchClockMs: null,
+        lineupsConfirmed: false,
+        homeStarterIds: [],
+        awayStarterIds: [],
+        currentHomePlayerIds: [],
+        currentAwayPlayerIds: [],
+        substitutionCountHome: 0,
+        substitutionCountAway: 0,
+        lastEvent: null,
+        lastSubstitution: null,
+        updatedAt: serverTimestamp(),
+      });
 
-      for (let index = 0; index < refs.length; index += 450) {
-        const batch = writeBatch(db);
-        refs.slice(index, index + 450).forEach((ref) => batch.delete(ref));
-        await batch.commit();
-      }
+      setDestructiveAction(null);
+      setConfirmationInput("");
+      setMessage(`${item.homeName} vs ${item.awayName} reset. The match is ready to start again.`);
+    } catch (err) {
+      console.error("Pilot match reset failed", err);
+      setError("Could not finish resetting the match. Refresh and try again before continuing.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteMatch = async (item: PilotMatchSummary) => {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const pilotMatchId = `${tournamentId}__${item.matchId}`;
+      const { eventsSnapshot, momentsSnapshot } = await getRelatedMatchData(pilotMatchId);
+      await deleteDocuments([
+        ...eventsSnapshot.docs.map((eventDoc) => eventDoc.ref),
+        ...momentsSnapshot.docs.map((momentDoc) => momentDoc.ref),
+        doc(db, "pilotMatches", pilotMatchId),
+      ]);
 
       if (editingMatchId === item.matchId) setEditingMatchId(null);
-      setMessage(`${item.matchId} deleted.`);
+      setDestructiveAction(null);
+      setConfirmationInput("");
+      setMessage(`${item.homeName} vs ${item.awayName} deleted.`);
     } catch (err) {
       console.error("Pilot match deletion failed", err);
       setError("Could not delete the match.");
     } finally {
       setBusy(false);
     }
+  };
+
+  const confirmDestructiveAction = async () => {
+    if (!destructiveAction || confirmationInput !== destructiveAction.confirmationCode || busy) return;
+    if (destructiveAction.kind === "RESET") await resetMatch(destructiveAction.match);
+    else await deleteMatch(destructiveAction.match);
   };
 
   if (authLoading) {
@@ -384,7 +477,7 @@ const PilotSetup = () => {
                     ) : (
                       <>
                         <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-black uppercase tracking-wider text-slate-500">{item.matchId} · {item.status}</p><p className="mt-1 truncate font-black">{item.homeName} vs {item.awayName}</p><p className="mt-1 text-xs text-slate-500">{Math.round((item.periodDurationMs || 600000) / 60000)} min per half · {item.scoreHome ?? 0}–{item.scoreAway ?? 0}</p><p className="mt-1 text-xs font-semibold text-cyan-200/70">{item.homePlayers?.length ?? 0} + {item.awayPlayers?.length ?? 0} players</p></div><div className="flex shrink-0 gap-2"><Link to={`/scorer/${tournamentId}/${item.matchId}`} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-black">SCORER</Link><Link to={`/live/${tournamentId}/match/${item.matchId}`} className="rounded-lg bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-200">LIVE</Link></div></div>
-                        <div className={`mt-3 grid gap-2 border-t border-white/5 pt-3 ${isAdmin ? "grid-cols-2" : "grid-cols-1"}`}><button type="button" onClick={() => beginEdit(item)} className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-slate-300">EDIT</button>{isAdmin && <button type="button" disabled={busy} onClick={() => deleteMatch(item)} className="rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-black text-red-200 disabled:opacity-40">DELETE</button>}</div>
+                        <div className={`mt-3 grid gap-2 border-t border-white/5 pt-3 ${isAdmin ? "grid-cols-3" : "grid-cols-1"}`}><button type="button" onClick={() => beginEdit(item)} className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-slate-300">EDIT</button>{isAdmin && <button type="button" disabled={busy} onClick={() => openDestructiveAction("RESET", item)} className="rounded-lg border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs font-black text-amber-200 disabled:opacity-40">RESET</button>}{isAdmin && <button type="button" disabled={busy} onClick={() => openDestructiveAction("DELETE", item)} className="rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-black text-red-200 disabled:opacity-40">DELETE</button>}</div>
                       </>
                     )}
                   </div>
@@ -394,6 +487,22 @@ const PilotSetup = () => {
           )}
         </section>
       </main>
+      {destructiveAction && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/85 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="destructive-action-title">
+          <div className={`w-full max-w-md rounded-3xl border p-5 shadow-2xl ${destructiveAction.kind === "DELETE" ? "border-red-400/30 bg-slate-950" : "border-amber-300/30 bg-slate-950"}`}>
+            <p className={`text-[0.65rem] font-black uppercase tracking-[0.22em] ${destructiveAction.kind === "DELETE" ? "text-red-300" : "text-amber-200"}`}>Protected action · Step 2 of 2</p>
+            <h2 id="destructive-action-title" className="mt-2 text-2xl font-black">{destructiveAction.kind === "DELETE" ? "Delete match?" : "Reset match?"}</h2>
+            <p className="mt-2 text-sm font-bold text-white">{destructiveAction.match.homeName} vs {destructiveAction.match.awayName}</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-400">{destructiveAction.kind === "DELETE" ? "The match, its result, events and moments will be permanently removed." : "The matchup and rosters will remain, but its result, clock, lineups, events, substitutions and moments will be cleared."}</p>
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Copy these numbers</p>
+              <p className="mt-2 select-all font-mono text-4xl font-black tracking-[0.2em] text-white" aria-label={`Confirmation code ${destructiveAction.confirmationCode}`}>{destructiveAction.confirmationCode}</p>
+            </div>
+            <label className="mt-4 block"><span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Enter the six digits</span><input autoFocus autoComplete="off" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={confirmationInput} onChange={(event) => setConfirmationInput(event.target.value.replace(/\D/g, "").slice(0, 6))} className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-center font-mono text-2xl font-black tracking-[0.2em] outline-none focus:border-cyan-300" /></label>
+            <div className="mt-5 grid grid-cols-2 gap-3"><button type="button" disabled={busy} onClick={closeDestructiveAction} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-black text-slate-300 disabled:opacity-40">CANCEL</button><button type="button" disabled={busy || confirmationInput !== destructiveAction.confirmationCode} onClick={confirmDestructiveAction} className={`rounded-xl px-4 py-3 font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-30 ${destructiveAction.kind === "DELETE" ? "bg-red-300" : "bg-amber-300"}`}>{busy ? "WORKING…" : destructiveAction.kind === "DELETE" ? "DELETE FOREVER" : "RESET MATCH"}</button></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
