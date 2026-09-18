@@ -5,7 +5,7 @@ import PilotEventFeed from "../components/PilotEventFeed";
 import PilotMatchTimeline from "../components/PilotMatchTimeline";
 import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
-import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID } from "../pilot/footballTournament";
+import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID, normalizeFootballMatch } from "../pilot/footballTournament";
 import useAudienceTracking from "../hooks/useAudienceTracking";
 import {
   DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
@@ -91,7 +91,7 @@ const PilotLive = () => {
 
   useEffect(() => {
     const unsubscribeMatch = onSnapshot(matchRef, (snap) => {
-      setMatch(snap.exists() ? (snap.data() as PilotMatch) : null);
+      setMatch(snap.exists() ? normalizeFootballMatch(snap.data() as PilotMatch) : null);
       setLoading(false);
     }, (err) => {
       console.error("Pilot live snapshot failed", err);
@@ -118,7 +118,7 @@ const PilotLive = () => {
     const favicon = document.createElement("link");
     favicon.rel = "icon";
     favicon.type = "image/png";
-    favicon.href = assetUrl("champions-league-emblem.png") || "";
+    favicon.href = assetUrl("champions-league-eagle-logo-web.png") || "";
     favicon.dataset.championsFavicon = "true";
     document.head.appendChild(favicon);
     document.title = match ? `${match.homeName} vs ${match.awayName} | ${name}` : `Partido | ${name}`;
@@ -169,7 +169,7 @@ const PilotLive = () => {
       <main className="relative z-10 mx-auto max-w-lg px-4 pb-[max(env(safe-area-inset-bottom),3rem)] pt-[max(env(safe-area-inset-top),1rem)] sm:pt-6">
         <header className="flex min-h-12 items-center justify-between gap-3">
           <Link to={`/live/${tournamentId}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-xl text-white/80 transition active:scale-95" aria-label="Back to tournament">←</Link>
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-2 text-center"><img src={assetUrl("champions-league-emblem.png")} alt="" className="h-9 w-9 shrink-0 object-contain"/><div className="min-w-0"><p className="champions-wordmark truncate text-sm font-black tracking-tight">{tournamentName}</p><p className="mt-0.5 text-[0.6rem] font-bold uppercase tracking-[0.16em] text-white/35">{match.matchId}</p></div></div>
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2 text-center"><img src={assetUrl("champions-league-eagle-logo-web.png")} alt="" className="h-12 w-12 shrink-0 object-contain"/><div className="min-w-0"><p className="champions-wordmark truncate text-sm font-black tracking-tight">{tournamentName}</p><p className="mt-0.5 text-[0.6rem] font-bold uppercase tracking-[0.16em] text-white/35">{match.matchId}</p></div></div>
           <div className="h-10 w-10" aria-hidden="true" />
         </header>
 

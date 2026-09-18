@@ -80,9 +80,9 @@ export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
   },
   {
     teamId: "slovan-bratislava",
-    name: "ŠK Slovan Bratislava",
-    shortName: "Slovan",
-    logoPath: "logos/football/slovan-bratislava.png",
+    name: "Manchester City",
+    shortName: "Man City",
+    logoPath: "logos/football/manchester-city.png",
     players: [
       player("Mr. Pérez", "Mr. Pérez"),
       player("Johan Ching", "Johan"),
@@ -133,6 +133,28 @@ export const FOOTBALL_2026_SCHEDULE: PilotScheduledMatch[] = [
   { matchId: "semi-2-leg-2", stage: "SEMIFINAL", tieId: "SF2", leg: 2, order: 4 },
   { matchId: "final", stage: "FINAL", order: 5 },
 ];
+
+export const normalizeFootballTeam = <T extends { teamId: string; name: string; shortName?: string; logoPath?: string }>(team: T): T =>
+  team.teamId === "slovan-bratislava"
+    ? { ...team, name: "Manchester City", shortName: "Man City", logoPath: "logos/football/manchester-city.png" }
+    : team;
+
+export const normalizeFootballMatch = <T extends {
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
+  homeName: string;
+  awayName: string;
+  homeLogoUrl?: string;
+  awayLogoUrl?: string;
+}>(match: T): T => ({
+  ...match,
+  ...(match.homeTeamId === "slovan-bratislava" || match.homeName === "ŠK Slovan Bratislava"
+    ? { homeName: "Manchester City", homeLogoUrl: "logos/football/manchester-city.png" }
+    : {}),
+  ...(match.awayTeamId === "slovan-bratislava" || match.awayName === "ŠK Slovan Bratislava"
+    ? { awayName: "Manchester City", awayLogoUrl: "logos/football/manchester-city.png" }
+    : {}),
+});
 
 export const assetUrl = (path?: string) => {
   if (!path) return undefined;

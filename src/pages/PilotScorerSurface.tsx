@@ -16,6 +16,7 @@ import {
   PilotClockStatus,
 } from "../pilot/clock";
 import PilotScorer from "./PilotScorer";
+import { normalizeFootballMatch } from "../pilot/footballTournament";
 
 const clampMinutes = (value: number) => Math.min(90, Math.max(1, Math.round(Number(value) || 10)));
 
@@ -53,7 +54,7 @@ const PilotScorerSurface = () => {
       }
 
       setExists(true);
-      const data = snap.data();
+      const data = normalizeFootballMatch(snap.data() as { homeTeamId?: string | null; awayTeamId?: string | null; homeName: string; awayName: string; homeLogoUrl?: string; awayLogoUrl?: string } & PilotClockState);
       const nextClockStatus = (data.clockStatus ?? "NOT_STARTED") as PilotClockStatus;
       setClockStatus(nextClockStatus);
       setMomentMatch({

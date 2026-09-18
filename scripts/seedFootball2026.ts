@@ -49,7 +49,10 @@ async function mainAdmin() {
   if (!db) throw new Error("Firestore Admin client unavailable.");
   const tournamentRef = db.collection("pilotTournaments").doc(FOOTBALL_2026_TOURNAMENT_ID);
   const existingTournament = await tournamentRef.get();
-  const needsTeams = !existingTournament.exists || !Array.isArray(existingTournament.data()?.teams);
+  const existingTeams = existingTournament.data()?.teams;
+  const tournamentTeams = Array.isArray(existingTeams)
+    ? existingTeams.map((team) => team.teamId === "slovan-bratislava" ? { ...team, name: "Manchester City", shortName: "Man City", logoPath: "logos/football/manchester-city.png" } : team)
+    : FOOTBALL_2026_TEAMS;
   await tournamentRef.set({
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID,
     name: "Champions League",
@@ -57,7 +60,7 @@ async function mainAdmin() {
     format: "ROUND_ROBIN_SEMIS_FINAL",
     knockoutTieBreak: "EXTRA_TIME_THEN_PENALTIES_IN_SECOND_LEG",
     defaultHalfMinutes: 10,
-    ...(needsTeams ? { teams: FOOTBALL_2026_TEAMS } : {}),
+    teams: tournamentTeams,
     updatedAt: FieldValue.serverTimestamp(),
     ...(!existingTournament.exists ? { createdAt: FieldValue.serverTimestamp() } : {}),
   }, { merge: true });
@@ -67,6 +70,11 @@ async function mainAdmin() {
     const matchRef = db.collection("pilotMatches").doc(`${FOOTBALL_2026_TOURNAMENT_ID}__${scheduled.matchId}`);
     const existing = await matchRef.get();
     if (existing.exists) {
+      const teamUpdate = {
+        ...(scheduled.homeTeamId === "slovan-bratislava" ? { homeName: "Manchester City", homeLogoUrl: "logos/football/manchester-city.png" } : {}),
+        ...(scheduled.awayTeamId === "slovan-bratislava" ? { awayName: "Manchester City", awayLogoUrl: "logos/football/manchester-city.png" } : {}),
+      };
+      if (Object.keys(teamUpdate).length) await matchRef.set({ ...teamUpdate, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       console.log(`[skip] ${scheduled.matchId} already exists`);
       continue;
     }
@@ -130,6 +138,12 @@ async function mainRest() {
     const path = `pilotMatches/${FOOTBALL_2026_TOURNAMENT_ID}__${scheduled.matchId}`;
     const existing = await restGet(path);
     if (existing) {
+      const teamUpdate = {
+        ...(scheduled.homeTeamId === "slovan-bratislava" ? { homeName: "Manchester City", homeLogoUrl: "logos/football/manchester-city.png" } : {}),
+        ...(scheduled.awayTeamId === "slovan-bratislava" ? { awayName: "Manchester City", awayLogoUrl: "logos/football/manchester-city.png" } : {}),
+        updatedAt: now,
+      };
+      if (scheduled.homeTeamId === "slovan-bratislava" || scheduled.awayTeamId === "slovan-bratislava") await restPut(path, teamUpdate, Object.keys(teamUpdate));
       console.log(`[skip] ${scheduled.matchId} already exists`);
       continue;
     }

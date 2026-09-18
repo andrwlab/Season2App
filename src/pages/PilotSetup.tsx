@@ -10,7 +10,7 @@ import PilotAudienceAnalytics from "../components/PilotAudienceAnalytics";
 import PilotTeamManager from "../components/PilotTeamManager";
 import PilotFootballBracketControl from "../components/PilotFootballBracketControl";
 import { db } from "../firebase";
-import { FOOTBALL_2026_TOURNAMENT_ID, PilotTeam } from "../pilot/footballTournament";
+import { FOOTBALL_2026_TOURNAMENT_ID, normalizeFootballMatch, normalizeFootballTeam, PilotTeam } from "../pilot/footballTournament";
 import { parseRosterText, PilotPlayer, rosterToText } from "../pilot/players";
 
 const clampMinutes = (value: number) => Math.min(90, Math.max(1, Number(value) || 10));
@@ -79,7 +79,7 @@ const PilotSetup = () => {
     const unsubscribeTournament = onSnapshot(tournamentRef, (snap) => {
       if (!snap.exists()) return;
       const data = snap.data() as PilotTournamentDoc;
-      setTournament(data);
+      setTournament({ ...data, teams: data.teams?.map(normalizeFootballTeam) });
       setName(tournamentId === FOOTBALL_2026_TOURNAMENT_ID ? "Champions League" : data.name || tournamentId);
       setDefaultHalfMinutes(data.defaultHalfMinutes || 10);
       setHalfMinutes(data.defaultHalfMinutes || 10);
@@ -88,7 +88,7 @@ const PilotSetup = () => {
     const matchesQuery = query(collection(db, "pilotMatches"), where("tournamentId", "==", tournamentId));
     const unsubscribeMatches = onSnapshot(matchesQuery, (snap) => {
       const next = snap.docs
-        .map((item) => item.data() as PilotMatchSummary)
+        .map((item) => normalizeFootballMatch(item.data() as PilotMatchSummary))
         .sort((a, b) => a.matchId.localeCompare(b.matchId, undefined, { numeric: true }));
       setMatches(next);
       const usedNumbers = new Set(next.map((item) => Number(item.matchId.match(/(\d+)$/)?.[1] ?? 0)));

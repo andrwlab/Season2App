@@ -24,6 +24,7 @@ import {
   PilotPhase,
 } from "../pilot/clock";
 import { PilotPlayer, sortPilotPlayers } from "../pilot/players";
+import { normalizeFootballMatch } from "../pilot/footballTournament";
 
 type TeamSide = "HOME" | "AWAY";
 type MatchEventType = "GOAL" | "SHOT" | "FOUL" | "YELLOW_CARD" | "RED_CARD";
@@ -187,7 +188,7 @@ const PilotScorer = () => {
       matchRef,
       (snap) => {
         setExists(snap.exists());
-        setMatch(snap.exists() ? (snap.data() as PilotMatch) : null);
+        setMatch(snap.exists() ? normalizeFootballMatch(snap.data() as PilotMatch) : null);
       },
       (err) => {
         console.error("Pilot scorer snapshot failed", err);
@@ -198,7 +199,7 @@ const PilotScorer = () => {
 
   useEffect(() => {
     const matchesQuery = query(collection(db, "pilotMatches"), where("tournamentId", "==", tournamentId));
-    return onSnapshot(matchesQuery, (snap) => setTournamentMatches(snap.docs.map((item) => item.data() as PilotMatch)));
+    return onSnapshot(matchesQuery, (snap) => setTournamentMatches(snap.docs.map((item) => normalizeFootballMatch(item.data() as PilotMatch))));
   }, [tournamentId]);
 
   useEffect(() => {

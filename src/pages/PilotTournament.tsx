@@ -5,7 +5,7 @@ import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
 import useAudienceTracking from "../hooks/useAudienceTracking";
 import { formatPhase, PilotPhase } from "../pilot/clock";
-import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID, PilotTeam } from "../pilot/footballTournament";
+import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID, normalizeFootballMatch, normalizeFootballTeam, PilotTeam } from "../pilot/footballTournament";
 
 type TournamentSection = "home" | "matches" | "standings" | "stats" | "teams";
 type Match = { matchId: string; tournamentId: string; homeName: string; awayName: string; homeLogoUrl?: string; awayLogoUrl?: string; scoreHome: number; scoreAway: number; status: "READY" | "LIVE" | "FULLTIME"; phase: PilotPhase; stage?: "GROUP" | "SEMIFINAL" | "FINAL"; matchday?: number; order?: number; tieId?: "SF1" | "SF2"; leg?: 1 | 2; homeTeamId?: string | null; awayTeamId?: string | null };
@@ -69,8 +69,12 @@ const PilotTournament = () => {
   useAudienceTracking({ tournamentId, scope: "TOURNAMENT" });
 
   useEffect(() => {
-    const stopTournament = onSnapshot(doc(db, "pilotTournaments", tournamentId), (snap) => setTournament(snap.exists() ? snap.data() as Tournament : null));
-    const stopMatches = onSnapshot(query(collection(db, "pilotMatches"), where("tournamentId", "==", tournamentId)), (snap) => { setMatches(snap.docs.map((item) => item.data() as Match).sort((a, b) => a.matchId.localeCompare(b.matchId, undefined, { numeric: true }))); setLoading(false); }, (snapshotError) => { console.error(snapshotError); setError("Los datos del torneo no están disponibles por el momento."); setLoading(false); });
+    const stopTournament = onSnapshot(doc(db, "pilotTournaments", tournamentId), (snap) => {
+      if (!snap.exists()) return setTournament(null);
+      const data = snap.data() as Tournament;
+      setTournament({ ...data, teams: data.teams?.map(normalizeFootballTeam) });
+    });
+    const stopMatches = onSnapshot(query(collection(db, "pilotMatches"), where("tournamentId", "==", tournamentId)), (snap) => { setMatches(snap.docs.map((item) => normalizeFootballMatch(item.data() as Match)).sort((a, b) => a.matchId.localeCompare(b.matchId, undefined, { numeric: true }))); setLoading(false); }, (snapshotError) => { console.error(snapshotError); setError("Los datos del torneo no están disponibles por el momento."); setLoading(false); });
     const stopEvents = onSnapshot(query(collection(db, "pilotEvents"), where("tournamentId", "==", tournamentId)), (snap) => setEvents(snap.docs.map((item) => item.data() as FootballEvent)));
     return () => { stopTournament(); stopMatches(); stopEvents(); };
   }, [tournamentId]);
@@ -105,7 +109,7 @@ const PilotTournament = () => {
     const favicon = document.createElement("link");
     favicon.rel = "icon";
     favicon.type = "image/png";
-    favicon.href = assetUrl("champions-league-emblem.png") || "";
+    favicon.href = assetUrl("champions-league-eagle-logo-web.png") || "";
     favicon.dataset.championsFavicon = "true";
     document.head.appendChild(favicon);
     document.title = `${pageName} | ${displayName}`;
@@ -127,7 +131,7 @@ const PilotTournament = () => {
     <main className="relative z-10 mx-auto max-w-lg px-4 pb-28 pt-5">
       <header className="pb-4">
         <div className="flex items-center gap-3">
-          <img src={assetUrl("champions-league-emblem.png")} alt="Logo de Champions League" className="h-16 w-16 shrink-0 object-contain drop-shadow-[0_0_18px_rgba(87,150,255,0.28)]" />
+          <img src={assetUrl("champions-league-eagle-logo-web.png")} alt="Logo de SABIS Champions League" className="h-24 w-24 shrink-0 object-contain drop-shadow-[0_0_18px_rgba(87,150,255,0.28)]" />
           <div className="min-w-0 flex-1">
             <p className="text-[0.62rem] font-black uppercase tracking-[0.24em] text-blue-200/65">{eyebrow}</p>
             <h1 className="champions-wordmark mt-1 truncate text-3xl font-black tracking-[-0.035em]">{heading || displayName}</h1>
