@@ -4,6 +4,9 @@ import {
   FOOTBALL_2026_SCHEDULE,
   FOOTBALL_2026_TEAMS,
   FOOTBALL_2026_TOURNAMENT_ID,
+  normalizeFootballMatch,
+  normalizeFootballTeam,
+  PilotTeam,
 } from "../src/pilot/footballTournament";
 
 const projectId = process.env.FIREBASE_PROJECT_ID || "webtorneitoapp";
@@ -51,7 +54,7 @@ async function mainAdmin() {
   const existingTournament = await tournamentRef.get();
   const existingTeams = existingTournament.data()?.teams;
   const tournamentTeams = Array.isArray(existingTeams)
-    ? existingTeams.map((team) => team.teamId === "slovan-bratislava" ? { ...team, name: "Manchester City", shortName: "Man City", logoPath: "logos/football/manchester-city.png" } : team)
+    ? existingTeams.map((team) => normalizeFootballTeam(team as PilotTeam))
     : FOOTBALL_2026_TEAMS;
   await tournamentRef.set({
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID,
@@ -70,11 +73,18 @@ async function mainAdmin() {
     const matchRef = db.collection("pilotMatches").doc(`${FOOTBALL_2026_TOURNAMENT_ID}__${scheduled.matchId}`);
     const existing = await matchRef.get();
     if (existing.exists) {
-      const teamUpdate = {
-        ...(scheduled.homeTeamId === "slovan-bratislava" ? { homeName: "Manchester City", homeLogoUrl: "logos/football/manchester-city.png" } : {}),
-        ...(scheduled.awayTeamId === "slovan-bratislava" ? { awayName: "Manchester City", awayLogoUrl: "logos/football/manchester-city.png" } : {}),
-      };
-      if (Object.keys(teamUpdate).length) await matchRef.set({ ...teamUpdate, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      const current = existing.data() as ReturnType<typeof matchPayload>;
+      const normalized = normalizeFootballMatch(current);
+      const affected = [current.homeTeamId, current.awayTeamId].some((teamId) => teamId === "slovan-bratislava" || teamId === "paris-saint-germain");
+      if (affected) await matchRef.set({
+        homeName: normalized.homeName,
+        awayName: normalized.awayName,
+        homeLogoUrl: normalized.homeLogoUrl,
+        awayLogoUrl: normalized.awayLogoUrl,
+        homePlayers: normalized.homePlayers,
+        awayPlayers: normalized.awayPlayers,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
       console.log(`[skip] ${scheduled.matchId} already exists`);
       continue;
     }
@@ -102,6 +112,25 @@ const documentBody = (data: Record<string, unknown>) => ({
   fields: Object.fromEntries(Object.entries(data).map(([key, value]) => [key, toFirestoreValue(value)])),
 });
 
+const fromFirestoreValue = (value?: FirestoreValue): unknown => {
+  if (!value) return undefined;
+  if ("nullValue" in value) return null;
+  if ("stringValue" in value) return value.stringValue;
+  if ("booleanValue" in value) return value.booleanValue;
+  if ("integerValue" in value) return Number(value.integerValue);
+  if ("doubleValue" in value) return Number(value.doubleValue);
+  if ("timestampValue" in value) return value.timestampValue;
+  if ("arrayValue" in value) return ((value.arrayValue as { values?: FirestoreValue[] }).values ?? []).map(fromFirestoreValue);
+  if ("mapValue" in value) {
+    const fields = (value.mapValue as { fields?: Record<string, FirestoreValue> }).fields ?? {};
+    return Object.fromEntries(Object.entries(fields).map(([key, item]) => [key, fromFirestoreValue(item)]));
+  }
+  return undefined;
+};
+
+const fromDocument = (document: { fields?: Record<string, FirestoreValue> }) =>
+  Object.fromEntries(Object.entries(document.fields ?? {}).map(([key, value]) => [key, fromFirestoreValue(value)]));
+
 const restBase = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
 const restHeaders = () => ({ Authorization: `Bearer ${oauthAccessToken}`, "Content-Type": "application/json" });
 
@@ -123,11 +152,15 @@ async function mainRest() {
   const now = new Date();
   const tournamentPath = `pilotTournaments/${FOOTBALL_2026_TOURNAMENT_ID}`;
   const existingTournament = await restGet(tournamentPath);
-  const needsTeams = !existingTournament?.fields?.teams;
+  const existingTournamentData = existingTournament ? fromDocument(existingTournament) : null;
+  const existingTeams = existingTournamentData?.teams;
+  const tournamentTeams = Array.isArray(existingTeams)
+    ? existingTeams.map((team) => normalizeFootballTeam(team as PilotTeam))
+    : FOOTBALL_2026_TEAMS;
   const tournamentData = {
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID, name: "Champions League", sport: "football",
     format: "ROUND_ROBIN_SEMIS_FINAL", knockoutTieBreak: "EXTRA_TIME_THEN_PENALTIES_IN_SECOND_LEG", defaultHalfMinutes: 10,
-    ...(needsTeams ? { teams: FOOTBALL_2026_TEAMS } : {}),
+    teams: tournamentTeams,
     ...(!existingTournament ? { createdAt: now } : {}),
     updatedAt: now,
   };
@@ -138,12 +171,21 @@ async function mainRest() {
     const path = `pilotMatches/${FOOTBALL_2026_TOURNAMENT_ID}__${scheduled.matchId}`;
     const existing = await restGet(path);
     if (existing) {
-      const teamUpdate = {
-        ...(scheduled.homeTeamId === "slovan-bratislava" ? { homeName: "Manchester City", homeLogoUrl: "logos/football/manchester-city.png" } : {}),
-        ...(scheduled.awayTeamId === "slovan-bratislava" ? { awayName: "Manchester City", awayLogoUrl: "logos/football/manchester-city.png" } : {}),
-        updatedAt: now,
-      };
-      if (scheduled.homeTeamId === "slovan-bratislava" || scheduled.awayTeamId === "slovan-bratislava") await restPut(path, teamUpdate, Object.keys(teamUpdate));
+      const current = fromDocument(existing) as ReturnType<typeof matchPayload>;
+      const normalized = normalizeFootballMatch(current);
+      const affected = [current.homeTeamId, current.awayTeamId].some((teamId) => teamId === "slovan-bratislava" || teamId === "paris-saint-germain");
+      if (affected) {
+        const teamUpdate = {
+          homeName: normalized.homeName,
+          awayName: normalized.awayName,
+          homeLogoUrl: normalized.homeLogoUrl,
+          awayLogoUrl: normalized.awayLogoUrl,
+          homePlayers: normalized.homePlayers,
+          awayPlayers: normalized.awayPlayers,
+          updatedAt: now,
+        };
+        await restPut(path, teamUpdate, Object.keys(teamUpdate));
+      }
       console.log(`[skip] ${scheduled.matchId} already exists`);
       continue;
     }

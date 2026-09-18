@@ -37,6 +37,8 @@ const player = (fullName: string, name: string): PilotRosterPlayer => ({
   name,
 });
 
+const MR_CASTILLO = player("Mr. Castillo", "Mr. Castillo");
+
 export const FOOTBALL_2026_TOURNAMENT_ID = "football-2026";
 
 export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
@@ -95,6 +97,7 @@ export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
       player("Eduardo Gudiño", "Eduardo"),
       player("Adrian Fernández", "Adrian"),
       player("Dylan Rodríguez", "Dylan R."),
+      MR_CASTILLO,
     ],
   },
   {
@@ -109,7 +112,6 @@ export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
       player("Diego Pimentel", "Diego"),
       player("William Qiu", "William"),
       player("Mr. Tam", "Mr. Tam"),
-      player("Mr. Castillo", "Mr. Castillo"),
       player("Mr. Gómez", "Mr. Gómez"),
       player("Adriam Rodríguez", "Adriam"),
       player("Edwin Chen", "Edwin"),
@@ -134,18 +136,38 @@ export const FOOTBALL_2026_SCHEDULE: PilotScheduledMatch[] = [
   { matchId: "final", stage: "FINAL", order: 5 },
 ];
 
-export const normalizeFootballTeam = <T extends { teamId: string; name: string; shortName?: string; logoPath?: string }>(team: T): T =>
-  team.teamId === "slovan-bratislava"
-    ? { ...team, name: "Manchester City", shortName: "Man City", logoPath: "logos/football/manchester-city.png" }
-    : team;
+export const normalizeFootballTeam = (team: PilotTeam): PilotTeam => {
+  const playersWithoutCastillo = team.players.filter((item) => item.playerId !== MR_CASTILLO.playerId);
+  if (team.teamId === "slovan-bratislava") {
+    return {
+      ...team,
+      name: "Manchester City",
+      shortName: "Man City",
+      logoPath: "logos/football/manchester-city.png",
+      players: [...playersWithoutCastillo, MR_CASTILLO],
+    };
+  }
+  if (team.teamId === "paris-saint-germain") return { ...team, players: playersWithoutCastillo };
+  return team;
+};
+
+type MatchRosterPlayer = { playerId: string; name: string; fullName?: string };
+
+const normalizeMatchRoster = (players: MatchRosterPlayer[], teamId?: string | null, teamName?: string) => {
+  const withoutCastillo = players.filter((item) => item.playerId !== MR_CASTILLO.playerId);
+  const isManchesterCity = teamId === "slovan-bratislava" || teamName === "ŠK Slovan Bratislava" || teamName === "Manchester City";
+  return isManchesterCity ? [...withoutCastillo, MR_CASTILLO] : withoutCastillo;
+};
 
 export const normalizeFootballMatch = <T extends {
   homeTeamId?: string | null;
   awayTeamId?: string | null;
   homeName: string;
   awayName: string;
-  homeLogoUrl?: string;
-  awayLogoUrl?: string;
+  homeLogoUrl?: string | null;
+  awayLogoUrl?: string | null;
+  homePlayers?: MatchRosterPlayer[];
+  awayPlayers?: MatchRosterPlayer[];
 }>(match: T): T => ({
   ...match,
   ...(match.homeTeamId === "slovan-bratislava" || match.homeName === "ŠK Slovan Bratislava"
@@ -154,6 +176,8 @@ export const normalizeFootballMatch = <T extends {
   ...(match.awayTeamId === "slovan-bratislava" || match.awayName === "ŠK Slovan Bratislava"
     ? { awayName: "Manchester City", awayLogoUrl: "logos/football/manchester-city.png" }
     : {}),
+  ...(match.homePlayers ? { homePlayers: normalizeMatchRoster(match.homePlayers, match.homeTeamId, match.homeName) } : {}),
+  ...(match.awayPlayers ? { awayPlayers: normalizeMatchRoster(match.awayPlayers, match.awayTeamId, match.awayName) } : {}),
 });
 
 export const assetUrl = (path?: string) => {
