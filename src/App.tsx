@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Navigate, Routes, Route, useLocation, useParams } from 'react-router-dom';
 
 // Páginas principales
@@ -40,6 +40,16 @@ const LegacySetupRedirect = () => {
 function AppShell() {
   const location = useLocation();
   const isPilotSurface = location.pathname.startsWith('/scorer/') || location.pathname.startsWith('/live/') || location.pathname.startsWith('/pilot');
+  const isChampionsSurface = location.pathname.startsWith('/live/');
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('champions-page', isChampionsSurface);
+    document.body.classList.toggle('champions-page', isChampionsSurface);
+    return () => {
+      document.documentElement.classList.remove('champions-page');
+      document.body.classList.remove('champions-page');
+    };
+  }, [isChampionsSurface]);
 
   return (
     <>

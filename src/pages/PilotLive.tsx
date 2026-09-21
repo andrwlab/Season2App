@@ -55,9 +55,9 @@ const teamInitials = (name: string) =>
 
 const TeamMark = ({ name, logoUrl }: { name: string; logoUrl?: string }) => {
   if (logoUrl) {
-    return <img src={assetUrl(logoUrl)} alt={`${name} logo`} className="mx-auto h-20 w-20 object-contain sm:h-24 sm:w-24" />;
+    return <img src={assetUrl(logoUrl)} alt={`${name} logo`} className="mx-auto h-16 w-16 object-contain min-[400px]:h-20 min-[400px]:w-20 sm:h-24 sm:w-24" />;
   }
-  return <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-xl font-black tracking-tight text-white sm:h-24 sm:w-24 sm:text-2xl">{teamInitials(name)}</div>;
+  return <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-lg font-black tracking-tight text-white min-[400px]:h-20 min-[400px]:w-20 min-[400px]:text-xl sm:h-24 sm:w-24 sm:text-2xl">{teamInitials(name)}</div>;
 };
 
 const isTimedPhase = (phase: PilotPhase) =>
@@ -130,9 +130,9 @@ const PilotLive = () => {
     };
   }, [match, tournament?.name, tournamentId]);
 
-  if (loading) return <div className="min-h-[100dvh] bg-[#070707] px-4 py-6 text-white"><div className="mx-auto max-w-lg animate-pulse space-y-5"><div className="h-8 w-40 rounded-lg bg-white/10" /><div className="h-[420px] rounded-[2rem] bg-white/[0.05]" /><div className="h-40 rounded-3xl bg-white/[0.05]" /></div></div>;
-  if (error) return <div className="min-h-[100dvh] bg-[#070707] p-8 text-center font-semibold text-red-300">{error}</div>;
-  if (!match) return <div className="min-h-[100dvh] bg-[#070707] px-5 py-10 text-white"><div className="mx-auto max-w-md text-center"><Link to={`/live/${tournamentId}`} className="text-sm font-bold text-white/60">← Tournament</Link><h1 className="mt-8 text-3xl font-black tracking-tight">Match not live yet</h1><p className="mt-3 text-sm leading-relaxed text-white/45">The scorer has not created this match yet. This page will become available as soon as the match is ready.</p></div></div>;
+  if (loading) return <div className="champions-shell min-h-[100dvh] px-4 pb-8 pt-[max(env(safe-area-inset-top),1.25rem)] text-white"><div className="mx-auto max-w-3xl animate-pulse space-y-5"><div className="h-8 w-40 rounded-lg bg-white/10" /><div className="h-[420px] rounded-[2rem] bg-white/[0.05]" /><div className="h-40 rounded-3xl bg-white/[0.05]" /></div></div>;
+  if (error) return <div className="champions-shell min-h-[100dvh] px-6 pb-8 pt-[max(env(safe-area-inset-top),2rem)] text-center font-semibold text-red-300">{error}</div>;
+  if (!match) return <div className="champions-shell min-h-[100dvh] px-5 pb-10 pt-[max(env(safe-area-inset-top),2.5rem)] text-white"><div className="mx-auto max-w-md text-center"><Link to={`/live/${tournamentId}`} className="text-sm font-bold text-white/60">← Tournament</Link><h1 className="mt-8 text-3xl font-black tracking-tight">Match not live yet</h1><p className="mt-3 text-sm leading-relaxed text-white/45">The scorer has not created this match yet. This page will become available as soon as the match is ready.</p></div></div>;
 
   const clockStatus = match.clockStatus ?? "NOT_STARTED";
   const clockParts = getClockDisplayParts(match, now);
@@ -166,7 +166,7 @@ const PilotLive = () => {
 
   return (
     <div className="champions-shell min-h-[100dvh] text-white">
-      <main className="relative z-10 mx-auto max-w-lg px-4 pb-[max(env(safe-area-inset-bottom),3rem)] pt-[max(env(safe-area-inset-top),1rem)] sm:pt-6">
+      <main className="relative z-10 mx-auto max-w-3xl px-3 pb-[max(env(safe-area-inset-bottom),3rem)] pt-[max(env(safe-area-inset-top),1rem)] min-[430px]:px-4 sm:px-6 sm:pt-6">
         <header className="flex min-h-12 items-center justify-between gap-3">
           <Link to={`/live/${tournamentId}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-xl text-white/80 transition active:scale-95" aria-label="Back to tournament">←</Link>
           <div className="flex min-w-0 flex-1 items-center justify-center gap-2 text-center"><img src={assetUrl("champions-league-eagle-logo-web.png")} alt="" className="h-12 w-12 shrink-0 object-contain"/><div className="min-w-0"><p className="champions-wordmark truncate text-sm font-black tracking-tight">{tournamentName}</p><p className="mt-0.5 text-[0.6rem] font-bold uppercase tracking-[0.16em] text-white/35">{match.matchId}</p></div></div>
@@ -202,10 +202,10 @@ const PilotLive = () => {
               )}
             </div>
 
-            <div className="mt-8 grid grid-cols-[1fr_auto_1fr] items-start gap-3 sm:gap-5">
+            <div className="mt-8 grid grid-cols-[1fr_auto_1fr] items-start gap-1 min-[400px]:gap-3 sm:gap-5">
               <div className="min-w-0 text-center"><TeamMark name={match.homeName} logoUrl={match.homeLogoUrl} /><p className="mt-4 line-clamp-2 min-h-10 text-sm font-black leading-tight sm:text-base">{match.homeName}</p><p className="mt-1 text-[0.62rem] font-bold uppercase tracking-[0.16em] text-white/30">Home</p></div>
-              <div key={`${match.scoreHome}-${match.scoreAway}-${match.penaltyHome ?? 0}-${match.penaltyAway ?? 0}`} className="score-pop flex min-w-[8.5rem] flex-col items-center justify-center pt-4 sm:min-w-[10rem] sm:pt-5">
-                <div className="flex items-center justify-center"><span className="text-[4.5rem] font-black leading-none tracking-[-0.08em] tabular-nums sm:text-[5.5rem]">{match.scoreHome}</span><span className="mx-2 pb-1 text-3xl font-light text-white/20 sm:mx-3">–</span><span className="text-[4.5rem] font-black leading-none tracking-[-0.08em] tabular-nums sm:text-[5.5rem]">{match.scoreAway}</span></div>
+              <div key={`${match.scoreHome}-${match.scoreAway}-${match.penaltyHome ?? 0}-${match.penaltyAway ?? 0}`} className="score-pop flex min-w-[6.5rem] flex-col items-center justify-center pt-4 min-[400px]:min-w-[8.5rem] sm:min-w-[10rem] sm:pt-5">
+                <div className="flex items-center justify-center"><span className="text-[3.4rem] font-black leading-none tracking-[-0.08em] tabular-nums min-[400px]:text-[4.5rem] sm:text-[5.5rem]">{match.scoreHome}</span><span className="mx-1 pb-1 text-2xl font-light text-white/20 min-[400px]:mx-2 min-[400px]:text-3xl sm:mx-3">–</span><span className="text-[3.4rem] font-black leading-none tracking-[-0.08em] tabular-nums min-[400px]:text-[4.5rem] sm:text-[5.5rem]">{match.scoreAway}</span></div>
                 {hasPenalties && <div className="mt-2 rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-1 text-xs font-black text-cyan-200">PEN {match.penaltyHome ?? 0}–{match.penaltyAway ?? 0}</div>}
               </div>
               <div className="min-w-0 text-center"><TeamMark name={match.awayName} logoUrl={match.awayLogoUrl} /><p className="mt-4 line-clamp-2 min-h-10 text-sm font-black leading-tight sm:text-base">{match.awayName}</p><p className="mt-1 text-[0.62rem] font-bold uppercase tracking-[0.16em] text-white/30">Away</p></div>

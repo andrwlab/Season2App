@@ -116,9 +116,40 @@
   position: relative;
   isolation: isolate;
   overflow-x: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
   background:
+    linear-gradient(180deg, #020817 0, rgba(2, 8, 23, 0.9) 4rem, transparent 11rem) fixed,
+    radial-gradient(circle at 50% -8%, rgba(52, 116, 255, 0.25), transparent 34rem) fixed,
+    linear-gradient(180deg, #020817 0%, #030712 42%, #02040a 100%) fixed;
+}
+
+html.champions-page,
+body.champions-page,
+body.champions-page #root {
+  min-height: 100%;
+  background-color: #020817;
+}
+
+body.champions-page {
+  overscroll-behavior-y: none;
+}
+
+body.champions-page::before,
+.champions-shell::after {
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(180deg, #020817 0, rgba(2, 8, 23, 0.9) 4rem, transparent 11rem),
     radial-gradient(circle at 50% -8%, rgba(52, 116, 255, 0.25), transparent 34rem),
     linear-gradient(180deg, #020817 0%, #030712 42%, #02040a 100%);
+}
+
+body.champions-page::after {
+  background: transparent;
 }
 
 .champions-shell::before {
@@ -148,4 +179,33 @@
   background-clip: text;
   -webkit-background-clip: text;
   text-shadow: 0 0 32px rgba(83, 143, 255, 0.18);
+}
+
+.champions-bottom-nav {
+  background: linear-gradient(180deg, rgba(2, 8, 23, 0.82), rgba(2, 8, 23, 0.97));
+  box-shadow: 0 -18px 45px rgba(2, 8, 23, 0.34);
+}
+
+@media (min-width: 768px) {
+  .champions-shell,
+  .champions-shell::after,
+  body.champions-page::before {
+    background:
+      linear-gradient(180deg, #020817 0, rgba(2, 8, 23, 0.88) 5rem, transparent 13rem),
+      radial-gradient(circle at 18% 0%, rgba(52, 116, 255, 0.2), transparent 30rem),
+      radial-gradient(circle at 82% 18%, rgba(0, 214, 255, 0.1), transparent 28rem),
+      linear-gradient(180deg, #020817 0%, #030712 48%, #02040a 100%);
+  }
+
+  .champions-shell {
+    background-attachment: fixed;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .champions-bottom-nav a {
+    flex-direction: row;
+    gap: 0.45rem;
+    padding-block: 0.45rem;
+  }
 }
