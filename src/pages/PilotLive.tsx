@@ -20,6 +20,8 @@ import {
 type PilotMatch = {
   tournamentId: string;
   matchId: string;
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
   homeName: string;
   awayName: string;
   homeLogoUrl?: string;
@@ -73,6 +75,15 @@ const statusFor = (phase: PilotPhase, clockStatus: PilotClockStatus) => {
   if (clockStatus === "NOT_STARTED") return "READY";
   if (clockStatus === "PAUSED") return "PAUSED";
   return "LIVE";
+};
+
+const fabricColorFor = (teamId: string | null | undefined, teamName: string, fallback: string) => {
+  const identity = `${teamId || ""} ${teamName}`.toLowerCase();
+  if (identity.includes("real-madrid") || identity.includes("real madrid")) return "#355fbd";
+  if (identity.includes("fc-barcelona") || identity.includes("barcelona")) return "#9f1747";
+  if (identity.includes("paris-saint-germain") || identity.includes("paris saint") || identity.includes("psg")) return "#173c7a";
+  if (identity.includes("slovan-bratislava") || identity.includes("manchester city")) return "#62aee0";
+  return fallback;
 };
 
 const PilotLive = () => {
@@ -163,9 +174,14 @@ const PilotLive = () => {
   const tournamentQrUrl = tournamentQrTargetUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(tournamentQrTargetUrl)}`
     : "";
+  const fabricStyle = {
+    "--fabric-home": fabricColorFor(match.homeTeamId, match.homeName, "#1f55a5"),
+    "--fabric-away": fabricColorFor(match.awayTeamId, match.awayName, "#0e8da8"),
+  } as React.CSSProperties;
 
   return (
-    <div className="champions-shell min-h-[100dvh] text-white">
+    <div className="champions-shell champions-match-view min-h-[100dvh] text-white" style={fabricStyle}>
+      <div className="champions-match-fabric" aria-hidden="true" />
       <main className="relative z-10 mx-auto max-w-3xl px-3 pb-[max(env(safe-area-inset-bottom),3rem)] pt-[max(env(safe-area-inset-top),1rem)] min-[430px]:px-4 sm:px-6 sm:pt-6">
         <header className="flex min-h-12 items-center justify-between gap-3">
           <Link to={`/live/${tournamentId}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-xl text-white/80 transition active:scale-95" aria-label="Back to tournament">←</Link>
@@ -187,7 +203,7 @@ const PilotLive = () => {
           </Link>
         )}
 
-        <section className="mt-4 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#111111]">
+        <section className="champions-match-stage mt-4 overflow-hidden rounded-[2rem] border border-white/[0.1]">
           <div className="px-5 pb-8 pt-5 sm:px-7">
             <div className="flex items-center justify-center gap-2"><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.7rem] font-black uppercase tracking-[0.12em] ${statusClass}`}>{isLive && <span className="live-dot h-1.5 w-1.5 rounded-full bg-red-400" />}{statusLabel}</span></div>
             <div className="mt-4 text-center">
@@ -213,12 +229,12 @@ const PilotLive = () => {
           </div>
         </section>
 
-        <section className="mt-5 rounded-3xl border border-white/[0.07] bg-[#101010] px-5 py-5">
+        <section className="champions-match-panel mt-5 rounded-3xl border border-white/[0.09] px-5 py-5">
           <div className="mb-5 flex items-center justify-between"><h2 className="text-base font-black tracking-tight">Match stats</h2><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-white/30">{match.phase === "FULLTIME" ? "Final" : isTimedPhase(match.phase) ? "Live" : "Match"}</span></div>
           <div className="space-y-4">{stats.map(([label, home, away]) => <div key={label} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4"><span className="text-right text-base font-black tabular-nums">{home}</span><span className="min-w-24 text-center text-xs font-semibold text-white/40">{label}</span><span className="text-left text-base font-black tabular-nums">{away}</span></div>)}</div>
         </section>
 
-        <section className="mt-5 overflow-hidden rounded-3xl border border-white/[0.07] bg-[#101010]">
+        <section className="champions-match-panel mt-5 overflow-hidden rounded-3xl border border-white/[0.09]">
           <PilotEventFeed pilotMatchId={pilotMatchId} homeName={match.homeName} awayName={match.awayName} periodDurationMs={periodDurationMs} extraTimePeriodDurationMs={extraTimePeriodDurationMs} />
         </section>
 

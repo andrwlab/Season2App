@@ -24,6 +24,7 @@ const CumulativeStats = lazy(() => import('./pages/CumulativeStats'));
 import PilotScorerSurface from './pages/PilotScorerSurface';
 import PilotLive from './pages/PilotLive';
 import PilotTournament from './pages/PilotTournament';
+import PilotPlayerProfile from './pages/PilotPlayerProfile';
 import PilotSetup from './pages/PilotSetup';
 import PilotAdminHome from './pages/PilotAdminHome';
 
@@ -71,6 +72,7 @@ function AppShell() {
           {/* Public spectator flow */}
           <Route path="/live/:tournamentId" element={<PilotTournament />} />
           <Route path="/live/:tournamentId/match/:matchId" element={<PilotLive />} />
+          <Route path="/live/:tournamentId/player/:playerId" element={<PilotPlayerProfile />} />
           <Route path="/live/:tournamentId/:section" element={<PilotTournament />} />
 
           {/* Single admin namespace: /pilot */}
