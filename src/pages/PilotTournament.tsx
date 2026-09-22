@@ -59,13 +59,13 @@ const Fixture = ({ match, tournamentId }: { match: Match; tournamentId: string }
   <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`${match.homeName} contra ${match.awayName}`} className="grid min-h-28 grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-3 rounded-3xl border border-white/[0.08] bg-[#101010] px-5 py-4 transition-transform active:scale-[0.99] sm:min-h-36 sm:px-6">
     <span className="col-span-3 text-center text-[0.58rem] font-black uppercase tracking-[0.18em] text-cyan-300/75">{stageName(match)}</span>
     <div className="flex min-w-0 items-center justify-center gap-2 text-center sm:justify-start sm:text-left">
-      <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl} small/>
+      <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl}/>
       <span className="hidden text-base font-black leading-tight sm:line-clamp-2">{match.homeName}</span>
     </div>
     <span className="text-[0.65rem] font-black uppercase text-white/25">vs</span>
     <div className="flex min-w-0 items-center justify-center gap-2 text-center sm:justify-end sm:text-right">
       <span className="hidden text-base font-black leading-tight sm:line-clamp-2">{match.awayName}</span>
-      <TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl} small/>
+      <TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl}/>
     </div>
   </Link>
 );
