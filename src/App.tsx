@@ -55,6 +55,7 @@ function AppShell() {
   return (
     <>
       {!isPilotSurface && <Navbar />}
+      {isChampionsSurface && <div className="champions-global-curtain" aria-hidden="true" />}
       <Suspense fallback={<div className="p-6 text-muted">Loading...</div>}>
         <Routes>
           <Route path="/" element={<Home />} />

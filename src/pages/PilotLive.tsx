@@ -20,8 +20,6 @@ import {
 type PilotMatch = {
   tournamentId: string;
   matchId: string;
-  homeTeamId?: string | null;
-  awayTeamId?: string | null;
   homeName: string;
   awayName: string;
   homeLogoUrl?: string;
@@ -75,15 +73,6 @@ const statusFor = (phase: PilotPhase, clockStatus: PilotClockStatus) => {
   if (clockStatus === "NOT_STARTED") return "READY";
   if (clockStatus === "PAUSED") return "PAUSED";
   return "LIVE";
-};
-
-const fabricColorFor = (teamId: string | null | undefined, teamName: string, fallback: string) => {
-  const identity = `${teamId || ""} ${teamName}`.toLowerCase();
-  if (identity.includes("real-madrid") || identity.includes("real madrid")) return "#355fbd";
-  if (identity.includes("fc-barcelona") || identity.includes("barcelona")) return "#9f1747";
-  if (identity.includes("paris-saint-germain") || identity.includes("paris saint") || identity.includes("psg")) return "#173c7a";
-  if (identity.includes("slovan-bratislava") || identity.includes("manchester city")) return "#62aee0";
-  return fallback;
 };
 
 const PilotLive = () => {
@@ -174,14 +163,8 @@ const PilotLive = () => {
   const tournamentQrUrl = tournamentQrTargetUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(tournamentQrTargetUrl)}`
     : "";
-  const fabricStyle = {
-    "--fabric-home": fabricColorFor(match.homeTeamId, match.homeName, "#1f55a5"),
-    "--fabric-away": fabricColorFor(match.awayTeamId, match.awayName, "#0e8da8"),
-  } as React.CSSProperties;
-
   return (
-    <div className="champions-shell champions-match-view min-h-[100dvh] text-white" style={fabricStyle}>
-      <div className="champions-match-fabric" aria-hidden="true" />
+    <div className="champions-shell min-h-[100dvh] text-white">
       <main className="relative z-10 mx-auto max-w-3xl px-3 pb-[max(env(safe-area-inset-bottom),3rem)] pt-[max(env(safe-area-inset-top),1rem)] min-[430px]:px-4 sm:px-6 sm:pt-6">
         <header className="flex min-h-12 items-center justify-between gap-3">
           <Link to={`/live/${tournamentId}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-xl text-white/80 transition active:scale-95" aria-label="Back to tournament">←</Link>
