@@ -10,7 +10,7 @@ import PilotAudienceAnalytics from "../components/PilotAudienceAnalytics";
 import PilotTeamManager from "../components/PilotTeamManager";
 import PilotFootballBracketControl from "../components/PilotFootballBracketControl";
 import { db } from "../firebase";
-import { FOOTBALL_2026_TOURNAMENT_ID, normalizeFootballMatch, normalizeFootballTeam, PilotTeam } from "../pilot/footballTournament";
+import { FOOTBALL_2026_TOURNAMENT_ID, footballMatchDate, normalizeFootballMatch, normalizeFootballTeam, PilotTeam } from "../pilot/footballTournament";
 import { parseRosterText, PilotPlayer, rosterToText } from "../pilot/players";
 
 const clampMinutes = (value: number) => Math.min(90, Math.max(1, Number(value) || 10));
@@ -24,6 +24,7 @@ type PilotTournamentDoc = {
 };
 
 type PilotMatchSummary = {
+  matchday?: number;
   scheduledDate?: string | null;
   matchId: string;
   tournamentId: string;
@@ -243,7 +244,7 @@ const PilotSetup = () => {
   };
 
   const beginEdit = (item: PilotMatchSummary) => {
-    setEditDate(item.scheduledDate || "");
+    setEditDate(footballMatchDate(item) || "");
     setEditingMatchId(item.matchId);
     setEditHome(item.homeName);
     setEditAway(item.awayName);
