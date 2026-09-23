@@ -179,22 +179,22 @@ const PilotTournament = () => {
   if (loading) return <div className="champions-shell min-h-[100dvh] px-4 pb-8 pt-[max(env(safe-area-inset-top),1.25rem)] text-white"><main className="mx-auto max-w-5xl animate-pulse space-y-5"><div className="h-20 rounded-2xl bg-white/[0.05]"/><div className="h-64 rounded-[2rem] bg-white/[0.05]"/><div className="h-32 rounded-3xl bg-white/[0.05]"/></main></div>;
   if (error) return <div className="champions-shell min-h-[100dvh] px-6 pb-8 pt-[max(env(safe-area-inset-top),2rem)] text-center font-semibold text-red-300">{error}</div>;
 
-  const [eyebrow, heading] = sectionTitles[activeSection];
+  const [, heading] = sectionTitles[activeSection];
   const compactHeader = activeSection !== "home";
   const matchUrl = (match: Match) => `/live/${tournamentId}/match/${match.matchId}`;
 
   return <div className="champions-shell min-h-[100dvh] text-white">
     <main className="relative z-10 mx-auto max-w-5xl px-3 pb-[calc(9rem+env(safe-area-inset-bottom))] pt-[max(env(safe-area-inset-top),1.25rem)] min-[430px]:px-4 sm:px-6 sm:pb-36 md:pt-[max(env(safe-area-inset-top),2rem)] lg:px-8">
-      <header className={compactHeader ? "pb-1 sm:pb-2" : "pb-4 sm:pb-6"}>
+      <header className={compactHeader ? "pb-1 sm:pb-2" : "champions-home-hero pb-5 sm:pb-7"}>
         <div className="flex items-center gap-3">
-          <img src={assetUrl("champions-league-eagle-logo-web.png")} alt="Logo de SABIS Champions League" className={`shrink-0 object-contain drop-shadow-[0_0_18px_rgba(87,150,255,0.28)] ${compactHeader ? "h-12 w-12 sm:h-14 sm:w-14" : "h-20 w-20 min-[430px]:h-24 min-[430px]:w-24 md:h-28 md:w-28"}`} />
+          <img src={assetUrl("champions-league-eagle-logo-web.png")} alt="Logo de SABIS Champions League" className={`shrink-0 object-contain drop-shadow-[0_0_24px_rgba(87,150,255,0.4)] ${compactHeader ? "h-12 w-12 sm:h-14 sm:w-14" : "h-24 w-24 min-[430px]:h-28 min-[430px]:w-28 md:h-32 md:w-32"}`} />
           <div className="min-w-0 flex-1">
-            {!compactHeader && <p className="text-[0.58rem] font-black uppercase tracking-[0.2em] text-blue-200/65 min-[430px]:text-[0.62rem] min-[430px]:tracking-[0.24em] md:text-xs">{eyebrow}</p>}
-            <h1 className={`champions-wordmark font-black tracking-[-0.035em] ${compactHeader ? "text-lg leading-tight sm:text-2xl" : "mt-1 truncate text-2xl min-[430px]:text-3xl md:text-4xl lg:text-5xl"}`}>{heading || displayName}</h1>
+            <h1 className={`champions-wordmark font-black tracking-[-0.035em] ${compactHeader ? "text-lg leading-tight sm:text-2xl" : "truncate text-3xl min-[430px]:text-4xl md:text-5xl lg:text-6xl"}`}>{heading || displayName}</h1>
             {compactHeader && <p className="mt-1 truncate text-[0.6rem] font-bold uppercase tracking-[0.1em] text-blue-200/75 sm:text-xs">{displayName}</p>}
           </div>
           {live.length > 0 && <Link to={matchUrl(live[0])} className="inline-flex shrink-0 items-center gap-2 rounded-full bg-red-500/[0.12] px-3 py-2 text-[0.65rem] font-black uppercase tracking-[0.12em] text-red-300"><span className="h-1.5 w-1.5 rounded-full bg-red-400"/>En vivo</Link>}
         </div>
+        {!compactHeader && <div className="champions-hero-rule" aria-hidden="true" />}
       </header>
 
       {activeSection === "home" && <>
