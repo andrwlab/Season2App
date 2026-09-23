@@ -24,6 +24,7 @@ type PilotTournamentDoc = {
 };
 
 type PilotMatchSummary = {
+  scheduledDate?: string | null;
   matchId: string;
   tournamentId: string;
   homeName: string;
@@ -80,6 +81,7 @@ const PilotSetup = () => {
   const [editHomeRosterText, setEditHomeRosterText] = useState("");
   const [editAwayRosterText, setEditAwayRosterText] = useState("");
   const [editMinutes, setEditMinutes] = useState(10);
+  const [editDate, setEditDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -241,6 +243,7 @@ const PilotSetup = () => {
   };
 
   const beginEdit = (item: PilotMatchSummary) => {
+    setEditDate(item.scheduledDate || "");
     setEditingMatchId(item.matchId);
     setEditHome(item.homeName);
     setEditAway(item.awayName);
@@ -263,6 +266,7 @@ const PilotSetup = () => {
     setMessage(null);
     try {
       const updates: Record<string, unknown> = {
+        scheduledDate: editDate || null,
         homeName: cleanHome,
         awayName: cleanAway,
         updatedAt: serverTimestamp(),
@@ -472,6 +476,7 @@ const PilotSetup = () => {
                         <div className="grid gap-2 sm:grid-cols-2"><input value={editHome} onChange={(e) => setEditHome(e.target.value)} className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 outline-none focus:border-cyan-300" /><input value={editAway} onChange={(e) => setEditAway(e.target.value)} className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 outline-none focus:border-cyan-300" /></div>
                         <div className="grid gap-2 sm:grid-cols-2"><label><span className="mb-1 block text-xs font-bold text-slate-500">Home roster {canEditPregame ? "" : "(locked after kickoff)"}</span><textarea rows={7} disabled={!canEditPregame} value={editHomeRosterText} onChange={(e) => setEditHomeRosterText(e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm leading-6 disabled:opacity-40" /></label><label><span className="mb-1 block text-xs font-bold text-slate-500">Away roster {canEditPregame ? "" : "(locked after kickoff)"}</span><textarea rows={7} disabled={!canEditPregame} value={editAwayRosterText} onChange={(e) => setEditAwayRosterText(e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm leading-6 disabled:opacity-40" /></label></div>
                         <label className="block"><span className="mb-1 block text-xs font-bold text-slate-500">Minutes per half {canEditPregame ? "" : "(locked after kickoff)"}</span><input type="number" min={1} max={90} disabled={!canEditPregame} value={editMinutes} onChange={(e) => setEditMinutes(clampMinutes(Number(e.target.value)))} className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-center font-black disabled:opacity-40" /></label>
+                        <label className="block"><span className="mb-1 block text-xs font-bold text-slate-300">Fecha del partido (opcional)</span><input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white"/><span className="mt-1 block text-xs text-slate-400">Si queda vacía, el calendario mostrará «Fecha por confirmar».</span></label>
                         <button type="button" disabled={busy} onClick={() => saveMatchEdit(item)} className="w-full rounded-xl bg-cyan-300 px-3 py-3 font-black text-slate-950 disabled:opacity-40">SAVE MATCH</button>
                       </div>
                     ) : (

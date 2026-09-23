@@ -8,7 +8,7 @@ import { formatPhase, PilotPhase } from "../pilot/clock";
 import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID, normalizeFootballMatch, normalizeFootballTeam, PilotTeam } from "../pilot/footballTournament";
 
 type TournamentSection = "home" | "matches" | "standings" | "stats" | "teams";
-type Match = { matchId: string; tournamentId: string; homeName: string; awayName: string; homeLogoUrl?: string; awayLogoUrl?: string; scoreHome: number; scoreAway: number; status: "READY" | "LIVE" | "FULLTIME"; phase: PilotPhase; stage?: "GROUP" | "SEMIFINAL" | "FINAL"; matchday?: number; order?: number; tieId?: "SF1" | "SF2"; leg?: 1 | 2; homeTeamId?: string | null; awayTeamId?: string | null };
+type Match = { scheduledDate?: string | null; matchId: string; tournamentId: string; homeName: string; awayName: string; homeLogoUrl?: string; awayLogoUrl?: string; scoreHome: number; scoreAway: number; status: "READY" | "LIVE" | "FULLTIME"; phase: PilotPhase; stage?: "GROUP" | "SEMIFINAL" | "FINAL"; matchday?: number; order?: number; tieId?: "SF1" | "SF2"; leg?: 1 | 2; homeTeamId?: string | null; awayTeamId?: string | null };
 type Tournament = { tournamentId: string; name: string; sport: "football"; teams?: PilotTeam[] };
 type Standing = { team: string; played: number; won: number; drawn: number; lost: number; gf: number; ga: number; points: number };
 type FootballEvent = { eventId?: string; type: string; status?: string; revertsEventId?: string; playerId?: string | null; playerName?: string | null; assistPlayerId?: string | null; assistPlayerName?: string | null };
@@ -55,9 +55,16 @@ const buildStandings = (completed: Match[], teamNames: string[]): Standing[] => 
 };
 const stageName = (match: Match) => match.stage === "FINAL" ? "Final" : match.stage === "SEMIFINAL" ? `Semifinal · ${match.leg === 1 ? "Ida" : "Vuelta"}` : match.matchday ? `Jornada ${match.matchday}` : "Primera fase";
 
-const Fixture = ({ match, tournamentId }: { match: Match; tournamentId: string }) => (
+const dateLabel = (value?: string | null) => {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "Fecha por confirmar";
+  const date = new Date(`${value}T12:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) return "Fecha por confirmar";
+  return date.toLocaleDateString("es-PA", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+};
+
+const Fixture = ({ match, tournamentId, grouped = false }: { match: Match; tournamentId: string; grouped?: boolean }) => (
   <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`${match.homeName} contra ${match.awayName}`} className="grid min-h-28 grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-3 rounded-3xl border border-white/[0.08] bg-[#101010] px-5 py-4 transition-transform active:scale-[0.99] sm:min-h-36 sm:px-6">
-    <span className="col-span-3 text-center text-[0.58rem] font-black uppercase tracking-[0.18em] text-cyan-300/75">{stageName(match)}</span>
+    {!grouped && <span className="col-span-3 text-center text-[0.58rem] font-black uppercase tracking-[0.18em] text-cyan-300/75">{stageName(match)} · {dateLabel(match.scheduledDate)}</span>}
     <div className="flex min-w-0 items-center justify-center gap-2 text-center sm:justify-start sm:text-left">
       <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl}/>
       <span className="hidden text-base font-black leading-tight sm:line-clamp-2">{match.homeName}</span>
@@ -70,6 +77,23 @@ const Fixture = ({ match, tournamentId }: { match: Match; tournamentId: string }
   </Link>
 );
 const Result = ({ match, tournamentId, divided = false }: { match: Match; tournamentId: string; divided?: boolean }) => <Link to={`/live/${tournamentId}/match/${match.matchId}`} className={`block px-4 py-4 ${divided ? "border-t border-white/[0.06]" : ""}`}><p className="mb-2 text-center text-[0.55rem] font-black uppercase tracking-[0.12em] text-white/30">{stageName(match)}</p><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"><span className="truncate text-sm font-bold">{match.homeName}</span><span className="text-xl font-black tabular-nums">{match.scoreHome}–{match.scoreAway}</span><span className="truncate text-right text-sm font-bold">{match.awayName}</span></div></Link>;
+
+const FixtureGroups = ({ matches, tournamentId }: { matches: Match[]; tournamentId: string }) => {
+  const groups = new Map<string, Match[]>();
+  matches.forEach((match) => {
+    const key = `${stageName(match)}:${match.scheduledDate || "pending"}`;
+    const group = groups.get(key) ?? [];
+    group.push(match);
+    groups.set(key, group);
+  });
+  return <div className="space-y-6">{[...groups].map(([key, group]) => <section key={key}>
+    <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 px-1">
+      <h3 className="text-sm font-black text-cyan-200">{stageName(group[0])}</h3>
+      <p className="text-xs font-semibold text-blue-100/80">{dateLabel(group[0].scheduledDate)}</p>
+    </header>
+    <div className="grid gap-3 md:grid-cols-2">{group.map((match) => <Fixture key={match.matchId} match={match} tournamentId={tournamentId} grouped/>)}</div>
+  </section>)}</div>;
+};
 
 const PilotTournament = () => {
   const { tournamentId = "pilot0", section: routeSection } = useParams();
@@ -171,7 +195,7 @@ const PilotTournament = () => {
       </>}
 
       {activeSection === "matches" && <>
-        <section className="pt-5"><div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black sm:text-lg">Próximos partidos</h2><span className="text-xs font-bold text-white/30">{upcoming.length} pendientes</span></div>{upcoming.length ? <div className="grid gap-3 md:grid-cols-2">{upcoming.map((match) => <Fixture key={match.matchId} match={match} tournamentId={tournamentId}/>)}</div> : <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">No hay próximos partidos confirmados.</div>}</section>
+        <section className="pt-5"><div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black sm:text-lg">Próximos partidos</h2><span className="text-xs font-bold text-white/30">{upcoming.length} pendientes</span></div>{upcoming.length ? <FixtureGroups matches={upcoming} tournamentId={tournamentId}/> : <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">No hay próximos partidos confirmados.</div>}</section>
         <section className="pt-7"><div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black">Resultados</h2><span className="text-xs font-bold text-white/30">Finalizados</span></div>{results.length ? <div className="overflow-hidden rounded-3xl border border-white/[0.07] bg-[#101010]">{results.map((match, index) => <Result key={match.matchId} match={match} tournamentId={tournamentId} divided={index > 0}/>)}</div> : <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">Todavía no hay resultados.</div>}</section>
         {knockouts.length > 0 && <section className="pt-7"><div className="mb-3 px-1"><h2 className="text-base font-black">Fase eliminatoria</h2><p className="mt-1 text-xs text-white/35">Semifinales de ida y vuelta; tiempo extra y penales solo en la vuelta.</p></div><div className="space-y-3"><div className="grid gap-2 sm:grid-cols-2">{semifinalTies.map((tie, index) => { const completed = tie.filter((match) => match.status === "FULLTIME"); const names = [...new Set(tie.flatMap((match) => [match.homeName, match.awayName]))].filter((name) => name !== "To be confirmed"); return <div key={index} className="rounded-2xl border border-white/[0.07] bg-[#101010] p-4"><p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-cyan-300/70">Semifinal {index + 1}</p><p className="mt-2 truncate text-sm font-black">{names.length === 2 ? `${names[0]} vs ${names[1]}` : "Cruce por definir"}</p><p className="mt-2 text-xs font-bold text-white/40">{completed.length}/2 partidos jugados</p><div className="mt-3 space-y-2 border-t border-white/[0.06] pt-3">{tie.map((match) => <Link key={match.matchId} to={matchUrl(match)} className="flex justify-between text-xs font-semibold text-white/55"><span>{match.leg === 1 ? "Ida" : "Vuelta"}</span><span>{match.status === "FULLTIME" ? `${match.scoreHome}–${match.scoreAway}` : "Ver partido →"}</span></Link>)}</div></div>; })}</div>{finalMatch && <Link to={matchUrl(finalMatch)} className="block rounded-2xl border border-amber-300/20 bg-amber-300/[0.05] p-4 text-center"><p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-amber-200">Final</p><p className="mt-2 text-sm font-black">{finalMatch.homeName} <span className="text-white/30">vs</span> {finalMatch.awayName}</p></Link>}</div></section>}
       </>}
