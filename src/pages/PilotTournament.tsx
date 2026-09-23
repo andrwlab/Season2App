@@ -37,8 +37,8 @@ const shortTeamName = (name: string) => {
 const TeamBadge = ({ name, logoUrl, small = false }: { name: string; logoUrl?: string; small?: boolean }) => {
   const size = small ? "h-10 w-10 text-xs" : "h-14 w-14 text-sm";
   return logoUrl
-    ? <img src={assetUrl(logoUrl)} alt={`Escudo de ${name}`} className={`${size} mx-auto shrink-0 object-contain`} />
-    : <div className={`mx-auto flex ${size} shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] font-black text-white/80`}>{initials(name)}</div>;
+    ? <span className={`${size} flex shrink-0 items-center justify-center`}><img src={assetUrl(logoUrl)} alt={`Escudo de ${name}`} className="max-h-full max-w-full object-contain" /></span>
+    : <span className={`flex ${size} shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] font-black text-white/80`}>{initials(name)}</span>;
 };
 const NavIcon = ({ name }: { name: TournamentSection }) => {
   if (name === "home") return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg>;
@@ -188,10 +188,10 @@ const PilotTournament = () => {
       </header>
 
       {activeSection === "home" && <>
-        <section className="mt-4">
+        {live.length > 0 && <section className="mt-4">
           <div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black">Ahora</h2>{live.length > 1 && <span className="text-xs font-bold text-white/35">{live.length} partidos</span>}</div>
           {live.length === 0 ? <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5"><p className="text-sm font-black">No hay partidos en vivo</p><p className="mt-1 text-xs leading-relaxed text-white/40">Cuando comience un encuentro, el marcador y sus jugadas aparecerán aquí.</p></div> : <div className="grid gap-3 lg:grid-cols-2">{live.map((match) => <Link key={match.matchId} to={matchUrl(match)} aria-label={`Partido en vivo: ${match.homeName} contra ${match.awayName}`} className="block overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#111111] active:scale-[0.99]"><div className="flex items-center justify-between px-5 pt-4 text-[0.65rem] font-black uppercase tracking-[0.13em] text-white/35"><span>{formatPhase(match.phase)}</span><span className="text-red-300">En vivo</span></div><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-6 text-center min-[430px]:gap-3 min-[430px]:px-5"><div className="min-w-0"><TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl}/><p className="mt-3 hidden text-sm font-black sm:line-clamp-2">{match.homeName}</p></div><div className="min-w-[6.5rem] text-4xl font-black tracking-[-0.08em] tabular-nums min-[430px]:min-w-[7.5rem] min-[430px]:text-5xl">{match.scoreHome}<span className="mx-2 text-2xl font-light text-white/20">–</span>{match.scoreAway}</div><div className="min-w-0"><TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl}/><p className="mt-3 hidden text-sm font-black sm:line-clamp-2">{match.awayName}</p></div></div><div className="border-t border-white/[0.06] px-5 py-3 text-center text-xs font-black text-cyan-200">Seguir partido →</div></Link>)}</div>}
-        </section>
+        </section>}
         {momentMatch && <PilotMomentsRail pilotMatchId={`${tournamentId}__${momentMatch.matchId}`}/>}
         <section className="pt-7"><div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black">Lo próximo</h2><Link to={toSection("matches")} className="text-xs font-black text-cyan-200">Ver calendario →</Link></div>{upcoming[0] ? <Fixture match={upcoming[0]} tournamentId={tournamentId}/> : <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">No hay próximos partidos confirmados.</div>}</section>
         <section className="grid grid-cols-2 gap-2 pt-7">

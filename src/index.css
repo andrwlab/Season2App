@@ -126,6 +126,7 @@ html.champions-page,
 body.champions-page,
 body.champions-page #root {
   min-height: 100%;
+  color-scheme: dark;
   background-color: #06145f;
 }
 
