@@ -189,7 +189,7 @@ const PilotTournament = () => {
         <div className="flex items-center gap-3">
           <img src={assetUrl("champions-league-eagle-logo-web.png")} alt="Logo de SABIS Champions League" className={`shrink-0 object-contain drop-shadow-[0_0_24px_rgba(87,150,255,0.4)] ${compactHeader ? "h-12 w-12 sm:h-14 sm:w-14" : "h-24 w-24 min-[430px]:h-28 min-[430px]:w-28 md:h-32 md:w-32"}`} />
           <div className="min-w-0 flex-1">
-            <h1 className={`champions-wordmark font-black tracking-[-0.035em] ${compactHeader ? "text-lg leading-tight sm:text-2xl" : "text-3xl leading-[0.92] min-[430px]:text-4xl md:text-5xl lg:text-6xl"}`}>{!compactHeader && heading === "Champions League" ? <><span className="block">Champions</span><span className="block">League</span></> : heading || displayName}</h1>
+            <h1 className={`champions-wordmark max-w-full whitespace-normal break-words overflow-visible font-black tracking-[-0.035em] ${compactHeader ? "text-lg leading-tight sm:text-2xl" : "text-3xl leading-[0.92] min-[430px]:text-4xl md:text-5xl lg:text-6xl"}`}>{!compactHeader && heading === "Champions League" ? <><span className="block">Champions</span><span className="block">League</span></> : heading || displayName}</h1>
             {compactHeader && <p className="mt-1 truncate text-[0.6rem] font-bold uppercase tracking-[0.1em] text-blue-200/75 sm:text-xs">{displayName}</p>}
           </div>
           {live.length > 0 && <Link to={matchUrl(live[0])} className="inline-flex shrink-0 items-center gap-2 rounded-full bg-red-500/[0.12] px-3 py-2 text-[0.65rem] font-black uppercase tracking-[0.12em] text-red-300"><span className="h-1.5 w-1.5 rounded-full bg-red-400"/>En vivo</Link>}
