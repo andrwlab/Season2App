@@ -93,7 +93,7 @@ const PilotPlayerProfile = () => {
 
         <section className="mt-6 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#111111] p-6 text-center sm:p-8">
           <div className="champions-player-avatar relative mx-auto h-36 w-36 sm:h-44 sm:w-44" aria-label={`Silueta de perfil de ${player.fullName}`}>
-            <img src={assetUrl("champions-league-eagle-logo-web.png")} alt="" className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain opacity-[0.09]" />
+            <img src={assetUrl("champions-league-eagle-logo-web.webp")} alt="" className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain opacity-[0.09]" />
             <svg viewBox="0 0 160 160" className="relative z-10 h-full w-full" aria-hidden="true">
               <defs><linearGradient id="profile-silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ffffff"/><stop offset="0.48" stopColor="#8fc7ff"/><stop offset="1" stopColor="#355c9a"/></linearGradient></defs>
               <circle cx="80" cy="57" r="29" fill="url(#profile-silver)" opacity="0.94"/>

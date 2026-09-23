@@ -167,7 +167,7 @@ const PilotTournament = () => {
     const favicon = document.createElement("link");
     favicon.rel = "icon";
     favicon.type = "image/png";
-    favicon.href = assetUrl("champions-league-eagle-logo-web.png") || "";
+    favicon.href = assetUrl("champions-league-eagle-logo-web.webp") || "";
     favicon.dataset.championsFavicon = "true";
     document.head.appendChild(favicon);
     document.title = `${pageName} | ${displayName}`;
@@ -190,7 +190,7 @@ const PilotTournament = () => {
     <main className="relative z-10 mx-auto max-w-5xl px-3 pb-[calc(9rem+env(safe-area-inset-bottom))] pt-[max(env(safe-area-inset-top),1.25rem)] min-[430px]:px-4 sm:px-6 sm:pb-36 md:pt-[max(env(safe-area-inset-top),2rem)] lg:px-8">
       <header className={compactHeader ? "pb-1 sm:pb-2" : "champions-home-hero pb-5 sm:pb-7"}>
         <div className="flex items-center gap-3">
-          <img src={assetUrl("champions-league-eagle-logo-web.png")} alt="Logo de SABIS Champions League" className={`shrink-0 object-contain drop-shadow-[0_0_24px_rgba(87,150,255,0.4)] ${compactHeader ? "h-12 w-12 sm:h-14 sm:w-14" : "h-24 w-24 min-[430px]:h-28 min-[430px]:w-28 md:h-32 md:w-32"}`} />
+          <img src={assetUrl("champions-league-eagle-logo-web.webp")} alt="Logo de SABIS Champions League" className={`shrink-0 object-contain drop-shadow-[0_0_24px_rgba(87,150,255,0.4)] ${compactHeader ? "h-12 w-12 sm:h-14 sm:w-14" : "h-24 w-24 min-[430px]:h-28 min-[430px]:w-28 md:h-32 md:w-32"}`} />
           <div className="min-w-0 flex-1">
             <h1 className={`champions-wordmark max-w-full whitespace-normal break-words overflow-visible font-black tracking-[-0.035em] ${compactHeader ? "text-lg leading-tight sm:text-2xl" : "text-3xl leading-[0.92] min-[430px]:text-4xl md:text-5xl lg:text-6xl"}`}>{!compactHeader && heading === "Champions League" ? <><span className="block">Champions</span><span className="block">League</span></> : heading || displayName}</h1>
             {compactHeader && <p className="mt-1 truncate text-[0.6rem] font-bold uppercase tracking-[0.1em] text-blue-200/75 sm:text-xs">{displayName}</p>}
