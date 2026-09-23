@@ -34,8 +34,8 @@ const shortTeamName = (name: string) => {
   if (normalized.includes("manchester city")) return "Man City";
   return name.replace(/\s+(c\.?f\.?|f\.?c\.?)$/i, "").trim();
 };
-const TeamBadge = ({ name, logoUrl, small = false }: { name: string; logoUrl?: string; small?: boolean }) => {
-  const size = small ? "h-10 w-10 text-xs" : "h-14 w-14 text-sm";
+const TeamBadge = ({ name, logoUrl, small = false, featured = false }: { name: string; logoUrl?: string; small?: boolean; featured?: boolean }) => {
+  const size = featured ? "h-20 w-20 text-sm" : small ? "h-10 w-10 text-xs" : "h-14 w-14 text-sm";
   return logoUrl
     ? <span className={`${size} flex shrink-0 items-center justify-center`}><img src={assetUrl(logoUrl)} alt={`Escudo de ${name}`} className="max-h-full max-w-full object-contain" /></span>
     : <span className={`flex ${size} shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] font-black text-white/80`}>{initials(name)}</span>;
@@ -74,13 +74,13 @@ const Fixture = ({ match, tournamentId, grouped = false }: { match: Match; tourn
   <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`${match.homeName} contra ${match.awayName}`} className={`${grouped ? "champions-fixture-row" : "champions-fixture-card"} grid min-h-32 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 px-4 py-4 transition-transform active:scale-[0.99] sm:min-h-36 sm:px-6`}>
     {!grouped && <span className="col-span-3 text-center text-[0.58rem] font-black uppercase tracking-[0.18em] text-cyan-300/75">{stageName(match)} · {dateLabel(footballMatchDate(match))}</span>}
     <div className={`flex min-w-0 items-center justify-center gap-2 ${grouped ? "flex-row sm:gap-3" : "flex-col gap-1.5"} ${grouped ? "sm:justify-start sm:text-left" : "text-center"}`}>
-      <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl}/>
-      <span className="line-clamp-2 text-xs font-black leading-tight text-white/90 sm:text-sm">{shortTeamName(match.homeName)}</span>
+      <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl} featured={grouped}/>
+      <span className={`${grouped ? "text-sm sm:text-base" : "text-xs sm:text-sm"} line-clamp-2 font-black leading-tight text-white/90`}>{shortTeamName(match.homeName)}</span>
     </div>
-    <span className="rounded-full px-2 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/30">vs</span>
+    <span className="rounded-full px-2 py-1 text-xs font-black uppercase tracking-[0.14em] text-white/35">vs</span>
     <div className={`flex min-w-0 items-center justify-center gap-2 ${grouped ? "flex-row sm:justify-end sm:gap-3" : "flex-col gap-1.5"} ${grouped ? "sm:text-right" : "text-center"}`}>
-      <span className="line-clamp-2 text-xs font-black leading-tight text-white/90 sm:text-sm">{shortTeamName(match.awayName)}</span>
-      <TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl}/>
+      <span className={`${grouped ? "text-sm sm:text-base" : "text-xs sm:text-sm"} line-clamp-2 font-black leading-tight text-white/90`}>{shortTeamName(match.awayName)}</span>
+      <TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl} featured={grouped}/>
     </div>
   </Link>
 );
@@ -174,7 +174,7 @@ const PilotTournament = () => {
   const matchUrl = (match: Match) => `/live/${tournamentId}/match/${match.matchId}`;
 
   return <div className="champions-shell min-h-[100dvh] text-white">
-    <main className="relative z-10 mx-auto max-w-5xl px-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-[max(env(safe-area-inset-top),1.25rem)] min-[430px]:px-4 sm:px-6 sm:pb-32 md:pt-[max(env(safe-area-inset-top),2rem)] lg:px-8">
+    <main className="relative z-10 mx-auto max-w-5xl px-3 pb-[calc(9rem+env(safe-area-inset-bottom))] pt-[max(env(safe-area-inset-top),1.25rem)] min-[430px]:px-4 sm:px-6 sm:pb-36 md:pt-[max(env(safe-area-inset-top),2rem)] lg:px-8">
       <header className={compactHeader ? "pb-1 sm:pb-2" : "pb-4 sm:pb-6"}>
         <div className="flex items-center gap-3">
           <img src={assetUrl("champions-league-eagle-logo-web.png")} alt="Logo de SABIS Champions League" className={`shrink-0 object-contain drop-shadow-[0_0_18px_rgba(87,150,255,0.28)] ${compactHeader ? "h-12 w-12 sm:h-14 sm:w-14" : "h-20 w-20 min-[430px]:h-24 min-[430px]:w-24 md:h-28 md:w-28"}`} />
