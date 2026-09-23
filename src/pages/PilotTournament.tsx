@@ -94,12 +94,12 @@ const FixtureGroups = ({ matches, tournamentId }: { matches: Match[]; tournament
     group.push(match);
     groups.set(key, group);
   });
-  return <div className="space-y-6">{[...groups].map(([key, group]) => <section key={key}>
-    <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2 px-1">
-      <h3 className="text-sm font-black text-cyan-200">{stageName(group[0])}</h3>
-      <p className="text-xs font-semibold text-blue-100/80">{dateLabel(footballMatchDate(group[0]))}</p>
+  return <div className="space-y-6">{[...groups].map(([key, group]) => <section key={key} className="champions-featured-fixtures overflow-hidden rounded-[1.45rem]">
+    <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-4 sm:px-6">
+      <h3 className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-cyan-200/80">{stageName(group[0])}</h3>
+      <p className="text-xs font-semibold text-blue-100/75">{dateLabel(footballMatchDate(group[0]))}</p>
     </header>
-    <div className="champions-matchday-card overflow-hidden rounded-[1.35rem]">{group.map((match) => <Fixture key={match.matchId} match={match} tournamentId={tournamentId} grouped />)}</div>
+    {group.map((match, index) => <div key={match.matchId} className={index ? "border-t border-cyan-200/15" : ""}><FeaturedFixture match={match} tournamentId={tournamentId}/></div>)}
   </section>)}</div>;
 };
 
