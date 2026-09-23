@@ -37,7 +37,7 @@ const shortTeamName = (name: string) => {
 const TeamBadge = ({ name, logoUrl, small = false, tiny = false, featured = false }: { name: string; logoUrl?: string; small?: boolean; tiny?: boolean; featured?: boolean }) => {
   const size = featured ? "h-16 w-16 text-sm sm:h-20 sm:w-20" : tiny ? "h-7 w-7 text-[0.55rem]" : small ? "h-10 w-10 text-xs" : "h-14 w-14 text-sm";
   return logoUrl
-    ? <span className={`${size} flex shrink-0 items-center justify-center`}><img src={assetUrl(logoUrl)} alt={`Escudo de ${name}`} className="h-[90%] w-[90%] object-contain" /></span>
+    ? <span className={`${size} flex shrink-0 items-center justify-center`}><img src={assetUrl(logoUrl)} alt={`Escudo de ${name}`} loading="lazy" decoding="async" className="h-[90%] w-[90%] object-contain" /></span>
     : <span className={`flex ${size} shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] font-black text-white/80`}>{initials(name)}</span>;
 };
 const NavIcon = ({ name }: { name: TournamentSection }) => {
@@ -130,9 +130,11 @@ const PilotTournament = () => {
       setTournament({ ...data, teams: data.teams?.map(normalizeFootballTeam) });
     });
     const stopMatches = onSnapshot(query(collection(db, "pilotMatches"), where("tournamentId", "==", tournamentId)), (snap) => { setMatches(snap.docs.map((item) => normalizeFootballMatch(item.data() as Match)).sort((a, b) => a.matchId.localeCompare(b.matchId, undefined, { numeric: true }))); setLoading(false); }, (snapshotError) => { console.error(snapshotError); setError("Los datos del torneo no están disponibles por el momento."); setLoading(false); });
-    const stopEvents = onSnapshot(query(collection(db, "pilotEvents"), where("tournamentId", "==", tournamentId)), (snap) => setEvents(snap.docs.map((item) => item.data() as FootballEvent)));
+    const stopEvents = activeSection === "stats"
+      ? onSnapshot(query(collection(db, "pilotEvents"), where("tournamentId", "==", tournamentId)), (snap) => setEvents(snap.docs.map((item) => item.data() as FootballEvent)))
+      : () => {};
     return () => { stopTournament(); stopMatches(); stopEvents(); };
-  }, [tournamentId]);
+  }, [activeSection, tournamentId]);
 
   const live = matches.filter((match) => match.status === "LIVE" && match.phase !== "FULLTIME");
   const results = matches.filter((match) => match.status === "FULLTIME" || match.phase === "FULLTIME").reverse();
@@ -177,7 +179,7 @@ const PilotTournament = () => {
     };
   }, [activeSection, displayName]);
 
-  if (loading) return <div className="champions-shell min-h-[100dvh] px-4 pb-8 pt-[max(env(safe-area-inset-top),1.25rem)] text-white"><main className="mx-auto max-w-5xl animate-pulse space-y-5"><div className="h-20 rounded-2xl bg-white/[0.05]"/><div className="h-64 rounded-[2rem] bg-white/[0.05]"/><div className="h-32 rounded-3xl bg-white/[0.05]"/></main></div>;
+  if (loading) return <div className="champions-shell min-h-[100dvh] px-3 pb-8 pt-[max(env(safe-area-inset-top),1.25rem)] text-white"><main className="mx-auto max-w-5xl"><img src={assetUrl("champions-matchday-1.webp")} alt="Primera jornada de Champions League" fetchPriority="high" className="champions-loading-hero w-full rounded-[1.5rem] object-cover shadow-[0_18px_60px_rgba(0,0,0,0.3)] sm:rounded-[2rem]"/><div className="mt-5 h-20 animate-pulse rounded-2xl bg-white/[0.05]"/><div className="mt-5 h-32 animate-pulse rounded-[2rem] bg-white/[0.05]"/></main></div>;
   if (error) return <div className="champions-shell min-h-[100dvh] px-6 pb-8 pt-[max(env(safe-area-inset-top),2rem)] text-center font-semibold text-red-300">{error}</div>;
 
   const [, heading] = sectionTitles[activeSection];

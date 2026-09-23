@@ -19,14 +19,12 @@ const PlayerProfile = lazy(() => import('./pages/PlayerProfile'));
 const AdminRosters = lazy(() => import('./pages/AdminRosters'));
 const CumulativeStats = lazy(() => import('./pages/CumulativeStats'));
 
-// Pilot/admin surfaces stay in the main bundle so navigation remains reliable
-// during long scorer sessions and GitHub Pages deployments.
-import PilotScorerSurface from './pages/PilotScorerSurface';
-import PilotLive from './pages/PilotLive';
-import PilotTournament from './pages/PilotTournament';
-import PilotPlayerProfile from './pages/PilotPlayerProfile';
-import PilotSetup from './pages/PilotSetup';
-import PilotAdminHome from './pages/PilotAdminHome';
+const PilotScorerSurface = lazy(() => import('./pages/PilotScorerSurface'));
+const PilotLive = lazy(() => import('./pages/PilotLive'));
+const PilotTournament = lazy(() => import('./pages/PilotTournament'));
+const PilotPlayerProfile = lazy(() => import('./pages/PilotPlayerProfile'));
+const PilotSetup = lazy(() => import('./pages/PilotSetup'));
+const PilotAdminHome = lazy(() => import('./pages/PilotAdminHome'));
 
 const LegacyScorerRedirect = () => {
   const { tournamentId = '', matchId = '' } = useParams();

@@ -241,6 +241,11 @@ body.champions-page {
   isolation: isolate;
 }
 
+.champions-loading-hero {
+  aspect-ratio: 16 / 9;
+  object-position: center;
+}
+
 .champions-home-hero::before {
   position: absolute;
   inset: -1rem -1rem 0;
