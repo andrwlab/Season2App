@@ -26,6 +26,14 @@ const sectionTitles: Record<TournamentSection, [string, string]> = {
 };
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "TM";
+const shortTeamName = (name: string) => {
+  const normalized = name.toLowerCase();
+  if (normalized.includes("real madrid")) return "Real Madrid";
+  if (normalized.includes("barcelona")) return "Barcelona";
+  if (normalized.includes("paris saint") || normalized === "psg") return "PSG";
+  if (normalized.includes("manchester city")) return "Man City";
+  return name.replace(/\s+(c\.?f\.?|f\.?c\.?)$/i, "").trim();
+};
 const TeamBadge = ({ name, logoUrl, small = false }: { name: string; logoUrl?: string; small?: boolean }) => {
   const size = small ? "h-10 w-10 text-xs" : "h-14 w-14 text-sm";
   return logoUrl
@@ -63,15 +71,15 @@ const dateLabel = (value?: string | null) => {
 };
 
 const Fixture = ({ match, tournamentId, grouped = false }: { match: Match; tournamentId: string; grouped?: boolean }) => (
-  <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`${match.homeName} contra ${match.awayName}`} className="grid min-h-28 grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-3 rounded-3xl border border-white/[0.08] bg-[#101010] px-5 py-4 transition-transform active:scale-[0.99] sm:min-h-36 sm:px-6">
+  <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`${match.homeName} contra ${match.awayName}`} className="champions-fixture-card grid min-h-32 grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-3 rounded-[1.35rem] px-4 py-4 transition-transform active:scale-[0.99] sm:min-h-36 sm:px-6">
     {!grouped && <span className="col-span-3 text-center text-[0.58rem] font-black uppercase tracking-[0.18em] text-cyan-300/75">{stageName(match)} · {dateLabel(footballMatchDate(match))}</span>}
-    <div className="flex min-w-0 items-center justify-center gap-2 text-center sm:justify-start sm:text-left">
+    <div className="flex min-w-0 flex-col items-center justify-center gap-1.5 text-center">
       <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl}/>
-      <span className="hidden text-base font-black leading-tight sm:line-clamp-2">{match.homeName}</span>
+      <span className="line-clamp-2 text-xs font-black leading-tight text-white/90 sm:text-sm">{shortTeamName(match.homeName)}</span>
     </div>
-    <span className="text-[0.65rem] font-black uppercase text-white/25">vs</span>
-    <div className="flex min-w-0 items-center justify-center gap-2 text-center sm:justify-end sm:text-right">
-      <span className="hidden text-base font-black leading-tight sm:line-clamp-2">{match.awayName}</span>
+    <span className="rounded-full px-2 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/30">vs</span>
+    <div className="flex min-w-0 flex-col items-center justify-center gap-1.5 text-center">
+      <span className="line-clamp-2 text-xs font-black leading-tight text-white/90 sm:text-sm">{shortTeamName(match.awayName)}</span>
       <TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl}/>
     </div>
   </Link>
