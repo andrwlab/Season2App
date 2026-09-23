@@ -35,9 +35,9 @@ const shortTeamName = (name: string) => {
   return name.replace(/\s+(c\.?f\.?|f\.?c\.?)$/i, "").trim();
 };
 const TeamBadge = ({ name, logoUrl, small = false, featured = false }: { name: string; logoUrl?: string; small?: boolean; featured?: boolean }) => {
-  const size = featured ? "h-20 w-20 text-sm" : small ? "h-10 w-10 text-xs" : "h-14 w-14 text-sm";
+  const size = featured ? "h-16 w-16 text-sm sm:h-20 sm:w-20" : small ? "h-10 w-10 text-xs" : "h-14 w-14 text-sm";
   return logoUrl
-    ? <span className={`${size} flex shrink-0 items-center justify-center`}><img src={assetUrl(logoUrl)} alt={`Escudo de ${name}`} className="max-h-full max-w-full object-contain" /></span>
+    ? <span className={`${size} flex shrink-0 items-center justify-center`}><img src={assetUrl(logoUrl)} alt={`Escudo de ${name}`} className="h-[90%] w-[90%] object-contain" /></span>
     : <span className={`flex ${size} shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] font-black text-white/80`}>{initials(name)}</span>;
 };
 const NavIcon = ({ name }: { name: TournamentSection }) => {
@@ -71,15 +71,15 @@ const dateLabel = (value?: string | null) => {
 };
 
 const Fixture = ({ match, tournamentId, grouped = false }: { match: Match; tournamentId: string; grouped?: boolean }) => (
-  <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`${match.homeName} contra ${match.awayName}`} className={`${grouped ? "champions-fixture-row" : "champions-fixture-card"} grid min-h-32 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 px-4 py-4 transition-transform active:scale-[0.99] sm:min-h-36 sm:px-6`}>
+  <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`${match.homeName} contra ${match.awayName}`} className={`${grouped ? "champions-fixture-row grid-cols-[4rem_minmax(0,1fr)_auto_minmax(0,1fr)_4rem] sm:grid-cols-[5rem_minmax(0,1fr)_auto_minmax(0,1fr)_5rem]" : "champions-fixture-card grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"} grid min-h-32 items-center gap-x-2 gap-y-3 px-4 py-4 transition-transform active:scale-[0.99] sm:min-h-36 sm:px-6`}>
     {!grouped && <span className="col-span-3 text-center text-[0.58rem] font-black uppercase tracking-[0.18em] text-cyan-300/75">{stageName(match)} · {dateLabel(footballMatchDate(match))}</span>}
-    <div className={`flex min-w-0 items-center justify-center gap-2 ${grouped ? "flex-row sm:gap-3" : "flex-col gap-1.5"} ${grouped ? "sm:justify-start sm:text-left" : "text-center"}`}>
+    <div className={`${grouped ? "contents" : "flex min-w-0 flex-col items-center justify-center gap-1.5 text-center"}`}>
       <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl} featured={grouped}/>
-      <span className={`${grouped ? "text-sm sm:text-base" : "text-xs sm:text-sm"} line-clamp-2 font-black leading-tight text-white/90`}>{shortTeamName(match.homeName)}</span>
+      <span className={`${grouped ? "whitespace-nowrap text-[0.78rem] text-left sm:text-base" : "text-xs sm:text-sm"} line-clamp-2 font-black leading-tight text-white/90`}>{shortTeamName(match.homeName)}</span>
     </div>
     <span className="rounded-full px-2 py-1 text-xs font-black uppercase tracking-[0.14em] text-white/35">vs</span>
-    <div className={`flex min-w-0 items-center justify-center gap-2 ${grouped ? "flex-row sm:justify-end sm:gap-3" : "flex-col gap-1.5"} ${grouped ? "sm:text-right" : "text-center"}`}>
-      <span className={`${grouped ? "text-sm sm:text-base" : "text-xs sm:text-sm"} line-clamp-2 font-black leading-tight text-white/90`}>{shortTeamName(match.awayName)}</span>
+    <div className={`${grouped ? "contents" : "flex min-w-0 flex-col items-center justify-center gap-1.5 text-center"}`}>
+      <span className={`${grouped ? "whitespace-nowrap text-right text-[0.78rem] sm:text-base" : "text-xs sm:text-sm"} line-clamp-2 font-black leading-tight text-white/90`}>{shortTeamName(match.awayName)}</span>
       <TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl} featured={grouped}/>
     </div>
   </Link>
