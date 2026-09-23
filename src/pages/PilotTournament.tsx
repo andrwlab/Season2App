@@ -150,7 +150,7 @@ const PilotTournament = () => {
     favicon.dataset.championsFavicon = "true";
     document.head.appendChild(favicon);
     document.title = `${pageName} | ${displayName}`;
-    if (themeColor) themeColor.content = "#020817";
+    if (themeColor) themeColor.content = "#06145f";
     return () => {
       document.title = previousTitle;
       if (themeColor && previousThemeColor) themeColor.content = previousThemeColor;

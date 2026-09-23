@@ -135,7 +135,7 @@ const PilotLive = () => {
     favicon.dataset.championsFavicon = "true";
     document.head.appendChild(favicon);
     document.title = match ? `${match.homeName} vs ${match.awayName} | ${name}` : `Partido | ${name}`;
-    if (themeColor) themeColor.content = "#020817";
+    if (themeColor) themeColor.content = "#06145f";
     return () => {
       document.title = previousTitle;
       if (themeColor && previousThemeColor) themeColor.content = previousThemeColor;
