@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import PilotEventFeed from "../components/PilotEventFeed";
 import PilotMatchTimeline from "../components/PilotMatchTimeline";
 import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
-import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID, normalizeFootballMatch } from "../pilot/footballTournament";
+import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID, footballMatchDate, normalizeFootballMatch } from "../pilot/footballTournament";
 import useAudienceTracking from "../hooks/useAudienceTracking";
 import {
   DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
@@ -18,6 +18,15 @@ import {
 } from "../pilot/clock";
 
 type PilotMatch = {
+  scheduledDate?: string | null;
+  stage?: string;
+  leg?: number;
+  matchday?: number;
+  homePlayers?: { playerId: string; name: string }[];
+  awayPlayers?: { playerId: string; name: string }[];
+  homeStarterIds?: string[];
+  awayStarterIds?: string[];
+  lineupsConfirmed?: boolean;
   tournamentId: string;
   matchId: string;
   homeName: string;
@@ -76,6 +85,10 @@ const statusFor = (phase: PilotPhase, clockStatus: PilotClockStatus) => {
 };
 
 const PilotLive = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const matchTabs = [{ key: "summary", label: "Resumen" }, { key: "events", label: "Jugadas" }, { key: "stats", label: "Estadísticas" }, { key: "lineups", label: "Alineaciones" }];
+  const activeTab = matchTabs.some((tab) => tab.key === searchParams.get("tab")) ? searchParams.get("tab")! : "summary";
+  const selectTab = (key: string) => setSearchParams((previous) => { const next = new URLSearchParams(previous); next.set("tab", key); return next; }, { replace: true });
   const { tournamentId = "pilot0", matchId = "match-001" } = useParams();
   const pilotMatchId = `${tournamentId}__${matchId}`;
   const [match, setMatch] = useState<PilotMatch | null>(null);
@@ -147,10 +160,10 @@ const PilotLive = () => {
         : "bg-red-500/[0.12] text-red-300";
 
   const stats = [
-    ["Shots", match.shotsHome ?? 0, match.shotsAway ?? 0],
-    ["Fouls", match.foulsHome ?? 0, match.foulsAway ?? 0],
-    ["Yellow cards", match.yellowHome ?? 0, match.yellowAway ?? 0],
-    ["Red cards", match.redHome ?? 0, match.redAway ?? 0],
+    ["Remates", match.shotsHome ?? 0, match.shotsAway ?? 0],
+    ["Faltas", match.foulsHome ?? 0, match.foulsAway ?? 0],
+    ["Amarillas", match.yellowHome ?? 0, match.yellowAway ?? 0],
+    ["Rojas", match.redHome ?? 0, match.redAway ?? 0],
   ] as const;
   const tournamentName = tournamentId === FOOTBALL_2026_TOURNAMENT_ID ? "Champions League" : tournament?.name || tournamentId;
   const hasPenalties = (match.penaltyAttemptsHome ?? 0) + (match.penaltyAttemptsAway ?? 0) > 0 || match.phase === "PENALTIES";
@@ -212,17 +225,48 @@ const PilotLive = () => {
           </div>
         </section>
 
-        <section className="champions-match-panel mt-5 rounded-3xl border border-white/[0.09] px-5 py-5">
-          <div className="mb-5 flex items-center justify-between"><h2 className="text-base font-black tracking-tight">Match stats</h2><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-white/30">{match.phase === "FULLTIME" ? "Final" : isTimedPhase(match.phase) ? "Live" : "Match"}</span></div>
+        <div role="tablist" aria-label="Información del partido" className="mt-5 grid grid-cols-4 gap-1 rounded-2xl bg-slate-950/80 p-1">
+          {matchTabs.map((tab, index) => <button key={tab.key} id={`match-tab-${tab.key}`} role="tab" type="button" aria-selected={activeTab === tab.key} aria-controls={`match-panel-${tab.key}`} tabIndex={activeTab === tab.key ? 0 : -1} onClick={() => selectTab(tab.key)} onKeyDown={(event) => {
+            let next = index;
+            if (event.key === "ArrowRight") next = (index + 1) % matchTabs.length;
+            else if (event.key === "ArrowLeft") next = (index + matchTabs.length - 1) % matchTabs.length;
+            else if (event.key === "Home") next = 0;
+            else if (event.key === "End") next = matchTabs.length - 1;
+            else return;
+            event.preventDefault(); selectTab(matchTabs[next].key); document.getElementById(`match-tab-${matchTabs[next].key}`)?.focus();
+          }} className={`min-h-12 rounded-xl px-1 text-[0.65rem] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200 sm:text-sm ${activeTab === tab.key ? "bg-cyan-300/15 text-cyan-100" : "text-slate-300"}`}>{tab.label}</button>)}
+        </div>
+        <div role="tabpanel" id={`match-panel-${activeTab}`} aria-labelledby={`match-tab-${activeTab}`} tabIndex={0}>
+        {activeTab === "summary" && <>
+          <section className="champions-match-panel mt-5 rounded-3xl border border-white/10 p-5">
+            <h2 className="font-black">Resumen del partido</h2>
+            <p className="mt-2 text-sm text-blue-100">{(() => { const date = footballMatchDate(match); return date ? new Date(`${date}T12:00:00Z`).toLocaleDateString("es-PA", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "Fecha por confirmar"; })()}</p>
+            <p className="mt-2 text-sm text-slate-300">{match.phase === "FULLTIME" ? "Partido finalizado. Consulta las jugadas y estadísticas." : match.status === "READY" ? "El encuentro aún no ha comenzado. Consulta las alineaciones antes del inicio." : "Sigue las jugadas y estadísticas en sus pestañas."}</p>
+          </section>
+          <PilotMomentsRail pilotMatchId={pilotMatchId} />
+          <PilotMatchTimeline pilotMatchId={pilotMatchId} />
+        </>}
+        {activeTab === "stats" && <section className="champions-match-panel mt-5 rounded-3xl border border-white/[0.09] px-5 py-5">
+          <div className="mb-5 flex items-center justify-between"><h2 className="text-base font-black tracking-tight">Estadísticas del partido</h2><span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-white/30">{match.phase === "FULLTIME" ? "Final" : isTimedPhase(match.phase) ? "En vivo" : "Partido"}</span></div>
           <div className="space-y-4">{stats.map(([label, home, away]) => <div key={label} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4"><span className="text-right text-base font-black tabular-nums">{home}</span><span className="min-w-24 text-center text-xs font-semibold text-white/40">{label}</span><span className="text-left text-base font-black tabular-nums">{away}</span></div>)}</div>
-        </section>
+        </section>}
 
-        <section className="champions-match-panel mt-5 overflow-hidden rounded-3xl border border-white/[0.09]">
+        {activeTab === "events" && <section className="champions-match-panel mt-5 overflow-hidden rounded-3xl border border-white/[0.09]">
           <PilotEventFeed pilotMatchId={pilotMatchId} homeName={match.homeName} awayName={match.awayName} periodDurationMs={periodDurationMs} extraTimePeriodDurationMs={extraTimePeriodDurationMs} />
-        </section>
-
-        <PilotMomentsRail pilotMatchId={pilotMatchId} />
-        <PilotMatchTimeline pilotMatchId={pilotMatchId} />
+        </section>}
+        {activeTab === "lineups" && <section className="mt-5 space-y-4">
+          <h2 className="font-black">Alineaciones iniciales</h2>
+          {!match.lineupsConfirmed && <p className="text-sm text-blue-100">Titulares pendientes de confirmación. Se muestra la plantilla disponible.</p>}
+          <div className="grid gap-4 sm:grid-cols-2">{[
+            { name: match.homeName, players: match.homePlayers ?? [], starters: match.homeStarterIds ?? [] },
+            { name: match.awayName, players: match.awayPlayers ?? [], starters: match.awayStarterIds ?? [] },
+          ].map((team, index) => <div key={index} className="champions-match-panel rounded-3xl border border-white/10 p-4">
+            <h3 className="font-black">{team.name}</h3>
+            {team.players.length === 0 && <p className="mt-3 text-sm text-slate-300">Plantilla por confirmar.</p>}
+            {(match.lineupsConfirmed ? ["Titulares", "Suplentes"] : ["Plantilla"]).map((group) => <div key={group} className="mt-4"><h4 className="text-xs font-bold text-cyan-200">{group}</h4><ul className="mt-2 space-y-1">{team.players.filter((player) => group === "Plantilla" || (group === "Titulares") === team.starters.includes(player.playerId)).map((player) => <li key={player.playerId}><Link className="flex min-h-11 items-center rounded-lg px-2 text-sm hover:bg-white/10" to={`/live/${tournamentId}/player/${player.playerId}`}>{player.name}</Link></li>)}</ul></div>)}
+          </div>)}</div>
+        </section>}
+        </div>
       </main>
     </div>
   );

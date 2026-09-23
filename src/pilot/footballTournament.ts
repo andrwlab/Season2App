@@ -42,10 +42,12 @@ const MR_CASTILLO = player("Mr. Castillo", "Mr. Castillo");
 export const FOOTBALL_2026_TOURNAMENT_ID = "football-2026";
 
 // A saved date (including null for unconfirmed) overrides the initial calendar.
-export const footballMatchDate = (match: { tournamentId: string; scheduledDate?: string | null; matchday?: number; stage?: string }) => {
+export const footballMatchDate = (match: { tournamentId: string; scheduledDate?: string | null; matchday?: number; stage?: string; leg?: number }) => {
   if (match.scheduledDate !== undefined) return match.scheduledDate;
-  if (match.tournamentId !== FOOTBALL_2026_TOURNAMENT_ID || (match.stage && match.stage !== "GROUP")) return null;
-  return ({ 1: "2026-09-25", 2: "2026-10-02", 3: "2026-10-09" } as Record<number, string>)[match.matchday ?? 0] ?? null;
+  if (match.tournamentId !== FOOTBALL_2026_TOURNAMENT_ID) return null;
+  if (match.stage === "FINAL") return "2026-11-13";
+  if (match.stage === "SEMIFINAL") return match.leg === 1 ? "2026-10-23" : match.leg === 2 ? "2026-11-06" : null;
+  return ({ 1: "2026-09-25", 2: "2026-10-09", 3: "2026-10-16" } as Record<number, string>)[match.matchday ?? 0] ?? null;
 };
 
 export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
