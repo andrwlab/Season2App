@@ -122,6 +122,14 @@ const PilotTournament = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useAudienceTracking({ tournamentId, scope: "TOURNAMENT" });
+  const [showMatchdayAd, setShowMatchdayAd] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("sabis-matchday-ad-dismissed") !== "1";
+  });
+  const dismissMatchdayAd = () => {
+    setShowMatchdayAd(false);
+    window.sessionStorage.setItem("sabis-matchday-ad-dismissed", "1");
+  };
 
   useEffect(() => {
     const stopTournament = onSnapshot(doc(db, "pilotTournaments", tournamentId), (snap) => {
@@ -179,7 +187,7 @@ const PilotTournament = () => {
     };
   }, [activeSection, displayName]);
 
-  if (loading) return <div className="champions-shell min-h-[100dvh] px-3 pb-8 pt-[max(env(safe-area-inset-top),1.25rem)] text-white"><main className="mx-auto max-w-5xl"><img src={assetUrl("champions-matchday-1.webp")} alt="Primera jornada de Champions League" fetchPriority="high" className="champions-loading-hero w-full rounded-[1.5rem] object-cover shadow-[0_18px_60px_rgba(0,0,0,0.3)] sm:rounded-[2rem]"/><div className="mt-5 h-20 animate-pulse rounded-2xl bg-white/[0.05]"/><div className="mt-5 h-32 animate-pulse rounded-[2rem] bg-white/[0.05]"/></main></div>;
+  if (loading) return <div className="champions-shell min-h-[100dvh] px-3 pb-8 pt-[max(env(safe-area-inset-top),1.25rem)] text-white"><main className="mx-auto max-w-5xl animate-pulse space-y-5"><div className="h-24 rounded-2xl bg-white/[0.05]"/><div className="h-64 rounded-[2rem] bg-white/[0.05]"/><div className="h-32 rounded-3xl bg-white/[0.05]"/></main></div>;
   if (error) return <div className="champions-shell min-h-[100dvh] px-6 pb-8 pt-[max(env(safe-area-inset-top),2rem)] text-center font-semibold text-red-300">{error}</div>;
 
   const [, heading] = sectionTitles[activeSection];
@@ -201,6 +209,15 @@ const PilotTournament = () => {
       </header>
 
       {activeSection === "home" && <>
+        {showMatchdayAd && <div className="champions-matchday-ad fixed inset-0 z-50 flex items-center justify-center px-4 py-6" role="dialog" aria-modal="true" aria-label="Promoción de la primera jornada">
+          <div className="champions-matchday-ad-card relative w-full max-w-3xl overflow-hidden rounded-[1.4rem] p-2 sm:rounded-[2rem] sm:p-3">
+            <img src={assetUrl("champions-matchday-1.webp")} alt="Primera jornada de Champions League" fetchPriority="high" className="w-full rounded-[1rem] object-cover sm:rounded-[1.5rem]" />
+            <div className="grid grid-cols-[1fr_auto] gap-2 p-2 sm:p-3">
+              <button type="button" onClick={dismissMatchdayAd} className="rounded-xl bg-cyan-200 px-4 py-3 text-sm font-black text-[#06145f] transition hover:bg-white">Ver más</button>
+              <button type="button" onClick={dismissMatchdayAd} aria-label="Cerrar anuncio" className="rounded-xl border border-white/20 bg-white/[0.08] px-4 py-3 text-xl font-black leading-none text-white transition hover:bg-white/[0.16]">×</button>
+            </div>
+          </div>
+        </div>}
         {live.length > 0 && <section className="mt-4">
           <div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black">Ahora</h2>{live.length > 1 && <span className="text-xs font-bold text-white/35">{live.length} partidos</span>}</div>
           {live.length === 0 ? <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5"><p className="text-sm font-black">No hay partidos en vivo</p><p className="mt-1 text-xs leading-relaxed text-white/40">Cuando comience un encuentro, el marcador y sus jugadas aparecerán aquí.</p></div> : <div className="grid gap-3 lg:grid-cols-2">{live.map((match) => <Link key={match.matchId} to={matchUrl(match)} aria-label={`Partido en vivo: ${match.homeName} contra ${match.awayName}`} className="block overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#111111] active:scale-[0.99]"><div className="flex items-center justify-between px-5 pt-4 text-[0.65rem] font-black uppercase tracking-[0.13em] text-white/35"><span>{formatPhase(match.phase)}</span><span className="text-red-300">En vivo</span></div><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-6 text-center min-[430px]:gap-3 min-[430px]:px-5"><div className="min-w-0"><TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl}/><p className="mt-3 hidden text-sm font-black sm:line-clamp-2">{match.homeName}</p></div><div className="min-w-[6.5rem] text-4xl font-black tracking-[-0.08em] tabular-nums min-[430px]:min-w-[7.5rem] min-[430px]:text-5xl">{match.scoreHome}<span className="mx-2 text-2xl font-light text-white/20">–</span>{match.scoreAway}</div><div className="min-w-0"><TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl}/><p className="mt-3 hidden text-sm font-black sm:line-clamp-2">{match.awayName}</p></div></div><div className="border-t border-white/[0.06] px-5 py-3 text-center text-xs font-black text-cyan-200">Seguir partido →</div></Link>)}</div>}

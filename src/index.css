@@ -241,9 +241,16 @@ body.champions-page {
   isolation: isolate;
 }
 
-.champions-loading-hero {
-  aspect-ratio: 16 / 9;
-  object-position: center;
+.champions-matchday-ad {
+  background: rgba(1, 7, 25, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.champions-matchday-ad-card {
+  border: 1px solid rgba(151, 207, 255, 0.3);
+  background: linear-gradient(145deg, rgba(18, 57, 137, 0.96), rgba(3, 14, 45, 0.98));
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.5), 0 0 40px rgba(48, 128, 255, 0.18);
 }
 
 .champions-home-hero::before {
