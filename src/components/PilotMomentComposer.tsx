@@ -40,11 +40,14 @@ const uploadToCloudinary = (file: File, onProgress: (value: number) => void) => 
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "nuxctlvg";
   const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "scorekeeper_photos";
   const request = new XMLHttpRequest();
-  request.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`);
+  const resourceType = file.type.startsWith("video/") ? "video" : "image";
+  request.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`);
+  request.timeout = 45_000;
   request.upload.onprogress = (event) => {
     if (event.lengthComputable) onProgress(Math.round(event.loaded / event.total * 100));
   };
   request.onerror = () => reject(new Error("Cloudinary upload failed. Check your internet connection."));
+  request.ontimeout = () => reject(new Error("Cloudinary upload timed out. Check the connection and try again."));
   request.onload = () => {
     try {
       const response = JSON.parse(request.responseText) as { secure_url?: string; public_id?: string; error?: { message?: string } };
