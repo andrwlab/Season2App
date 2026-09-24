@@ -1,8 +1,7 @@
-import React, { FormEvent, useMemo, useState } from "react";
-import { FirebaseError } from "firebase/app";
+import React, { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "../firebase";
+import { db } from "../firebase";
+import { prepareMomentMedia, type PreparedMomentMedia } from "../pilot/momentMedia";
 import {
   PILOT_MOMENTS_COLLECTION,
   PilotMomentMediaType,
@@ -21,8 +20,6 @@ type Props = {
 
 type PublishStage = "IDLE" | "UPLOADING" | "SAVING";
 
-const MAX_FILE_BYTES = 50 * 1024 * 1024;
-
 const MOMENT_TYPES: PilotMomentType[] = [
   "GOAL",
   "HIGHLIGHT",
@@ -34,37 +31,32 @@ const MOMENT_TYPES: PilotMomentType[] = [
   "OTHER",
 ];
 
-const safeExtension = (file: File) => {
-  const raw = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  if (raw) return raw;
-  return file.type.startsWith("video/") ? "mp4" : "jpg";
-};
-
 const publishErrorMessage = (error: unknown) => {
-  if (!(error instanceof FirebaseError)) {
-    return "Moment could not be published. Check your connection and try again.";
-  }
-
-  switch (error.code) {
-    case "storage/quota-exceeded":
-      return "Media upload is unavailable for this Firebase Storage plan or quota. Firebase Storage now requires the Blaze plan; publish without media or enable Storage billing before retrying.";
-    case "storage/retry-limit-exceeded":
-      return "Media upload timed out. If this Firebase project is on Spark, Storage will not accept uploads; otherwise check Storage access and try again.";
-    case "storage/unauthorized":
-      return "Storage denied this upload. Confirm you are signed in as an admin and that storage.rules are deployed.";
-    case "storage/bucket-not-found":
-      return "No Firebase Storage bucket is available for this project.";
-    case "storage/project-not-found":
-      return "Firebase Storage could not find the configured project.";
-    case "storage/unknown":
-      return `Firebase Storage could not complete the upload${error.message ? `: ${error.message}` : "."}`;
-    case "permission-denied":
-    case "firestore/permission-denied":
-      return "Firestore denied the Moment record. Confirm your admin session and Firestore rules.";
-    default:
-      return `Moment could not be published (${error.code}). ${error.message || "Please try again."}`;
-  }
+  if (!(error instanceof Error)) return "Moment could not be published. Check your connection and try again.";
+  return error.message || "Moment could not be published. Check your connection and try again.";
 };
+
+const uploadToCloudinary = (file: File, onProgress: (value: number) => void) => new Promise<{ url: string; publicId: string }>((resolve, reject) => {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "nuxctlvg";
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "scorekeeper_photos";
+  const request = new XMLHttpRequest();
+  request.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`);
+  request.upload.onprogress = (event) => {
+    if (event.lengthComputable) onProgress(Math.round(event.loaded / event.total * 100));
+  };
+  request.onerror = () => reject(new Error("Cloudinary upload failed. Check your internet connection."));
+  request.onload = () => {
+    try {
+      const response = JSON.parse(request.responseText) as { secure_url?: string; public_id?: string; error?: { message?: string } };
+      if (request.status >= 200 && request.status < 300 && response.secure_url) resolve({ url: response.secure_url, publicId: response.public_id || "" });
+      else reject(new Error(response.error?.message || "Cloudinary rejected this upload."));
+    } catch { reject(new Error("Cloudinary returned an invalid upload response.")); }
+  };
+  const body = new FormData();
+  body.append("file", file);
+  body.append("upload_preset", uploadPreset);
+  request.send(body);
+});
 
 const PilotMomentComposer = ({
   tournamentId,
@@ -79,7 +71,14 @@ const PilotMomentComposer = ({
   const [title, setTitle] = useState("");
   const [playerName, setPlayerName] = useState("");
   const [caption, setCaption] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [media, setMedia] = useState<PreparedMomentMedia | null>(null);
+  const [selectedName, setSelectedName] = useState("");
+  const [preparing, setPreparing] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const preparation = useRef<AbortController | null>(null);
+  const publishing = useRef(false);
   const [publishStage, setPublishStage] = useState<PublishStage>("IDLE");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -87,30 +86,55 @@ const PilotMomentComposer = ({
   const busy = publishStage !== "IDLE";
   const minuteLabel = useMemo(() => formatMomentMinute(matchClockMs), [matchClockMs]);
 
+  useEffect(() => () => {
+    preparation.current?.abort();
+  }, []);
+
+  const removeMedia = () => {
+    preparation.current?.abort();
+    preparation.current = null;
+    setMedia(null);
+    setSelectedName("");
+    setPreparing(false);
+    setMediaError(null);
+    if (fileInput.current) fileInput.current.value = "";
+  };
+
+  const selectMedia = async (selected: File | null) => {
+    removeMedia();
+    setError(null);
+    setSuccess(null);
+    if (!selected) return;
+    const controller = new AbortController();
+    preparation.current = controller;
+    setSelectedName(selected.name);
+    setPreparing(true);
+    try {
+      const result = await prepareMomentMedia(selected, controller.signal);
+      if (!controller.signal.aborted) setMedia(result);
+    } catch (err) {
+      if (!controller.signal.aborted) setMediaError(err instanceof Error ? err.message : "Could not prepare this file.");
+    } finally {
+      if (!controller.signal.aborted) setPreparing(false);
+    }
+  };
+
   const clearForm = () => {
     setTitle("");
     setPlayerName("");
     setCaption("");
-    setFile(null);
+    removeMedia();
   };
 
   const publishMoment = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (publishing.current || preparing || mediaError || (selectedName && !media)) return;
 
     setError(null);
     setSuccess(null);
 
-    if (file && file.size > MAX_FILE_BYTES) {
-      setError("Media must be smaller than 50 MB for this MVP.");
-      return;
-    }
-
-    if (file && !file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-      setError("Only image and video files are supported.");
-      return;
-    }
-
+    publishing.current = true;
+    const file = media?.file;
     try {
       const momentRef = doc(collection(db, PILOT_MOMENTS_COLLECTION));
       let mediaUrl: string | undefined;
@@ -119,11 +143,11 @@ const PilotMomentComposer = ({
 
       if (file) {
         setPublishStage("UPLOADING");
+        setUploadProgress(0);
         mediaType = file.type.startsWith("video/") ? "VIDEO" : "IMAGE";
-        storagePath = `pilotMoments/${tournamentId}/${matchId}/${momentRef.id}.${safeExtension(file)}`;
-        const mediaRef = ref(storage, storagePath);
-        await uploadBytes(mediaRef, file, { contentType: file.type });
-        mediaUrl = await getDownloadURL(mediaRef);
+        const uploaded = await uploadToCloudinary(file, setUploadProgress);
+        mediaUrl = uploaded.url;
+        storagePath = uploaded.publicId || undefined;
       }
 
       setPublishStage("SAVING");
@@ -160,16 +184,19 @@ const PilotMomentComposer = ({
       console.error("Failed to publish pilot moment", err);
       setError(publishErrorMessage(err));
     } finally {
+      publishing.current = false;
       setPublishStage("IDLE");
     }
   };
 
   const buttonLabel =
-    publishStage === "UPLOADING"
-      ? "UPLOADING MEDIA…"
-      : publishStage === "SAVING"
-        ? "SAVING MOMENT…"
-        : "PUBLISH MOMENT";
+    preparing
+      ? "PREPARING MEDIA…"
+      : publishStage === "UPLOADING"
+        ? `UPLOADING MEDIA… ${uploadProgress}%`
+        : publishStage === "SAVING"
+          ? "SAVING MOMENT…"
+          : "PUBLISH MOMENT";
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -185,84 +212,101 @@ const PilotMomentComposer = ({
       </div>
 
       <form onSubmit={publishMoment} className="mt-4 space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <fieldset disabled={busy} className="min-w-0 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Type</span>
+              <select
+                value={type}
+                onChange={(event) => setType(event.target.value as PilotMomentType)}
+                className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300"
+              >
+                {MOMENT_TYPES.map((item) => (
+                  <option key={item} value={item}>{item.replaceAll("_", " ")}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Team</span>
+              <select
+                value={teamSide}
+                onChange={(event) => setTeamSide(event.target.value as "HOME" | "AWAY" | "")}
+                className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300"
+              >
+                <option value="">None</option>
+                <option value="HOME">{homeName}</option>
+                <option value="AWAY">{awayName}</option>
+              </select>
+            </label>
+          </div>
+
           <label className="block">
-            <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Type</span>
-            <select
-              value={type}
-              onChange={(event) => setType(event.target.value as PilotMomentType)}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300"
-            >
-              {MOMENT_TYPES.map((item) => (
-                <option key={item} value={item}>{item.replaceAll("_", " ")}</option>
-              ))}
-            </select>
+            <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Player / subject</span>
+            <input
+              value={playerName}
+              onChange={(event) => setPlayerName(event.target.value)}
+              placeholder="Optional"
+              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-300"
+            />
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Team</span>
-            <select
-              value={teamSide}
-              onChange={(event) => setTeamSide(event.target.value as "HOME" | "AWAY" | "")}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300"
-            >
-              <option value="">None</option>
-              <option value="HOME">{homeName}</option>
-              <option value="AWAY">{awayName}</option>
-            </select>
+            <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Title</span>
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Optional — a default title is generated"
+              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-300"
+            />
           </label>
-        </div>
 
-        <label className="block">
-          <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Player / subject</span>
-          <input
-            value={playerName}
-            onChange={(event) => setPlayerName(event.target.value)}
-            placeholder="Optional"
-            className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-300"
-          />
-        </label>
+          <label className="block">
+            <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Caption</span>
+            <textarea
+              value={caption}
+              onChange={(event) => setCaption(event.target.value)}
+              rows={2}
+              placeholder="Optional context for spectators"
+              className="w-full resize-none rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-300"
+            />
+          </label>
 
-        <label className="block">
-          <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Title</span>
-          <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Optional — a default title is generated"
-            className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-300"
-          />
-        </label>
+          <label className="block rounded-xl border border-dashed border-white/15 bg-black/20 px-3 py-3">
+            <span className="block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Photo / video</span>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*,video/*"
+              aria-describedby="moment-media-help moment-media-status"
+              onChange={(event) => void selectMedia(event.target.files?.[0] ?? null)}
+              className="mt-2 block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-xs file:font-black file:text-slate-950"
+            />
+            <p id="moment-media-help" className="mt-2 text-xs text-slate-400">Photos are optimized automatically. Videos: up to 30 seconds and 20 MB. Trim larger clips before uploading.</p>
+          </label>
+          <div id="moment-media-status" role="status" aria-live="polite" className="text-xs text-slate-300">
+            {selectedName && <p className="truncate">{selectedName}</p>}
+            {preparing && <p className="mt-1 text-cyan-200">Preparing your file… You can keep filling in your Moment.</p>}
+            {media && <p className="mt-1 text-emerald-200">
+              Ready · {(media.file.size / 1024 / 1024).toFixed(2)} MB
+              {media.file.size < media.originalBytes && ` (was ${(media.originalBytes / 1024 / 1024).toFixed(2)} MB)`}
+              {media.durationSeconds !== undefined && ` · ${Math.ceil(media.durationSeconds)} sec`}
+            </p>}
+          </div>
+          {mediaError && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200">{mediaError}</p>}
+          {selectedName && <button type="button" onClick={removeMedia} className="text-xs font-bold text-slate-300 underline">Remove media</button>}
+        </fieldset>
 
-        <label className="block">
-          <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Caption</span>
-          <textarea
-            value={caption}
-            onChange={(event) => setCaption(event.target.value)}
-            rows={2}
-            placeholder="Optional context for spectators"
-            className="w-full resize-none rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-300"
-          />
-        </label>
-
-        <label className="block rounded-xl border border-dashed border-white/15 bg-black/20 px-3 py-3">
-          <span className="block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">Photo / video</span>
-          <input
-            type="file"
-            accept="image/*,video/*"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            className="mt-2 block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-xs file:font-black file:text-slate-950"
-          />
-          {file && <p className="mt-2 truncate text-xs text-slate-400">{file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>}
-        </label>
-
-        {error && <p className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200">{error}</p>}
+        {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200">{error}</p>}
         {success && <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">{success}</p>}
 
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || preparing || !!mediaError || (!!selectedName && !media)}
+          aria-busy={busy || preparing}
           className="w-full rounded-xl bg-cyan-300 px-4 py-3.5 text-sm font-black text-slate-950 active:scale-[0.99] disabled:opacity-50"
         >
+          {(busy || preparing) && <span aria-hidden="true" className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950 align-[-0.15em]" />}
           {buttonLabel}
         </button>
       </form>
