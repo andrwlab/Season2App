@@ -248,9 +248,12 @@ body.champions-page {
 }
 
 .champions-matchday-ad-card {
-  border: 1px solid rgba(151, 207, 255, 0.3);
-  background: linear-gradient(145deg, rgba(18, 57, 137, 0.96), rgba(3, 14, 45, 0.98));
-  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.5), 0 0 40px rgba(48, 128, 255, 0.18);
+  overflow: visible;
+  filter: drop-shadow(0 24px 70px rgba(0, 0, 0, 0.55));
+}
+
+.champions-matchday-ad-image {
+  box-shadow: 0 0 0 1px rgba(151, 207, 255, 0.32), 0 0 38px rgba(48, 128, 255, 0.24);
 }
 
 .champions-home-hero::before {
