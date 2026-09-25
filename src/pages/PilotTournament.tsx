@@ -200,7 +200,7 @@ const PilotTournament = () => {
         <div className="flex items-center gap-3">
           <img src={assetUrl("champions-league-eagle-logo-web.webp")} alt="Logo de SABIS Champions League" className={`shrink-0 object-contain drop-shadow-[0_0_24px_rgba(87,150,255,0.4)] ${compactHeader ? "h-12 w-12 sm:h-14 sm:w-14" : "h-24 w-24 min-[430px]:h-28 min-[430px]:w-28 md:h-32 md:w-32"}`} />
           <div className="min-w-0 flex-1">
-            <h1 className={`champions-wordmark max-w-full whitespace-normal break-words overflow-visible font-black tracking-[-0.035em] ${compactHeader ? "text-lg leading-tight sm:text-2xl" : "text-3xl leading-[0.92] min-[430px]:text-4xl md:text-5xl lg:text-6xl"}`}>{!compactHeader && heading === "Champions League" ? <><span className="block">Champions</span><span className="block">League</span></> : heading || displayName}</h1>
+            <h1 className={`champions-wordmark max-w-full whitespace-normal break-words overflow-visible pb-[0.08em] font-black tracking-[-0.035em] ${compactHeader ? "text-lg leading-tight sm:text-2xl" : "text-3xl leading-[1.05] min-[430px]:text-4xl md:text-5xl lg:text-6xl"}`}>{!compactHeader && heading === "Champions League" ? <><span className="block">Champions</span><span className="block">League</span></> : heading || displayName}</h1>
             {compactHeader && <p className="mt-1 truncate text-[0.6rem] font-bold uppercase tracking-[0.1em] text-blue-200/75 sm:text-xs">{displayName}</p>}
           </div>
           {live.length > 0 && <Link to={matchUrl(live[0])} className="inline-flex shrink-0 items-center gap-2 rounded-full bg-red-500/[0.12] px-3 py-2 text-[0.65rem] font-black uppercase tracking-[0.12em] text-red-300"><span className="h-1.5 w-1.5 rounded-full bg-red-400"/>En vivo</Link>}
@@ -211,7 +211,7 @@ const PilotTournament = () => {
       {activeSection === "home" && <>
         {showMatchdayAd && <div className="champions-matchday-ad fixed inset-0 z-50 flex items-center justify-center px-4 py-8" role="dialog" aria-modal="true" aria-label="Promoción de la primera jornada">
           <div className="champions-matchday-ad-card relative flex max-h-full max-w-[calc(100vw-2rem)] flex-col items-center">
-            <img src={assetUrl("champions-matchday-1.webp")} alt="Primera jornada: Real Madrid contra Barcelona y PSG contra Manchester City" fetchPriority="high" className="champions-matchday-ad-image max-h-[76dvh] max-w-full rounded-[1.2rem] object-contain" />
+            <img src={assetUrl("champions-matchday-1.webp")} alt="Primera jornada: Real Madrid contra Barcelona y PSG contra Manchester City" fetchPriority="high" className="champions-matchday-ad-image max-h-[64dvh] max-w-full rounded-[1.2rem] object-contain" />
             <button type="button" onClick={dismissMatchdayAd} aria-label="Cerrar anuncio" className="champions-matchday-ad-close absolute -right-3 -top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#102451]/95 text-2xl font-black leading-none text-white shadow-xl transition hover:bg-[#1c3a75]">×</button>
             <button type="button" onClick={dismissMatchdayAd} className="champions-matchday-ad-more mt-3 min-w-[12rem] rounded-full bg-cyan-200 px-10 py-3 text-sm font-black text-[#06145f] shadow-xl transition hover:bg-white">Ver más</button>
           </div>
