@@ -8,6 +8,7 @@ import { db } from "../firebase";
 import useUserRole from "../hooks/useUserRole";
 import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID, footballMatchDate, normalizeFootballMatch } from "../pilot/footballTournament";
 import useAudienceTracking from "../hooks/useAudienceTracking";
+import { PilotPlayer } from "../pilot/players";
 import {
   DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
   DEFAULT_PERIOD_DURATION_MS,
@@ -23,8 +24,8 @@ type PilotMatch = {
   stage?: string;
   leg?: number;
   matchday?: number;
-  homePlayers?: { playerId: string; name: string }[];
-  awayPlayers?: { playerId: string; name: string }[];
+  homePlayers?: PilotPlayer[];
+  awayPlayers?: PilotPlayer[];
   homeStarterIds?: string[];
   awayStarterIds?: string[];
   lineupsConfirmed?: boolean;
@@ -264,7 +265,7 @@ const PilotLive = () => {
           ].map((team, index) => <div key={index} className="champions-match-panel rounded-3xl border border-white/10 p-4">
             <h3 className="font-black">{team.name}</h3>
             {team.players.length === 0 && <p className="mt-3 text-sm text-slate-300">Plantilla por confirmar.</p>}
-            {(match.lineupsConfirmed ? ["Titulares", "Suplentes"] : ["Plantilla"]).map((group) => <div key={group} className="mt-4"><h4 className="text-xs font-bold text-cyan-200">{group}</h4><ul className="mt-2 space-y-1">{team.players.filter((player) => group === "Plantilla" || (group === "Titulares") === team.starters.includes(player.playerId)).map((player) => <li key={player.playerId}><Link className="flex min-h-11 items-center rounded-lg px-2 text-sm hover:bg-white/10" to={`/live/${tournamentId}/player/${player.playerId}`}>{player.name}</Link></li>)}</ul></div>)}
+            {(match.lineupsConfirmed ? ["Titulares", "Suplentes"] : ["Plantilla"]).map((group) => <div key={group} className="mt-4"><h4 className="text-xs font-bold text-cyan-200">{group}</h4><ul className="mt-2 space-y-1">{team.players.filter((player) => group === "Plantilla" || (group === "Titulares") === team.starters.includes(player.playerId)).map((player) => <li key={player.playerId}><Link className={`flex min-h-11 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}
           </div>)}</div>
         </section>}
         </div>

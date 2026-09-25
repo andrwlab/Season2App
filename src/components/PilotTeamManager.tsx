@@ -51,8 +51,8 @@ const PilotTeamManager = ({ tournamentId, teams }: Props) => {
           awayName: away.name,
           homeLogoUrl: home.logoPath,
           awayLogoUrl: away.logoPath,
-          homePlayers: home.players.map(({ playerId, name, fullName }) => ({ playerId, name, fullName })),
-          awayPlayers: away.players.map(({ playerId, name, fullName }) => ({ playerId, name, fullName })),
+          homePlayers: home.players.map(({ playerId, name, fullName, suspended, suspensionReason }) => ({ playerId, name, fullName, suspended, suspensionReason })),
+          awayPlayers: away.players.map(({ playerId, name, fullName, suspended, suspensionReason }) => ({ playerId, name, fullName, suspended, suspensionReason })),
           homeStarterIds: [],
           awayStarterIds: [],
           currentHomePlayerIds: [],
@@ -73,7 +73,7 @@ const PilotTeamManager = ({ tournamentId, teams }: Props) => {
     }
   };
 
-  const updatePlayer = (teamId: string, playerId: string, field: "name" | "fullName", value: string) => {
+  const updatePlayer = (teamId: string, playerId: string, field: "name" | "fullName" | "suspended" | "suspensionReason", value: string | boolean) => {
     setDraft((current) => current.map((team) => team.teamId !== teamId ? team : {
       ...team,
       players: team.players.map((player) => player.playerId === playerId ? { ...player, [field]: value } : player),
@@ -117,7 +117,7 @@ const PilotTeamManager = ({ tournamentId, teams }: Props) => {
       <div><p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Teams & rosters</p><p className="mt-1 text-sm text-slate-500">Corrections and transfers update every match that has not started. Finished or live matches keep their historical roster.</p></div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {draft.map((team) => <div key={team.teamId} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><div className="mb-3 flex items-center gap-3"><img src={assetUrl(team.logoPath)} alt="" className="h-12 w-12 object-contain" /><div><p className="font-black">{team.name}</p><p className="text-xs text-slate-500">{team.players.length} players</p></div></div><div className="space-y-2">{team.players.map((player) => <div key={player.playerId} className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-2"><input aria-label={`Display name for ${player.fullName}`} value={player.name} onChange={(event) => updatePlayer(team.teamId, player.playerId, "name", event.target.value)} className="w-full bg-transparent text-sm font-black outline-none focus:text-cyan-200" /><input aria-label={`Full name for ${player.name}`} value={player.fullName} onChange={(event) => updatePlayer(team.teamId, player.playerId, "fullName", event.target.value)} className="mt-1 w-full bg-transparent text-xs text-slate-500 outline-none focus:text-slate-200" /></div>)}</div></div>)}
+        {draft.map((team) => <div key={team.teamId} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><div className="mb-3 flex items-center gap-3"><img src={assetUrl(team.logoPath)} alt="" className="h-12 w-12 object-contain" /><div><p className="font-black">{team.name}</p><p className="text-xs text-slate-500">{team.players.length} players</p></div></div><div className="space-y-2">{team.players.map((player) => <div key={player.playerId} className={`rounded-xl border p-2 ${player.suspended ? "border-red-400/30 bg-red-500/[0.06]" : "border-white/[0.07] bg-white/[0.03]"}`}><input aria-label={`Display name for ${player.fullName}`} value={player.name} onChange={(event) => updatePlayer(team.teamId, player.playerId, "name", event.target.value)} className="w-full bg-transparent text-sm font-black outline-none focus:text-cyan-200" /><input aria-label={`Full name for ${player.name}`} value={player.fullName} onChange={(event) => updatePlayer(team.teamId, player.playerId, "fullName", event.target.value)} className="mt-1 w-full bg-transparent text-xs text-slate-500 outline-none focus:text-slate-200" /><label className="mt-2 flex items-center gap-2 text-xs font-bold text-red-200"><input type="checkbox" checked={player.suspended === true} onChange={(event) => updatePlayer(team.teamId, player.playerId, "suspended", event.target.checked)} /> 🟥 Suspendido</label>{player.suspended && <input aria-label={`Suspension reason for ${player.name}`} value={player.suspensionReason || ""} placeholder="Suspensión por quizzes" onChange={(event) => updatePlayer(team.teamId, player.playerId, "suspensionReason", event.target.value)} className="mt-2 w-full rounded-lg border border-red-400/20 bg-red-500/[0.06] px-2 py-1 text-xs text-red-100 outline-none placeholder:text-red-200/45" />}</div>)}</div></div>)}
       </div>
 
       <button type="button" disabled={busy} onClick={saveCorrections} className="w-full rounded-xl bg-cyan-300 px-4 py-3 font-black text-slate-950 disabled:opacity-40">SAVE NAME CORRECTIONS</button>

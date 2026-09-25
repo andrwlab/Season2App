@@ -912,7 +912,8 @@ const PilotScorer = () => {
         <div className="mb-2 flex items-center justify-between gap-2"><p className="truncate text-sm font-black">{teamNameForSide(side)}</p><span className="text-xs font-bold text-cyan-300">{selectedIds.length} starters</span></div>
         {roster.length === 0 ? <p className="text-xs text-slate-500">No roster loaded.</p> : <div className="grid grid-cols-2 gap-2">{roster.map((player) => {
           const selected = selectedIds.includes(player.playerId);
-          return <button key={player.playerId} type="button" onClick={() => toggleStarter(side, player.playerId)} className={`rounded-lg border px-2 py-2 text-left text-xs font-bold ${selected ? "border-cyan-300 bg-cyan-300/15 text-cyan-100" : "border-white/10 bg-white/[0.03] text-slate-400"}`}>{player.name}</button>;
+          const unavailable = player.suspended === true;
+          return <button key={player.playerId} type="button" disabled={unavailable} onClick={() => toggleStarter(side, player.playerId)} className={`rounded-lg border px-2 py-2 text-left text-xs font-bold ${unavailable ? "cursor-not-allowed border-red-400/30 bg-red-500/10 text-red-200/80" : selected ? "border-cyan-300 bg-cyan-300/15 text-cyan-100" : "border-white/10 bg-white/[0.03] text-slate-400"}`}><span className="block">{unavailable ? "🟥 " : ""}{player.name}</span>{unavailable && <span className="mt-1 block text-[0.6rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</button>;
         })}</div>}
       </div>
     );

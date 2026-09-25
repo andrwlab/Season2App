@@ -160,7 +160,7 @@ export const normalizeFootballTeam = (team: PilotTeam): PilotTeam => {
   return team;
 };
 
-type MatchRosterPlayer = { playerId: string; name: string; fullName?: string };
+type MatchRosterPlayer = { playerId: string; name: string; fullName?: string; suspended?: boolean; suspensionReason?: string };
 
 const normalizeMatchRoster = (players: MatchRosterPlayer[], teamId?: string | null, teamName?: string) => {
   const withoutCastillo = players.filter((item) => item.playerId !== MR_CASTILLO.playerId);

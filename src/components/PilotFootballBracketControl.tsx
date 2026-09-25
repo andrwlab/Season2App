@@ -19,7 +19,7 @@ type Match = {
 
 type Props = { tournamentId: string; teams: PilotTeam[]; matches: Match[]; suggestedSeeds: string[] };
 
-const roster = (team: PilotTeam) => team.players.map(({ playerId, name, fullName }) => ({ playerId, name, fullName }));
+const roster = (team: PilotTeam) => team.players.map(({ playerId, name, fullName, suspended, suspensionReason }) => ({ playerId, name, fullName, suspended, suspensionReason }));
 
 const PilotFootballBracketControl = ({ tournamentId, teams, matches, suggestedSeeds }: Props) => {
   const [seeds, setSeeds] = useState<string[]>([]);

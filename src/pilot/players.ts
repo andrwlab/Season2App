@@ -1,6 +1,9 @@
 export type PilotPlayer = {
   playerId: string;
   name: string;
+  /** Set on the roster when the player cannot participate in the match. */
+  suspended?: boolean;
+  suspensionReason?: string;
 };
 
 const slugifyPlayerName = (value: string) =>
