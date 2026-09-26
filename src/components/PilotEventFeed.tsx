@@ -8,6 +8,7 @@ import {
   getPhaseOfficialStartMs,
   PilotPhase,
 } from "../pilot/clock";
+import { displayFootballPlayerName } from "../pilot/footballTournament";
 
 type TeamSide = "HOME" | "AWAY";
 type MatchEventType = "GOAL" | "SHOT" | "FOUL" | "YELLOW_CARD" | "RED_CARD";
@@ -147,7 +148,11 @@ const PilotEventFeed = ({
             const type = event.type as VisibleEventType;
             const teamName = event.teamSide === "HOME" ? homeName : event.teamSide === "AWAY" ? awayName : "";
             const minute = minutePartsFor(event, periodDurationMs, extraTimePeriodDurationMs);
-            const subject = event.type === "SUBSTITUTION" ? teamName : event.playerName || teamName;
+            const displayPlayerName = displayFootballPlayerName(event.playerId, event.playerName);
+            const displayAssistName = displayFootballPlayerName(event.assistPlayerId, event.assistPlayerName);
+            const displayPlayerInName = displayFootballPlayerName(event.playerInId, event.playerInName);
+            const displayPlayerOutName = displayFootballPlayerName(event.playerOutId, event.playerOutName);
+            const subject = event.type === "SUBSTITUTION" ? teamName : displayPlayerName || teamName;
             const nextEvent = visibleEvents[index + 1];
             const showHalftimeDivider = Boolean(
               nextEvent && !isFirstHalfEvent(event) && isFirstHalfEvent(nextEvent)
@@ -162,9 +167,9 @@ const PilotEventFeed = ({
                   </span>
                   <span className="pt-0.5 text-base" aria-hidden="true">{iconFor(type)}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-white/90">{labelFor(type)}{subject ? ` · ${subject}` : ""}{event.playerName && teamName ? <span className="font-semibold text-white/45"> · {teamName}</span> : null}</p>
-                    {type === "GOAL" && event.assistPlayerName && <p className="mt-1 text-xs font-semibold text-cyan-200/70">Assist · {event.assistPlayerName}</p>}
-                    {type === "SUBSTITUTION" && <p className="mt-1 text-xs font-semibold"><span className="text-emerald-300/80">IN · {event.playerInName ?? "Unknown"}</span><span className="mx-2 text-white/20">|</span><span className="text-red-300/80">OUT · {event.playerOutName ?? "Unknown"}</span></p>}
+                    <p className="text-sm font-bold text-white/90">{labelFor(type)}{subject ? ` · ${subject}` : ""}{displayPlayerName && teamName ? <span className="font-semibold text-white/45"> · {teamName}</span> : null}</p>
+                    {type === "GOAL" && displayAssistName && <p className="mt-1 text-xs font-semibold text-cyan-200/70">Assist · {displayAssistName}</p>}
+                    {type === "SUBSTITUTION" && <p className="mt-1 text-xs font-semibold"><span className="text-emerald-300/80">IN · {displayPlayerInName ?? "Unknown"}</span><span className="mx-2 text-white/20">|</span><span className="text-red-300/80">OUT · {displayPlayerOutName ?? "Unknown"}</span></p>}
                   </div>
                 </div>
 

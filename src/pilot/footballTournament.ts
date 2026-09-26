@@ -23,7 +23,7 @@ export type PilotScheduledMatch = {
   leg?: 1 | 2;
 };
 
-const playerIdFor = (fullName: string) =>
+export const playerIdFor = (fullName: string) =>
   `football-${fullName
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -36,6 +36,19 @@ const player = (fullName: string, name: string): PilotRosterPlayer => ({
   fullName,
   name,
 });
+
+/**
+ * Events recorded before the roster correction used Antonio Zhu's id/name,
+ * but those events were actually Hyatt's. Keep the stored ids untouched and
+ * normalize only the public-facing label and derived totals.
+ */
+export const LEGACY_HYATT_PLAYER_ID = playerIdFor("Antonio Zhu");
+export const ANTONIO_PLAYER_ID = playerIdFor("Antonio");
+export const displayFootballPlayerName = (playerId?: string | null, playerName?: string | null) => {
+  if (!playerName) return playerName ?? undefined;
+  if (playerId === LEGACY_HYATT_PLAYER_ID || (playerName === "Antonio" && playerId !== ANTONIO_PLAYER_ID)) return "Hyatt";
+  return playerName;
+};
 
 const MR_CASTILLO = player("Mr. Castillo", "Mr. Castillo");
 // The original roster entry carrying Antonio's events was actually Hyatt. Keep

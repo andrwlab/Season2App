@@ -5,7 +5,7 @@ import PilotMomentsRail from "../components/PilotMomentsRail";
 import { db } from "../firebase";
 import useAudienceTracking from "../hooks/useAudienceTracking";
 import { formatPhase, PilotPhase } from "../pilot/clock";
-import { assetUrl, FOOTBALL_2026_TOURNAMENT_ID, footballMatchDate, normalizeFootballMatch, normalizeFootballTeam, PilotTeam } from "../pilot/footballTournament";
+import { assetUrl, displayFootballPlayerName, FOOTBALL_2026_TOURNAMENT_ID, footballMatchDate, normalizeFootballMatch, normalizeFootballTeam, PilotTeam } from "../pilot/footballTournament";
 
 type TournamentSection = "home" | "matches" | "standings" | "stats" | "teams";
 type Match = { scheduledDate?: string | null; matchId: string; tournamentId: string; homeName: string; awayName: string; homeLogoUrl?: string; awayLogoUrl?: string; scoreHome: number; scoreAway: number; status: "READY" | "LIVE" | "FULLTIME"; phase: PilotPhase; stage?: "GROUP" | "SEMIFINAL" | "FINAL"; matchday?: number; order?: number; tieId?: "SF1" | "SF2"; leg?: 1 | 2; homeTeamId?: string | null; awayTeamId?: string | null };
@@ -159,7 +159,7 @@ const PilotTournament = () => {
     const stats = new Map<string, PlayerStat>();
     const ensure = (id?: string | null, name?: string | null) => { if (!id || !name) return null; if (!stats.has(id)) stats.set(id, { playerId: id, name, goals: 0, assists: 0, yellow: 0, red: 0 }); return stats.get(id)!; };
     const reversed = new Set(events.filter((event) => event.type === "REVERSAL" && event.revertsEventId).map((event) => event.revertsEventId));
-    events.filter((event) => event.type !== "REVERSAL" && event.status !== "REVERSED" && !reversed.has(event.eventId)).forEach((event) => { const player = ensure(event.playerId, event.playerName); if (player && (event.type === "GOAL" || event.type === "PENALTY_GOAL")) player.goals++; if (player && event.type === "YELLOW_CARD") player.yellow++; if (player && event.type === "RED_CARD") player.red++; const assister = ensure(event.assistPlayerId, event.assistPlayerName); if (assister && event.type === "GOAL") assister.assists++; });
+    events.filter((event) => event.type !== "REVERSAL" && event.status !== "REVERSED" && !reversed.has(event.eventId)).forEach((event) => { const player = ensure(event.playerId, displayFootballPlayerName(event.playerId, event.playerName)); if (player && (event.type === "GOAL" || event.type === "PENALTY_GOAL")) player.goals++; if (player && event.type === "YELLOW_CARD") player.yellow++; if (player && event.type === "RED_CARD") player.red++; const assister = ensure(event.assistPlayerId, displayFootballPlayerName(event.assistPlayerId, event.assistPlayerName)); if (assister && event.type === "GOAL") assister.assists++; });
     return [...stats.values()].sort((a, b) => b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name));
   }, [events]);
   const displayName = tournamentId === FOOTBALL_2026_TOURNAMENT_ID ? "Champions League" : tournament?.name || tournamentId;
