@@ -7,6 +7,7 @@ import { useAuth } from "../AuthContext";
 import { canScoreMatches, isAdminRole } from "../auth/roles";
 import { getFirebaseErrorCode } from "../auth/errors";
 import PilotMomentComposer from "../components/PilotMomentComposer";
+import PilotAdminEventEditor from "../components/PilotAdminEventEditor";
 import { db } from "../firebase";
 import {
   DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
@@ -17,10 +18,11 @@ import {
 } from "../pilot/clock";
 import PilotScorer from "./PilotScorer";
 import { normalizeFootballMatch } from "../pilot/footballTournament";
+import { PilotPlayer } from "../pilot/players";
 
 const clampMinutes = (value: number) => Math.min(90, Math.max(1, Math.round(Number(value) || 10)));
 
-type MomentMatchState = PilotClockState & { homeName: string; awayName: string };
+type MomentMatchState = PilotClockState & { homeName: string; awayName: string; homePlayers?: PilotPlayer[]; awayPlayers?: PilotPlayer[] };
 
 const PilotScorerSurface = () => {
   const { tournamentId = "pilot0", matchId = "match-001" } = useParams();
@@ -67,6 +69,8 @@ const PilotScorerSurface = () => {
         periodDurationMs: Number(data.periodDurationMs ?? DEFAULT_PERIOD_DURATION_MS),
         extraTimePeriodDurationMs: Number(data.extraTimePeriodDurationMs ?? DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS),
         completedMatchClockMs: data.completedMatchClockMs == null ? undefined : Number(data.completedMatchClockMs),
+        homePlayers: data.homePlayers,
+        awayPlayers: data.awayPlayers,
       });
 
       if (nextClockStatus === "NOT_STARTED") {
@@ -186,6 +190,8 @@ const PilotScorerSurface = () => {
       )}
 
       <PilotScorer />
+
+      {canManageMoments && exists && momentMatch && <PilotAdminEventEditor pilotMatchId={pilotMatchId} homePlayers={momentMatch.homePlayers} awayPlayers={momentMatch.awayPlayers} />}
 
       {canManageMoments && exists && momentMatch && <button type="button" onClick={() => setShowMomentComposer(true)} className="fixed bottom-4 right-4 z-40 rounded-full bg-cyan-300 px-5 py-3.5 text-sm font-black text-slate-950 shadow-2xl shadow-black/40 active:scale-[0.98]">+ MOMENT</button>}
 
