@@ -38,6 +38,12 @@ const player = (fullName: string, name: string): PilotRosterPlayer => ({
 });
 
 const MR_CASTILLO = player("Mr. Castillo", "Mr. Castillo");
+// The original roster entry carrying Antonio's events was actually Hyatt. Keep
+// that legacy id attached to Hyatt and create a clean Antonio identity.
+const HYATT = { ...player("Antonio Zhu", "Hyatt") };
+const ANTONIO = player("Antonio", "Antonio");
+const DYLAN_D_CORRECTED = { ...player("Dylan Dely", "Dylan D."), playerId: playerIdFor("Henrique Arenas") };
+const HENRIQUE_CORRECTED = { ...player("Henrique Arenas", "Henrique"), playerId: playerIdFor("Dylan Dely") };
 
 export const FOOTBALL_2026_TOURNAMENT_ID = "football-2026";
 
@@ -99,10 +105,11 @@ export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
       player("Johan Ching", "Johan"),
       player("Dylan Sanjur", "Dylan S."),
       player("Rian Ahir Ahir", "Rian"),
-      player("Dylan Dely", "Dylan D."),
-      player("Antonio Zhu", "Antonio"),
+      DYLAN_D_CORRECTED,
+      HYATT,
+      ANTONIO,
       player("Winston Chen", "Winston"),
-      player("Henrique Arenas", "Henrique"),
+      HENRIQUE_CORRECTED,
       player("Eduardo Gudiño", "Eduardo"),
       player("Adrian Fernández", "Adrian"),
       player("Dylan Rodríguez", "Dylan R."),

@@ -86,12 +86,21 @@ const statusFor = (phase: PilotPhase, clockStatus: PilotClockStatus) => {
   return "LIVE";
 };
 
+const lineupImageFor = (teamId?: string | null, teamName?: string) => {
+  if (teamId === "real-madrid" || teamName === "Real Madrid C.F.") return "lineups/real-madrid-j1.webp";
+  if (teamId === "fc-barcelona" || teamName === "F.C. Barcelona") return "lineups/barcelona-j1.webp";
+  if (teamId === "slovan-bratislava" || teamName === "Manchester City") return "lineups/manchester-city-j1.webp";
+  if (teamId === "paris-saint-germain" || teamName === "Paris Saint-Germain") return "lineups/psg-j1.webp";
+  return null;
+};
+
 const PilotLive = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const matchTabs = [{ key: "summary", label: "Resumen" }, { key: "events", label: "Jugadas" }, { key: "stats", label: "Estadísticas" }, { key: "lineups", label: "Alineaciones" }];
-  const activeTab = matchTabs.some((tab) => tab.key === searchParams.get("tab")) ? searchParams.get("tab")! : "summary";
-  const selectTab = (key: string) => setSearchParams((previous) => { const next = new URLSearchParams(previous); next.set("tab", key); return next; }, { replace: true });
   const { tournamentId = "pilot0", matchId = "match-001" } = useParams();
+  const matchTabs = [{ key: "summary", label: "Resumen" }, { key: "events", label: "Jugadas" }, { key: "stats", label: "Estadísticas" }, { key: "lineups", label: "Alineaciones" }];
+  const defaultTab = matchId === "group-01" || matchId === "group-02" ? "lineups" : "summary";
+  const activeTab = matchTabs.some((tab) => tab.key === searchParams.get("tab")) ? searchParams.get("tab")! : defaultTab;
+  const selectTab = (key: string) => setSearchParams((previous) => { const next = new URLSearchParams(previous); next.set("tab", key); return next; }, { replace: true });
   const pilotMatchId = `${tournamentId}__${matchId}`;
   const [match, setMatch] = useState<PilotMatch | null>(null);
   const [tournament, setTournament] = useState<PilotTournament | null>(null);
@@ -264,6 +273,7 @@ const PilotLive = () => {
             { name: match.awayName, players: match.awayPlayers ?? [], starters: match.awayStarterIds ?? [] },
           ].map((team, index) => <div key={index} className="champions-match-panel rounded-3xl border border-white/10 p-4">
             <h3 className="font-black">{team.name}</h3>
+            {lineupImageFor(index === 0 ? match.homeTeamId : match.awayTeamId, team.name) && <img src={assetUrl(lineupImageFor(index === 0 ? match.homeTeamId : match.awayTeamId, team.name) || undefined)} alt={`Alineación de ${team.name}`} loading="lazy" className="mt-3 w-full rounded-2xl border border-cyan-200/15 object-contain" />}
             {team.players.length === 0 && <p className="mt-3 text-sm text-slate-300">Plantilla por confirmar.</p>}
             {(match.lineupsConfirmed ? ["Titulares", "Suplentes"] : ["Plantilla"]).map((group) => <div key={group} className="mt-4"><h4 className="text-xs font-bold text-cyan-200">{group}</h4><ul className="mt-2 space-y-1">{team.players.filter((player) => group === "Plantilla" || (group === "Titulares") === team.starters.includes(player.playerId)).map((player) => <li key={player.playerId}><Link className={`flex min-h-11 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}
           </div>)}</div>
