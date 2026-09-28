@@ -46,7 +46,10 @@ export const LEGACY_HYATT_PLAYER_ID = playerIdFor("Antonio Zhu");
 export const ANTONIO_PLAYER_ID = playerIdFor("Antonio");
 export const displayFootballPlayerName = (playerId?: string | null, playerName?: string | null) => {
   if (!playerName) return playerName ?? undefined;
-  if (playerId === LEGACY_HYATT_PLAYER_ID || (playerName === "Antonio" && playerId !== ANTONIO_PLAYER_ID)) return "Hyatt";
+  // All existing Antonio-labeled events belong to Hyatt. Antonio's new
+  // identity has no historical events yet and remains available for future
+  // scoring selections.
+  if (playerId === LEGACY_HYATT_PLAYER_ID || playerName === "Antonio") return "Hyatt";
   return playerName;
 };
 
