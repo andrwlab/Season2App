@@ -96,7 +96,15 @@ const PilotSetup = () => {
     const unsubscribeTournament = onSnapshot(tournamentRef, (snap) => {
       if (!snap.exists()) return;
       const data = snap.data() as PilotTournamentDoc;
-      setTournament({ ...data, teams: data.teams?.map(normalizeFootballTeam) });
+      const normalizedTeams = data.teams?.map(normalizeFootballTeam);
+      setTournament({ ...data, teams: normalizedTeams });
+      // Persist the roster correction for the active tournament as well as
+      // normalizing it in the UI, so new matches use the corrected identities.
+      if (isAdmin && data.teams && normalizedTeams && JSON.stringify(data.teams) !== JSON.stringify(normalizedTeams)) {
+        void setDoc(tournamentRef, { teams: normalizedTeams, updatedAt: serverTimestamp() }, { merge: true }).catch((error) => {
+          console.error("Failed to persist football roster correction", error);
+        });
+      }
       setName(tournamentId === FOOTBALL_2026_TOURNAMENT_ID ? "Champions League" : data.name || tournamentId);
       setDefaultHalfMinutes(data.defaultHalfMinutes || 10);
       setHalfMinutes(data.defaultHalfMinutes || 10);
@@ -118,7 +126,7 @@ const PilotSetup = () => {
       unsubscribeTournament();
       unsubscribeMatches();
     };
-  }, [authLoading, canOperate, tournamentId, tournamentRef, user]);
+  }, [authLoading, canOperate, isAdmin, tournamentId, tournamentRef, user]);
 
   const login = async () => {
     setAuthError(null);

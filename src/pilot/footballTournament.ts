@@ -57,6 +57,27 @@ const HYATT = { ...player("Antonio Zhu", "Hyatt") };
 const ANTONIO = player("Antonio", "Antonio");
 const DYLAN_D_CORRECTED = { ...player("Dylan Dely", "Dylan D."), playerId: playerIdFor("Henrique Arenas") };
 const HENRIQUE_CORRECTED = { ...player("Henrique Arenas", "Henrique"), playerId: playerIdFor("Dylan Dely") };
+const DYLAN_D_ID = playerIdFor("Dylan Dely");
+const HENRIQUE_ID = playerIdFor("Henrique Arenas");
+
+const canonicalizeManchesterPlayers = <T extends { playerId: string; name: string; fullName?: string }>(players: T[]): T[] => {
+  const corrected = players.map((item) => {
+    // Existing roster data used these IDs before the titularity correction.
+    if (item.playerId === LEGACY_HYATT_PLAYER_ID && item.name === "Antonio") {
+      return { ...item, name: "Hyatt", fullName: item.fullName || "Antonio Zhu" };
+    }
+    if (item.playerId === DYLAN_D_ID && item.name === "Dylan D.") {
+      return { ...item, playerId: HENRIQUE_ID, fullName: item.fullName || "Dylan Dely" };
+    }
+    if (item.playerId === HENRIQUE_ID && item.name === "Henrique") {
+      return { ...item, playerId: DYLAN_D_ID, fullName: item.fullName || "Henrique Arenas" };
+    }
+    return item;
+  });
+  // Antonio is a new identity; do not reuse Hyatt's historical ID.
+  if (!corrected.some((item) => item.playerId === ANTONIO_PLAYER_ID)) corrected.push(ANTONIO as T);
+  return corrected;
+};
 
 export const FOOTBALL_2026_TOURNAMENT_ID = "football-2026";
 
@@ -173,7 +194,7 @@ export const normalizeFootballTeam = (team: PilotTeam): PilotTeam => {
       name: "Manchester City",
       shortName: "Man City",
       logoPath: "logos/football/manchester-city.png",
-      players: [...playersWithoutCastillo, MR_CASTILLO],
+      players: [...canonicalizeManchesterPlayers(playersWithoutCastillo), MR_CASTILLO],
     };
   }
   if (team.teamId === "paris-saint-germain") return { ...team, players: playersWithoutCastillo };
@@ -197,8 +218,9 @@ export const normalizeFootballMatch = <T extends {
   awayLogoUrl?: string | null;
   homePlayers?: MatchRosterPlayer[];
   awayPlayers?: MatchRosterPlayer[];
-}>(match: T): T => ({
-  ...match,
+}>(match: T): T => {
+  const normalized = {
+    ...match,
   ...(match.homeTeamId === "slovan-bratislava" || match.homeName === "ŠK Slovan Bratislava"
     ? { homeName: "Manchester City", homeLogoUrl: "logos/football/manchester-city.png" }
     : {}),
@@ -206,8 +228,16 @@ export const normalizeFootballMatch = <T extends {
     ? { awayName: "Manchester City", awayLogoUrl: "logos/football/manchester-city.png" }
     : {}),
   ...(match.homePlayers ? { homePlayers: normalizeMatchRoster(match.homePlayers, match.homeTeamId, match.homeName) } : {}),
-  ...(match.awayPlayers ? { awayPlayers: normalizeMatchRoster(match.awayPlayers, match.awayTeamId, match.awayName) } : {}),
-});
+    ...(match.awayPlayers ? { awayPlayers: normalizeMatchRoster(match.awayPlayers, match.awayTeamId, match.awayName) } : {}),
+  } as T;
+  if (normalized.homeTeamId === "slovan-bratislava" || normalized.homeName === "Manchester City") {
+    normalized.homePlayers = normalized.homePlayers && canonicalizeManchesterPlayers(normalized.homePlayers);
+  }
+  if (normalized.awayTeamId === "slovan-bratislava" || normalized.awayName === "Manchester City") {
+    normalized.awayPlayers = normalized.awayPlayers && canonicalizeManchesterPlayers(normalized.awayPlayers);
+  }
+  return normalized;
+};
 
 export const assetUrl = (path?: string) => {
   if (!path) return undefined;
