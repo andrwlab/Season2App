@@ -94,6 +94,16 @@ const lineupImageFor = (teamId?: string | null, teamName?: string) => {
   return null;
 };
 
+const LineupPoster = ({ src, teamName }: { src: string; teamName: string }) => (
+  <div className="relative mt-3 overflow-hidden rounded-2xl border border-cyan-200/15">
+    <img src={assetUrl(src)} alt={`Alineación de ${teamName}`} loading="lazy" className="block w-full object-contain" />
+    {teamName === "Real Madrid C.F." && <svg aria-hidden="true" viewBox="0 0 1122 1402" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">
+      <rect x="210" y="629" width="182" height="42" rx="9" fill="#06183d" stroke="#0878ff" strokeWidth="1" />
+      <text x="301" y="658" textAnchor="middle" fill="#fff" fontFamily="Impact, 'Arial Narrow', sans-serif" fontSize="25" fontWeight="700">Iann</text>
+    </svg>}
+  </div>
+);
+
 const PilotLive = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { tournamentId = "pilot0", matchId = "match-001" } = useParams();
@@ -273,7 +283,7 @@ const PilotLive = () => {
             { name: match.awayName, players: match.awayPlayers ?? [], starters: match.awayStarterIds ?? [] },
           ].map((team, index) => <div key={index} className="champions-match-panel rounded-3xl border border-white/10 p-4">
             <h3 className="font-black">{team.name}</h3>
-            {lineupImageFor(index === 0 ? match.homeTeamId : match.awayTeamId, team.name) && <img src={assetUrl(lineupImageFor(index === 0 ? match.homeTeamId : match.awayTeamId, team.name) || undefined)} alt={`Alineación de ${team.name}`} loading="lazy" className="mt-3 w-full rounded-2xl border border-cyan-200/15 object-contain" />}
+            {lineupImageFor(index === 0 ? match.homeTeamId : match.awayTeamId, team.name) && <LineupPoster src={lineupImageFor(index === 0 ? match.homeTeamId : match.awayTeamId, team.name)!} teamName={team.name} />}
             {team.players.length === 0 && <p className="mt-3 text-sm text-slate-300">Plantilla por confirmar.</p>}
             {(match.lineupsConfirmed ? ["Titulares", "Suplentes"] : ["Plantilla"]).map((group) => <div key={group} className="mt-4"><h4 className="text-xs font-bold text-cyan-200">{group}</h4><ul className="mt-2 space-y-1">{team.players.filter((player) => group === "Plantilla" || (group === "Titulares") === team.starters.includes(player.playerId)).map((player) => <li key={player.playerId}><Link className={`flex min-h-11 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}
           </div>)}</div>
