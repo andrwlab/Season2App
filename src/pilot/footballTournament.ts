@@ -49,16 +49,16 @@ export const displayFootballPlayerName = (playerId?: string | null, playerName?:
   // All existing Antonio-labeled events belong to Hyatt. Antonio's new
   // identity has no historical events yet and remains available for future
   // scoring selections.
-  if (playerId === LEGACY_HYATT_PLAYER_ID || playerName === "Antonio") return "Hyatt";
+  if (playerId === LEGACY_HYATT_PLAYER_ID || (!playerId && playerName === "Antonio")) return "Hyatt";
   return playerName;
 };
 
 const MR_CASTILLO = player("Mr. Castillo", "Mr. Castillo");
 // The original roster entry carrying Antonio's events was actually Hyatt. Keep
 // that legacy id attached to Hyatt and create a clean Antonio identity.
-const HYATT = { ...player("Antonio Zhu", "Hyatt") };
-const ANTONIO = player("Antonio", "Antonio");
-const DYLAN_D_CORRECTED = { ...player("Dylan Dely", "Dylan D."), playerId: playerIdFor("Henrique Arenas") };
+const HYATT = { ...player("Hyatt Navarro", "Hyatt"), playerId: playerIdFor("Antonio Zhu") };
+const ANTONIO = { ...player("Antonio Zhu", "Antonio"), playerId: playerIdFor("Antonio") };
+const DYLAN_D_CORRECTED = { ...player("Dylan Dely", "Dylan Dely"), playerId: playerIdFor("Henrique Arenas") };
 const HENRIQUE_CORRECTED = { ...player("Henrique Arenas", "Henrique"), playerId: playerIdFor("Dylan Dely") };
 const DYLAN_D_ID = playerIdFor("Dylan Dely");
 const HENRIQUE_ID = playerIdFor("Henrique Arenas");
@@ -66,11 +66,11 @@ const HENRIQUE_ID = playerIdFor("Henrique Arenas");
 const canonicalizeManchesterPlayers = <T extends { playerId: string; name: string; fullName?: string }>(players: T[]): T[] => {
   const corrected = players.map((item) => {
     // Existing roster data used these IDs before the titularity correction.
-    if (item.playerId === LEGACY_HYATT_PLAYER_ID && item.name === "Antonio") {
-      return { ...item, name: "Hyatt", fullName: item.fullName || "Antonio Zhu" };
+    if (item.playerId === LEGACY_HYATT_PLAYER_ID) {
+      return { ...item, name: "Hyatt", fullName: "Hyatt Navarro" };
     }
     if (item.playerId === DYLAN_D_ID && item.name === "Dylan D.") {
-      return { ...item, playerId: HENRIQUE_ID, fullName: item.fullName || "Dylan Dely" };
+      return { ...item, playerId: HENRIQUE_ID, name: "Dylan Dely", fullName: "Dylan Dely" };
     }
     if (item.playerId === HENRIQUE_ID && item.name === "Henrique") {
       return { ...item, playerId: DYLAN_D_ID, fullName: item.fullName || "Henrique Arenas" };
@@ -111,6 +111,7 @@ export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
       player("Mr. Solís", "Mr. Solís"),
       player("James De Gracia", "James"),
       player("Joel Pérez", "Joel"),
+      MR_CASTILLO,
     ],
   },
   {
@@ -125,11 +126,11 @@ export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
       player("Juan Bonilla", "Juan"),
       player("Brian Chen", "Brian"),
       player("Williams Luo", "Williams"),
-      player("Jaime Gibss", "Jaime"),
+      { ...player("Jaime Gibbs", "Jaime"), playerId: playerIdFor("Jaime Gibss") },
       player("Ian Espino", "Ian"),
       player("Mr. Marmolejo", "Mr. Marmolejo"),
       player("Héctor Chen", "Héctor C."),
-      player("José Pimentel", "José P."),
+      player("José Pimentel", "José"),
     ],
   },
   {
@@ -148,9 +149,8 @@ export const FOOTBALL_2026_TEAMS: PilotTeam[] = [
       player("Winston Chen", "Winston"),
       HENRIQUE_CORRECTED,
       player("Eduardo Gudiño", "Eduardo"),
-      player("Adrian Fernández", "Adrian"),
+      player("Adrián Fernández", "Adrián"),
       player("Dylan Rodríguez", "Dylan R."),
-      MR_CASTILLO,
     ],
   },
   {
@@ -191,13 +191,16 @@ export const FOOTBALL_2026_SCHEDULE: PilotScheduledMatch[] = [
 
 export const normalizeFootballTeam = (team: PilotTeam): PilotTeam => {
   const playersWithoutCastillo = team.players.filter((item) => item.playerId !== MR_CASTILLO.playerId);
+  if (team.teamId === "real-madrid") {
+    return { ...team, players: [...playersWithoutCastillo, MR_CASTILLO] };
+  }
   if (team.teamId === "slovan-bratislava") {
     return {
       ...team,
       name: "Manchester City",
       shortName: "Man City",
       logoPath: "logos/football/manchester-city.png",
-      players: [...canonicalizeManchesterPlayers(playersWithoutCastillo), MR_CASTILLO],
+      players: canonicalizeManchesterPlayers(playersWithoutCastillo),
     };
   }
   if (team.teamId === "paris-saint-germain") return { ...team, players: playersWithoutCastillo };
@@ -206,11 +209,7 @@ export const normalizeFootballTeam = (team: PilotTeam): PilotTeam => {
 
 type MatchRosterPlayer = { playerId: string; name: string; fullName?: string; suspended?: boolean; suspensionReason?: string };
 
-const normalizeMatchRoster = (players: MatchRosterPlayer[], teamId?: string | null, teamName?: string) => {
-  const withoutCastillo = players.filter((item) => item.playerId !== MR_CASTILLO.playerId);
-  const isManchesterCity = teamId === "slovan-bratislava" || teamName === "ŠK Slovan Bratislava" || teamName === "Manchester City";
-  return isManchesterCity ? [...withoutCastillo, MR_CASTILLO] : withoutCastillo;
-};
+const normalizeMatchRoster = (players: MatchRosterPlayer[]) => players;
 
 export const normalizeFootballMatch = <T extends {
   homeTeamId?: string | null;

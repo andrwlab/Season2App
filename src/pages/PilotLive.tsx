@@ -87,10 +87,10 @@ const statusFor = (phase: PilotPhase, clockStatus: PilotClockStatus) => {
 };
 
 const lineupImageFor = (teamId?: string | null, teamName?: string) => {
-  if (teamId === "real-madrid" || teamName === "Real Madrid C.F.") return "lineups/real-madrid-j1.webp";
-  if (teamId === "fc-barcelona" || teamName === "F.C. Barcelona") return "lineups/barcelona-j1.webp";
-  if (teamId === "slovan-bratislava" || teamName === "Manchester City") return "lineups/manchester-city-j1.webp";
-  if (teamId === "paris-saint-germain" || teamName === "Paris Saint-Germain") return "lineups/psg-j1.webp";
+  if (teamId === "real-madrid" || teamName === "Real Madrid C.F.") return "lineups/real-madrid-j1-corrected.webp";
+  if (teamId === "fc-barcelona" || teamName === "F.C. Barcelona") return "lineups/barcelona-j1-corrected.webp";
+  if (teamId === "slovan-bratislava" || teamName === "Manchester City") return "lineups/manchester-city-j1-corrected.webp";
+  if (teamId === "paris-saint-germain" || teamName === "Paris Saint-Germain") return "lineups/psg-j1-corrected.webp";
   return null;
 };
 

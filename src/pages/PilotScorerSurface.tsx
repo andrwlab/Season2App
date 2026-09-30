@@ -8,6 +8,7 @@ import { canScoreMatches, isAdminRole } from "../auth/roles";
 import { getFirebaseErrorCode } from "../auth/errors";
 import PilotMomentComposer from "../components/PilotMomentComposer";
 import PilotAdminEventEditor from "../components/PilotAdminEventEditor";
+import PilotFootballMatchdayCorrection from "../components/PilotFootballMatchdayCorrection";
 import { db } from "../firebase";
 import {
   DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
@@ -190,6 +191,8 @@ const PilotScorerSurface = () => {
       )}
 
       <PilotScorer />
+
+      {canManageMoments && exists && <PilotFootballMatchdayCorrection tournamentId={tournamentId} matchId={matchId} pilotMatchId={pilotMatchId} />}
 
       {canManageMoments && exists && momentMatch && <PilotAdminEventEditor pilotMatchId={pilotMatchId} homePlayers={momentMatch.homePlayers} awayPlayers={momentMatch.awayPlayers} />}
 
