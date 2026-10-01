@@ -96,7 +96,7 @@ const lineupImageFor = (teamId?: string | null, teamName?: string) => {
 
 const LineupPoster = ({ src, teamName }: { src: string; teamName: string }) => (
   <div className="relative mt-3 overflow-hidden rounded-2xl border border-cyan-200/15">
-    <img src={assetUrl(src)} alt={`Alineación de ${teamName}`} loading="lazy" className="block w-full object-contain" />
+    <img src={assetUrl(src)} alt={`Alineación de ${teamName}`} loading="lazy" className="mx-auto block h-[min(68dvh,700px)] w-full object-contain" />
     {teamName === "Real Madrid C.F." && <svg aria-hidden="true" viewBox="0 0 1122 1402" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">
       <rect x="210" y="629" width="182" height="42" rx="9" fill="#06183d" stroke="#0878ff" strokeWidth="1" />
       <text x="301" y="658" textAnchor="middle" fill="#fff" fontFamily="Impact, 'Arial Narrow', sans-serif" fontSize="25" fontWeight="700">Iann</text>
@@ -117,10 +117,13 @@ const PilotLive = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [lineupSide, setLineupSide] = useState<0 | 1>(0);
   const userRole = useUserRole();
   const canSeeMatchId = userRole === "admin" || userRole === "scorekeeper";
 
   useAudienceTracking({ tournamentId, matchId, scope: "MATCH" });
+
+  useEffect(() => setLineupSide(0), [matchId]);
 
   const matchRef = useMemo(() => doc(db, "pilotMatches", pilotMatchId), [pilotMatchId]);
   const tournamentRef = useMemo(() => doc(db, "pilotTournaments", tournamentId), [tournamentId]);
@@ -276,17 +279,33 @@ const PilotLive = () => {
           <PilotEventFeed pilotMatchId={pilotMatchId} homeName={match.homeName} awayName={match.awayName} periodDurationMs={periodDurationMs} extraTimePeriodDurationMs={extraTimePeriodDurationMs} />
         </section>}
         {activeTab === "lineups" && <section className="mt-5 space-y-4">
-          <h2 className="font-black">Alineaciones iniciales</h2>
-          {!match.lineupsConfirmed && <p className="text-sm text-blue-100">Titulares pendientes de confirmación. Se muestra la plantilla disponible.</p>}
-          <div className="grid gap-4 sm:grid-cols-2">{[
+          <div><h2 className="font-black">Alineaciones</h2>{!match.lineupsConfirmed && <p className="mt-1 text-sm text-blue-100">Titulares pendientes de confirmación. Se muestra la plantilla disponible.</p>}</div>
+          {(() => {
+            const lineupTeams = [
             { name: match.homeName, players: match.homePlayers ?? [], starters: match.homeStarterIds ?? [] },
             { name: match.awayName, players: match.awayPlayers ?? [], starters: match.awayStarterIds ?? [] },
-          ].map((team, index) => <div key={index} className="champions-match-panel rounded-3xl border border-white/10 p-4">
-            <h3 className="font-black">{team.name}</h3>
-            {lineupImageFor(index === 0 ? match.homeTeamId : match.awayTeamId, team.name) && <LineupPoster src={lineupImageFor(index === 0 ? match.homeTeamId : match.awayTeamId, team.name)!} teamName={team.name} />}
-            {team.players.length === 0 && <p className="mt-3 text-sm text-slate-300">Plantilla por confirmar.</p>}
-            {(match.lineupsConfirmed ? ["Titulares", "Suplentes"] : ["Plantilla"]).map((group) => <div key={group} className="mt-4"><h4 className="text-xs font-bold text-cyan-200">{group}</h4><ul className="mt-2 space-y-1">{team.players.filter((player) => group === "Plantilla" || (group === "Titulares") === team.starters.includes(player.playerId)).map((player) => <li key={player.playerId}><Link className={`flex min-h-11 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}
-          </div>)}</div>
+            ];
+            const team = lineupTeams[lineupSide];
+            const teamId = lineupSide === 0 ? match.homeTeamId : match.awayTeamId;
+            const poster = lineupImageFor(teamId, team.name);
+            const playerGroups = (match.lineupsConfirmed ? ["Titulares", "Suplentes"] : ["Plantilla"]).map((group) => ({
+              name: group,
+              players: team.players.filter((player) => group === "Plantilla" || (group === "Titulares") === team.starters.includes(player.playerId)),
+            }));
+            return <>
+              <div role="tablist" aria-label="Seleccionar equipo" className="grid grid-cols-2 gap-2 rounded-2xl border border-white/[0.08] bg-slate-950/60 p-1.5">
+                {lineupTeams.map((item, index) => <button key={item.name} type="button" role="tab" aria-selected={lineupSide === index} onClick={() => setLineupSide(index as 0 | 1)} className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-2 text-xs font-black transition sm:text-sm ${lineupSide === index ? "bg-cyan-300/15 text-cyan-100 shadow-inner" : "text-white/45 hover:bg-white/[0.04] hover:text-white/75"}`}>
+                  <span className="max-w-full truncate">{item.name}</span>
+                </button>)}
+              </div>
+              <div role="tabpanel" className="champions-match-panel rounded-3xl border border-white/10 p-3 sm:p-4">
+                <div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{team.name}</p><p className="mt-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/35">{match.lineupsConfirmed ? `${team.starters.length} titulares` : "Plantilla"}</p></div><span className="shrink-0 rounded-full border border-cyan-200/15 bg-cyan-200/[0.06] px-3 py-1 text-[0.62rem] font-black uppercase tracking-wider text-cyan-100">{lineupSide === 0 ? "Local" : "Visitante"}</span></div>
+                {poster && <LineupPoster src={poster} teamName={team.name} />}
+                {team.players.length === 0 && <p className="mt-3 text-sm text-slate-300">Plantilla por confirmar.</p>}
+                {poster ? <details className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3"><summary className="cursor-pointer py-3 text-xs font-bold text-cyan-100/75">Ver lista de jugadores</summary><div className="grid gap-4 border-t border-white/[0.06] pb-3 pt-2 sm:grid-cols-2">{playerGroups.map((group) => <div key={group.name}><h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-cyan-200">{group.name}</h4><ul className="mt-1 space-y-1">{group.players.map((player) => <li key={player.playerId}><Link className={`flex min-h-9 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}</div></details> : <div className="mt-3 grid gap-4 sm:grid-cols-2">{playerGroups.map((group) => <div key={group.name}><h4 className="text-xs font-bold text-cyan-200">{group.name}</h4><ul className="mt-2 space-y-1">{group.players.map((player) => <li key={player.playerId}><Link className={`flex min-h-11 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}</div>}
+              </div>
+            </>;
+          })()}
         </section>}
         </div>
       </main>

@@ -107,11 +107,94 @@ const FeaturedFixture = ({ match, tournamentId }: { match: Match; tournamentId: 
   <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`${match.homeName} contra ${match.awayName}`} className="champions-featured-fixture grid grid-cols-[4.5rem_minmax(0,1fr)_auto_minmax(0,1fr)_4.5rem] items-center gap-x-2 px-3 py-4 sm:grid-cols-[6.5rem_minmax(0,1fr)_auto_minmax(0,1fr)_6.5rem] sm:px-6 sm:py-5">
     <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl} featured />
     <span className="min-w-0 truncate text-right text-[0.78rem] font-black text-white sm:text-base">{shortTeamName(match.homeName)}</span>
-    <span className="px-2 text-[0.68rem] font-black uppercase tracking-[0.14em] text-cyan-200/75 sm:text-xs">vs</span>
+    <span className="whitespace-nowrap px-2 text-[0.68rem] font-black uppercase tracking-[0.08em] text-cyan-200/75 sm:text-xs">{match.status === "READY" ? "vs" : `${match.scoreHome}–${match.scoreAway}`}</span>
     <span className="min-w-0 truncate text-[0.78rem] font-black text-white sm:text-base">{shortTeamName(match.awayName)}</span>
     <span className="justify-self-end"><TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl} featured /></span>
   </Link>
 );
+
+type FeaturedMatchday = { key: string; label: string; date: string; matches: Match[]; sort: number };
+
+const FeaturedMatchdayCarousel = ({ matches, tournamentId }: { matches: Match[]; tournamentId: string }) => {
+  const groups = useMemo(() => {
+    const grouped = new Map<string, FeaturedMatchday>();
+    matches.forEach((match) => {
+      let key: string;
+      let label: string;
+      let sort: number;
+      if (match.stage === "SEMIFINAL") {
+        key = `semi-${match.leg ?? 1}`;
+        label = `Semifinales · ${match.leg === 2 ? "Vuelta" : "Ida"}`;
+        sort = 100 + (match.leg ?? 1);
+      } else if (match.stage === "FINAL") {
+        key = "final";
+        label = "Final";
+        sort = 200;
+      } else {
+        key = `matchday-${match.matchday ?? 0}`;
+        label = match.matchday ? `Jornada ${match.matchday}` : "Primera fase";
+        sort = match.matchday ?? 99;
+      }
+      const group = grouped.get(key) ?? { key, label, date: footballMatchDate(match) ?? "", matches: [], sort };
+      group.matches.push(match);
+      if (!group.date && footballMatchDate(match)) group.date = footballMatchDate(match)!;
+      grouped.set(key, group);
+    });
+    return [...grouped.values()].map((group) => ({ ...group, matches: group.matches.sort((a, b) => (a.order ?? 99) - (b.order ?? 99)) })).sort((a, b) => a.sort - b.sort);
+  }, [matches]);
+  const firstUpcomingKey = groups.find((group) => group.matches.some((match) => match.status === "READY"))?.key ?? groups.at(-1)?.key ?? "";
+  const [activeKey, setActiveKey] = useState(firstUpcomingKey);
+  const touchStart = React.useRef<{ x: number; y: number } | null>(null);
+  const touchMoved = React.useRef(false);
+  const activeIndex = Math.max(0, groups.findIndex((group) => group.key === activeKey));
+  const activeGroup = groups[activeIndex];
+
+  useEffect(() => {
+    if (!groups.some((group) => group.key === activeKey)) setActiveKey(firstUpcomingKey);
+  }, [activeKey, firstUpcomingKey, groups]);
+
+  const move = (offset: number) => {
+    const next = Math.min(groups.length - 1, Math.max(0, activeIndex + offset));
+    if (groups[next]) setActiveKey(groups[next].key);
+  };
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start) return;
+    const dx = event.changedTouches[0].clientX - start.x;
+    const dy = event.changedTouches[0].clientY - start.y;
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    touchMoved.current = true;
+    move(dx < 0 ? 1 : -1);
+    window.setTimeout(() => { touchMoved.current = false; }, 450);
+  };
+
+  if (!activeGroup) return <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">Todavía no hay jornadas confirmadas.</div>;
+
+  return <div className="champions-featured-fixtures overflow-hidden rounded-[1.45rem]" aria-roledescription="carrusel de jornadas" aria-label="Próximos partidos por jornada"
+    onTouchStart={(event) => { const touch = event.touches[0]; touchStart.current = { x: touch.clientX, y: touch.clientY }; }}
+    onTouchEnd={handleTouchEnd}
+    onClickCapture={(event) => { if (touchMoved.current) { event.preventDefault(); event.stopPropagation(); touchMoved.current = false; } }}
+    onKeyDown={(event) => { if (event.key === "ArrowLeft") move(1); if (event.key === "ArrowRight") move(-1); }}
+    tabIndex={0}>
+    <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-6">
+      <div className="min-w-0"><p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-cyan-200/85">{activeGroup.label}</p><p className="mt-1 text-xs font-semibold text-blue-100/75">{dateLabel(activeGroup.date)}</p></div>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="mr-1 text-[0.65rem] font-bold tabular-nums text-white/40">{activeIndex + 1}/{groups.length}</span>
+        <button type="button" onClick={() => move(-1)} disabled={activeIndex === 0} aria-label="Jornada anterior" className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-200/20 bg-white/[0.04] text-lg font-bold text-cyan-100 transition hover:bg-cyan-200/10 disabled:opacity-30">‹</button>
+        <button type="button" onClick={() => move(1)} disabled={activeIndex === groups.length - 1} aria-label="Jornada siguiente" className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-200/20 bg-white/[0.04] text-lg font-bold text-cyan-100 transition hover:bg-cyan-200/10 disabled:opacity-30">›</button>
+      </div>
+    </div>
+    <div className="touch-pan-y" onTouchStart={(event) => { const touch = event.touches[0]; touchStart.current = { x: touch.clientX, y: touch.clientY }; }} onTouchEnd={handleTouchEnd}>
+      <div className="flex transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${activeIndex * 100}%)` }} aria-live="polite">
+        {groups.map((group) => <section key={group.key} aria-label={group.label} className="w-full shrink-0">
+          {group.matches.map((match, index) => <div key={match.matchId} className={index ? "border-t border-cyan-200/15" : ""}><FeaturedFixture match={match} tournamentId={tournamentId} /></div>)}
+        </section>)}
+      </div>
+    </div>
+    <div className="flex justify-center gap-1.5 pb-3 pt-1" aria-hidden="true">{groups.map((group, index) => <span key={group.key} className={`h-1.5 rounded-full transition-all ${index === activeIndex ? "w-5 bg-cyan-200" : "w-1.5 bg-white/25"}`} />)}</div>
+  </div>;
+};
 
 const PilotTournament = () => {
   const { tournamentId = "pilot0", section: routeSection } = useParams();
@@ -124,11 +207,11 @@ const PilotTournament = () => {
   useAudienceTracking({ tournamentId, scope: "TOURNAMENT" });
   const [showMatchdayAd, setShowMatchdayAd] = useState(() => {
     if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem("sabis-matchday-ad-dismissed") !== "1";
+    return window.sessionStorage.getItem("sabis-matchday-2-ad-dismissed") !== "1";
   });
   const dismissMatchdayAd = () => {
     setShowMatchdayAd(false);
-    window.sessionStorage.setItem("sabis-matchday-ad-dismissed", "1");
+    window.sessionStorage.setItem("sabis-matchday-2-ad-dismissed", "1");
   };
 
   useEffect(() => {
@@ -209,9 +292,9 @@ const PilotTournament = () => {
       </header>
 
       {activeSection === "home" && <>
-        {showMatchdayAd && <div className="champions-matchday-ad fixed inset-0 z-50 flex items-center justify-center px-4 py-8" role="dialog" aria-modal="true" aria-label="Promoción de la primera jornada">
+        {showMatchdayAd && <div className="champions-matchday-ad fixed inset-0 z-50 flex items-center justify-center px-4 py-8" role="dialog" aria-modal="true" aria-label="Promoción de la segunda jornada">
           <div className="champions-matchday-ad-card relative flex max-h-full max-w-[calc(100vw-2rem)] flex-col items-center">
-            <img src={assetUrl("champions-matchday-1.webp")} alt="Primera jornada: Real Madrid contra Barcelona y PSG contra Manchester City" fetchPriority="high" className="champions-matchday-ad-image max-h-[64dvh] max-w-full rounded-[1.2rem] object-contain" />
+            <img src={assetUrl("champions-matchday-2.webp")} alt="Segunda jornada, viernes 9 de octubre de 2026: PSG contra Real Madrid y Manchester City contra Barcelona" fetchPriority="high" className="champions-matchday-ad-image max-h-[64dvh] max-w-full rounded-[1.2rem] object-contain" />
             <button type="button" onClick={dismissMatchdayAd} aria-label="Cerrar anuncio" className="champions-matchday-ad-close absolute -right-3 -top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#102451]/95 text-2xl font-black leading-none text-white shadow-xl transition hover:bg-[#1c3a75]">×</button>
             <button type="button" onClick={dismissMatchdayAd} className="champions-matchday-ad-more mt-3 min-w-[12rem] rounded-full bg-cyan-200 px-10 py-3 text-sm font-black text-[#06145f] shadow-xl transition hover:bg-white">Ver más</button>
           </div>
@@ -221,7 +304,7 @@ const PilotTournament = () => {
           {live.length === 0 ? <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5"><p className="text-sm font-black">No hay partidos en vivo</p><p className="mt-1 text-xs leading-relaxed text-white/40">Cuando comience un encuentro, el marcador y sus jugadas aparecerán aquí.</p></div> : <div className="grid gap-3 lg:grid-cols-2">{live.map((match) => <Link key={match.matchId} to={matchUrl(match)} aria-label={`Partido en vivo: ${match.homeName} contra ${match.awayName}`} className="block overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#111111] active:scale-[0.99]"><div className="flex items-center justify-between px-5 pt-4 text-[0.65rem] font-black uppercase tracking-[0.13em] text-white/35"><span>{formatPhase(match.phase)}</span><span className="text-red-300">En vivo</span></div><div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-6 text-center min-[430px]:gap-3 min-[430px]:px-5"><div className="min-w-0"><TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl}/><p className="mt-3 hidden text-sm font-black sm:line-clamp-2">{match.homeName}</p></div><div className="min-w-[6.5rem] text-4xl font-black tracking-[-0.08em] tabular-nums min-[430px]:min-w-[7.5rem] min-[430px]:text-5xl">{match.scoreHome}<span className="mx-2 text-2xl font-light text-white/20">–</span>{match.scoreAway}</div><div className="min-w-0"><TeamBadge name={match.awayName} logoUrl={match.awayLogoUrl}/><p className="mt-3 hidden text-sm font-black sm:line-clamp-2">{match.awayName}</p></div></div><div className="border-t border-white/[0.06] px-5 py-3 text-center text-xs font-black text-cyan-200">Seguir partido →</div></Link>)}</div>}
         </section>}
         {momentMatch && <PilotMomentsRail pilotMatchId={`${tournamentId}__${momentMatch.matchId}`}/>}
-        <section className="pt-7"><div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black">Próximos partidos</h2><Link to={toSection("matches")} className="text-xs font-black text-cyan-200">Ver calendario →</Link></div>{upcoming.length ? <div className="champions-featured-fixtures overflow-hidden rounded-[1.45rem]"><div className="flex items-center justify-between px-4 pb-2 pt-4 sm:px-6"><p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-cyan-200/80">{stageName(upcoming[0])}</p><p className="text-xs font-semibold text-blue-100/75">{dateLabel(footballMatchDate(upcoming[0]))}</p></div>{upcoming.slice(0, 2).map((match, index) => <div key={match.matchId} className={index ? "border-t border-cyan-200/15" : ""}><FeaturedFixture match={match} tournamentId={tournamentId}/></div>)}</div> : <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">No hay próximos partidos confirmados.</div>}</section>
+        <section className="pt-7"><div className="mb-3 flex items-center justify-between px-1"><h2 className="text-base font-black">Próximos partidos</h2><Link to={toSection("matches")} className="text-xs font-black text-cyan-200">Ver calendario →</Link></div><FeaturedMatchdayCarousel matches={matches} tournamentId={tournamentId}/></section>
         <section className="grid grid-cols-2 gap-2 pt-7">
           <Link to={toSection("standings")} className="rounded-2xl border border-white/[0.07] bg-[#101010] p-4"><p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-white/35">Líder</p><p className="mt-2 truncate text-sm font-black">{standings[0]?.team ?? "Por definir"}</p><p className="mt-1 text-xs text-white/40">{standings[0]?.played ? `${standings[0].points} puntos` : "Aún sin partidos"}</p><p className="mt-4 text-xs font-black text-cyan-200">Ver tabla →</p></Link>
           <Link to={toSection("stats")} className="rounded-2xl border border-white/[0.07] bg-[#101010] p-4"><p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-white/35">Goleador</p><p className="mt-2 truncate text-sm font-black">{playerStats[0]?.name ?? "Por definir"}</p><p className="mt-1 text-xs text-white/40">{playerStats[0] ? `${playerStats[0].goals} goles` : "Aún sin estadísticas"}</p><p className="mt-4 text-xs font-black text-cyan-200">Ver estadísticas →</p></Link>
