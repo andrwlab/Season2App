@@ -48,12 +48,16 @@ type DestructiveMatchAction = {
   match: PilotMatchSummary;
   confirmationCode: string;
 };
+type AdminView = "overview" | "matches" | "teams" | "settings";
 
 const createConfirmationCode = () => {
   const values = new Uint32Array(1);
   window.crypto.getRandomValues(values);
   return String(100000 + (values[0] % 900000));
 };
+const formatAdminDate = (date: string | null) => date
+  ? new Date(`${date}T12:00:00Z`).toLocaleDateString("es-PA", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+  : "Fecha por confirmar";
 
 const PilotSetup = () => {
   const { tournamentId = "pilot0" } = useParams();
@@ -68,6 +72,7 @@ const PilotSetup = () => {
 
   const [tournament, setTournament] = useState<PilotTournamentDoc | null>(null);
   const [matches, setMatches] = useState<PilotMatchSummary[]>([]);
+  const [activeView, setActiveView] = useState<AdminView>("overview");
   const [name, setName] = useState("Micro Football Tournament");
   const [defaultHalfMinutes, setDefaultHalfMinutes] = useState(10);
   const [matchId, setMatchId] = useState("match-001");
@@ -89,6 +94,26 @@ const PilotSetup = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [destructiveAction, setDestructiveAction] = useState<DestructiveMatchAction | null>(null);
   const [confirmationInput, setConfirmationInput] = useState("");
+  const upcomingMatches = useMemo(() => {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return matches
+    .filter((item) => {
+      if (item.status === "LIVE") return true;
+      const date = footballMatchDate(item);
+      return item.status === "READY" && (!date || date >= today);
+    })
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === "LIVE" ? -1 : b.status === "LIVE" ? 1 : 0;
+      const aDate = footballMatchDate(a);
+      const bDate = footballMatchDate(b);
+      if (aDate && bDate) return aDate.localeCompare(bDate);
+      if (aDate) return -1;
+      if (bDate) return 1;
+      return a.matchId.localeCompare(b.matchId, undefined, { numeric: true });
+    })
+    .slice(0, 2);
+  }, [matches]);
 
   useEffect(() => {
     if (authLoading || !user || !canOperate) return undefined;
@@ -439,24 +464,42 @@ const PilotSetup = () => {
           <div className="grid grid-cols-2 gap-2 sm:flex"><Link to="/pilot" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-center text-xs font-black text-slate-300">← ALL TOURNAMENTS</Link><Link to={`/live/${tournamentId}`} className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-center text-xs font-black text-cyan-200">PUBLIC HUB →</Link></div>
         </header>
 
-        {isAdmin && <PilotAudienceAnalytics tournamentId={tournamentId} />}
+        <nav aria-label="Tournament management" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {([
+            ["overview", "Inicio"], ["matches", "Partidos"],
+            ...(isAdmin ? [["teams", "Equipos"], ["settings", "Configuración"]] : []),
+          ] as Array<[AdminView, string]>).map(([view, label]) => <button key={view} type="button" onClick={() => setActiveView(view)} aria-current={activeView === view ? "page" : undefined} className={`min-h-12 rounded-xl border px-3 py-3 text-sm font-black transition ${activeView === view ? "border-cyan-300/40 bg-cyan-300/15 text-cyan-100" : "border-white/10 bg-white/[0.035] text-slate-400 hover:bg-white/[0.07]"}`}>{label}</button>)}
+        </nav>
 
-        {isAdmin && <form onSubmit={saveTournament} className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+        {activeView === "overview" && <section className="space-y-3">
+          <div className="flex items-end justify-between gap-3"><div><p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-cyan-300">Panel del torneo</p><h2 className="mt-1 text-xl font-black">Próximos partidos</h2></div><button type="button" onClick={() => setActiveView("matches")} className="text-xs font-black text-cyan-200">Ver todos →</button></div>
+          {upcomingMatches.length ? <div className="space-y-3">{upcomingMatches.map((item) => <article key={item.matchId} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2"><span className={`rounded-full px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-wider ${item.status === "LIVE" ? "bg-red-400/15 text-red-200" : "bg-cyan-300/10 text-cyan-200"}`}>{item.status === "LIVE" ? "En vivo" : "Próximo"}</span><span className="text-xs font-semibold text-slate-400">{formatAdminDate(footballMatchDate(item))}</span></div>
+            <h3 className="mt-3 text-base font-black">{item.homeName} <span className="text-white/30">vs</span> {item.awayName}</h3>
+            <div className="mt-3 grid grid-cols-2 gap-2"><Link to={`/scorer/${tournamentId}/${item.matchId}`} className="rounded-xl bg-cyan-300 px-3 py-3 text-center text-xs font-black text-slate-950">Abrir marcador</Link><Link to={`/live/${tournamentId}/match/${item.matchId}`} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center text-xs font-black text-slate-200">Ver partido</Link></div>
+          </article>)}</div> : <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-slate-400">No hay partidos pendientes. Entra en Partidos para crear o editar encuentros.</div>}
+        </section>}
+
+        {activeView === "settings" && isAdmin && <div className="space-y-5">
+        <PilotAudienceAnalytics tournamentId={tournamentId} />
+        <form onSubmit={saveTournament} className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
           <div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Tournament</p><p className="mt-1 text-sm text-slate-500">Settings for this tournament only.</p></div>
           <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Display name</span><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-base outline-none focus:border-cyan-400" /></label>
           <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Default minutes per half</span><div className="grid grid-cols-[48px_1fr_48px] gap-2"><button type="button" onClick={() => setDefaultHalfMinutes((v) => clampMinutes(v - 1))} className="rounded-xl bg-slate-800 text-xl font-black">−</button><input type="number" min={1} max={90} value={defaultHalfMinutes} onChange={(e) => setDefaultHalfMinutes(Number(e.target.value))} className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-center text-lg font-black outline-none focus:border-cyan-400" /><button type="button" onClick={() => setDefaultHalfMinutes((v) => clampMinutes(v + 1))} className="rounded-xl bg-slate-800 text-xl font-black">+</button></div></label>
           <button disabled={busy} className="w-full rounded-xl bg-cyan-300 px-4 py-3 font-black text-slate-950 disabled:opacity-50">SAVE TOURNAMENT SETTINGS</button>
-        </form>}
+        </form>
 
-        {isAdmin && (tournament?.teams?.length ?? 0) > 0 && <PilotTeamManager tournamentId={tournamentId} teams={tournament!.teams!} />}
-
-        {isAdmin && tournament?.sport === "football" && (tournament?.teams?.length ?? 0) === 4 && <PilotFootballBracketControl
+        {tournament?.sport === "football" && (tournament?.teams?.length ?? 0) === 4 && <PilotFootballBracketControl
           tournamentId={tournamentId}
           teams={tournament!.teams!}
           matches={matches}
           suggestedSeeds={tournament!.teams!.map((team) => team.teamId)}
         />}
+        </div>}
 
+        {activeView === "teams" && isAdmin && (tournament?.teams?.length ?? 0) > 0 && <PilotTeamManager tournamentId={tournamentId} teams={tournament!.teams!} />}
+
+        {activeView === "matches" && <>
         <form onSubmit={createMatch} className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
           <div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Add match</p><p className="mt-1 text-sm text-slate-500">Create a match and paste each roster with one player per line.</p></div>
           <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400">Match ID</span><input value={matchId} onChange={(e) => setMatchId(e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-base outline-none focus:border-cyan-400" /></label>
@@ -500,6 +543,7 @@ const PilotSetup = () => {
             </div>
           )}
         </section>
+        </>}
       </main>
       {destructiveAction && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/85 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="destructive-action-title">

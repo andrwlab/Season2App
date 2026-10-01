@@ -19,6 +19,7 @@ const sections: Array<{ key: TournamentSection; label: string; path: string }> =
   { key: "standings", label: "Tabla", path: "standings" }, { key: "stats", label: "Stats", path: "stats" },
   { key: "teams", label: "Equipos", path: "teams" },
 ];
+const bottomNavSections = sections.filter((item) => item.key !== "matches");
 const sectionTitles: Record<TournamentSection, [string, string]> = {
   home: ["Torneo en vivo", ""], matches: ["Calendario y resultados", "Partidos"],
   standings: ["Primera fase", "Tabla de posiciones"], stats: ["Rendimiento individual", "Estadísticas"],
@@ -344,7 +345,7 @@ const PilotTournament = () => {
     </main>
 
     <nav aria-label="Navegación del torneo" className="champions-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] px-2 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 backdrop-blur-xl sm:bottom-4 sm:mx-auto sm:max-w-3xl sm:rounded-2xl sm:border sm:px-3 lg:bottom-6">
-      <div className="mx-auto grid max-w-3xl grid-cols-5 gap-1 sm:gap-2">{sections.map((item) => <NavLink key={item.key} to={item.key === "home" ? `/live/${tournamentId}` : `/live/${tournamentId}/${item.path}`} end={item.key === "home"} className={({ isActive }) => `flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[0.58rem] font-black transition-colors sm:py-2.5 sm:text-xs ${isActive ? "bg-cyan-300/[0.12] text-cyan-100" : "text-white/45 hover:bg-white/[0.04] hover:text-white/70"}`}><NavIcon name={item.key}/><span className="truncate">{item.label}</span></NavLink>)}</div>
+      <div className="mx-auto grid max-w-3xl grid-cols-4 gap-1 sm:gap-2">{bottomNavSections.map((item) => <NavLink key={item.key} to={item.key === "home" ? `/live/${tournamentId}` : `/live/${tournamentId}/${item.path}`} end={item.key === "home"} className={({ isActive }) => `flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[0.58rem] font-black transition-colors sm:py-2.5 sm:text-xs ${isActive ? "bg-cyan-300/[0.12] text-cyan-100" : "text-white/45 hover:bg-white/[0.04] hover:text-white/70"}`}><NavIcon name={item.key}/><span className="truncate">{item.label}</span></NavLink>)}</div>
     </nav>
   </div>;
 };
