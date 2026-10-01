@@ -268,7 +268,7 @@ const PilotLive = () => {
 
         {activeTab === "events" && <>
           <section className="champions-match-panel mt-5 overflow-hidden rounded-3xl border border-white/[0.09]">
-            <PilotEventFeed pilotMatchId={pilotMatchId} homeName={match.homeName} awayName={match.awayName} periodDurationMs={periodDurationMs} extraTimePeriodDurationMs={extraTimePeriodDurationMs} />
+            <PilotEventFeed pilotMatchId={pilotMatchId} homeName={match.homeName} awayName={match.awayName} homePlayers={match.homePlayers} awayPlayers={match.awayPlayers} periodDurationMs={periodDurationMs} extraTimePeriodDurationMs={extraTimePeriodDurationMs} />
           </section>
           <PilotMomentsRail pilotMatchId={pilotMatchId} />
           <PilotMatchTimeline pilotMatchId={pilotMatchId} />

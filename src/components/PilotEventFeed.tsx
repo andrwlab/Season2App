@@ -9,6 +9,7 @@ import {
   PilotPhase,
 } from "../pilot/clock";
 import { displayFootballPlayerName } from "../pilot/footballTournament";
+import { PilotPlayer } from "../pilot/players";
 
 type TeamSide = "HOME" | "AWAY";
 type MatchEventType = "GOAL" | "SHOT" | "FOUL" | "YELLOW_CARD" | "RED_CARD";
@@ -106,12 +107,16 @@ const PilotEventFeed = ({
   awayName,
   periodDurationMs = DEFAULT_PERIOD_DURATION_MS,
   extraTimePeriodDurationMs = DEFAULT_EXTRA_TIME_PERIOD_DURATION_MS,
+  homePlayers,
+  awayPlayers,
 }: {
   pilotMatchId: string;
   homeName: string;
   awayName: string;
   periodDurationMs?: number;
   extraTimePeriodDurationMs?: number;
+  homePlayers?: PilotPlayer[];
+  awayPlayers?: PilotPlayer[];
 }) => {
   const [events, setEvents] = useState<PilotEvent[]>([]);
 
@@ -147,11 +152,16 @@ const PilotEventFeed = ({
           {visibleEvents.map((event, index) => {
             const type = event.type as VisibleEventType;
             const teamName = event.teamSide === "HOME" ? homeName : event.teamSide === "AWAY" ? awayName : "";
+            const teamPlayers = event.teamSide === "HOME" ? homePlayers : event.teamSide === "AWAY" ? awayPlayers : undefined;
             const minute = minutePartsFor(event, periodDurationMs, extraTimePeriodDurationMs);
-            const displayPlayerName = displayFootballPlayerName(event.playerId, event.playerName);
-            const displayAssistName = displayFootballPlayerName(event.assistPlayerId, event.assistPlayerName);
-            const displayPlayerInName = displayFootballPlayerName(event.playerInId, event.playerInName);
-            const displayPlayerOutName = displayFootballPlayerName(event.playerOutId, event.playerOutName);
+            const rosterName = (playerId?: string | null, fallback?: string | null) => {
+              const canonicalName = playerId ? teamPlayers?.find((player) => player.playerId === playerId)?.name : undefined;
+              return displayFootballPlayerName(playerId, canonicalName ?? fallback);
+            };
+            const displayPlayerName = rosterName(event.playerId, event.playerName);
+            const displayAssistName = rosterName(event.assistPlayerId, event.assistPlayerName);
+            const displayPlayerInName = rosterName(event.playerInId, event.playerInName);
+            const displayPlayerOutName = rosterName(event.playerOutId, event.playerOutName);
             const subject = event.type === "SUBSTITUTION" ? teamName : displayPlayerName || teamName;
             const nextEvent = visibleEvents[index + 1];
             const showHalftimeDivider = Boolean(
