@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { db } from "../firebase";
 import { useAuth } from "../AuthContext";
 import { canScoreMatches } from "../auth/roles";
+import { signInWithGoogle } from "../auth/googleSignIn";
+import { auth } from "../firebase";
 
 type Player = { id: string; name: string; grade: string; side: "women" | "men" };
 type Match = {
@@ -73,6 +75,7 @@ export default function SabisVolleyballHub() {
   const [boardName, setBoardName] = useState("Rotación inicial");
   const [savedBoard, setSavedBoard] = useState("");
   const [boards, setBoards] = useState<{ id: string; name: string; side: "women" | "men"; tokens: BoardToken[] }[]>([]);
+  const [authError, setAuthError] = useState("");
 
   useEffect(() => onSnapshot(collection(db, "sabisVolleyballMatches"), (snap) => {
     setMatches(snap.docs.map((d) => ({ ...d.data(), id: d.id } as Match)));
@@ -104,10 +107,15 @@ export default function SabisVolleyballHub() {
     const y = Math.min(94, Math.max(6, ((event.clientY - rect.top) / rect.height) * 100));
     setTokens((prev) => prev.map((t) => t.id === id ? { ...t, x, y } : t));
   };
+  const login = async () => {
+    setAuthError("");
+    try { await signInWithGoogle(auth); }
+    catch { setAuthError("No se pudo iniciar sesión. Intenta de nuevo en Safari o Chrome."); }
+  };
 
   return <main className="harpy-page">
     <style>{styles}</style>
-    <header className="he-header"><Link to="/" className="he-back">← <span>Livescore</span></Link><div className="he-brand"><span className="he-mark">HE</span><div><p>SABIS COSTA VERDE</p><h1>Harpy Eagles</h1><small>VOLEIBOL · TEMPORADA 2026–27</small></div></div><p className="he-tagline">DISCIPLINA · EQUIPO · PASIÓN</p></header>
+    <header className="he-header"><Link to="/" className="he-back">← <span>Livescore</span></Link><div className="he-brand"><span className="he-mark">HE</span><div><p>SABIS COSTA VERDE</p><h1>Harpy Eagles</h1><small>VOLEIBOL · TEMPORADA 2026–27</small></div></div><div className="he-auth">{canEdit ? <span>STAFF · EDICIÓN ACTIVA</span> : <button onClick={login}>Acceso de staff</button>}{authError && <small>{authError}</small>}</div></header>
     <nav className="he-tabs" aria-label="Secciones">{([["partidos","Partidos"],["plantel","Plantel"],["pizarra","Pizarra"]] as const).map(([id,label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>
     {tab === "partidos" && <section className="he-section"><div className="he-section-title"><div><span className="he-kicker">SABIS vs AMERICAN SCHOOL</span><h2>Partidos</h2></div>{canEdit && MATCHES.some((item) => !matches.some((match) => match.id === item.id)) && <button className="he-primary" onClick={createFixtures}>Crear partidos faltantes</button>}</div>{!ready ? <p className="he-empty">Cargando partidos…</p> : <div className="he-match-list">{visibleMatches.map((m) => <MatchCard key={m.id} match={m} onChange={updateMatch} />)}</div>}<p className="he-note">Las estadísticas de este hub se guardan en colecciones independientes y no se mezclan con otros torneos.</p></section>}
     {tab === "plantel" && <section className="he-section"><div className="he-section-title"><div><span className="he-kicker">JUGADORAS Y JUGADORES</span><h2>Plantel</h2></div><div className="he-switch"><button className={side === "women" ? "active" : ""} onClick={() => setSide("women")}>Femenino</button><button className={side === "men" ? "active" : ""} onClick={() => setSide("men")}>Masculino</button></div></div><div className="he-roster-grid">{PLAYERS.filter((p) => p.side === side).map((p) => <article className="he-player" key={p.id}><span>{p.name}</span><small>{p.grade}</small></article>)}</div><p className="he-note">Los apellidos completos no se muestran. El grado ayuda a distinguir nombres repetidos.</p></section>}
@@ -117,5 +125,5 @@ export default function SabisVolleyballHub() {
 }
 
 const styles = `
-.he-saved-boards{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;color:#aaa;font-size:12px}.he-saved-boards button{border:1px solid #444;background:#151619;color:#eee;border-radius:20px;padding:7px 12px;cursor:pointer}
+.he-saved-boards{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;color:#aaa;font-size:12px}.he-saved-boards button{border:1px solid #444;background:#151619;color:#eee;border-radius:20px;padding:7px 12px;cursor:pointer}.he-auth{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.he-auth button{border:1px solid #ff6a16;border-radius:30px;background:#ff6a1615;color:#ff9a58;padding:10px 13px;font-size:12px;font-weight:850;cursor:pointer}.he-auth>span{font-size:9px;color:#ff9a58;letter-spacing:.1em;font-weight:900}.he-auth small{max-width:200px;text-align:right;color:#ff9a58;font-size:10px}
 `;
