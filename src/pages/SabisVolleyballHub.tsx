@@ -16,6 +16,7 @@ type Match = {
   stats?: Record<string, { attacks: number; blocks: number; assists: number; aces: number }>;
 };
 type BoardToken = { id: string; x: number; y: number };
+type SavedBoard = { id: string; name: string; side: "women" | "men"; tokens: BoardToken[]; players?: Record<string, string>; replacements?: Record<string, string> };
 
 // Public labels deliberately contain only a first name, surname initial, and grade.
 const PLAYERS: Player[] = [
@@ -30,8 +31,16 @@ const MATCHES = [
   { id: "harpy-2026-10-02-women", date: "2026-10-02", side: "women" as const, opponent: "American School International", status: "scheduled" as const, setsFor: 0, setsAgainst: 0 },
   { id: "harpy-2026-10-02-men", date: "2026-10-02", side: "men" as const, opponent: "American School International", status: "scheduled" as const, setsFor: 0, setsAgainst: 0 },
 ];
-const STORE = "sabis-volleyball-board-v1";
-const initialTokens: BoardToken[] = Array.from({ length: 6 }, (_, i) => ({ id: String(i + 1), x: [50, 26, 74, 26, 50, 74][i], y: [18, 38, 38, 68, 68, 68][i] }));
+const STORE = "sabis-volleyball-board-v2";
+// One team's half-court formation: front row 4–3–2, back row 5–6–1.
+const initialTokens: BoardToken[] = [
+  { id: "1", x: 74, y: 72 }, { id: "2", x: 74, y: 22 }, { id: "3", x: 50, y: 22 },
+  { id: "4", x: 26, y: 22 }, { id: "5", x: 26, y: 72 }, { id: "6", x: 50, y: 72 },
+];
+const POSITIONS = [
+  { id: "4", role: "Punta · delantero" }, { id: "3", role: "Central · delantero" }, { id: "2", role: "Opuesto · delantero" },
+  { id: "5", role: "Punta · zaguero" }, { id: "6", role: "Líbero / central · zaguero" }, { id: "1", role: "Armador · zaguero" },
+];
 
 function MatchCard({ match, onChange }: { match: Match; onChange: (next: Match) => void }) {
   const [showSetup, setShowSetup] = useState(false);
@@ -71,11 +80,13 @@ export default function SabisVolleyballHub() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<"partidos" | "plantel" | "pizarra">("partidos");
+  const [boardView, setBoardView] = useState<"formation" | "lineup">("formation");
   const [side, setSide] = useState<"women" | "men">("women");
   const [tokens, setTokens] = useState<BoardToken[]>(() => { try { return JSON.parse(localStorage.getItem(STORE) || "null") || initialTokens; } catch { return initialTokens; } });
   const [boardName, setBoardName] = useState("Rotación inicial");
   const [savedBoard, setSavedBoard] = useState("");
-  const [boards, setBoards] = useState<{ id: string; name: string; side: "women" | "men"; tokens: BoardToken[] }[]>([]);
+  const [lineups, setLineups] = useState<Record<"women" | "men", { players: Record<string, string>; replacements: Record<string, string> }>>({ women: { players: {}, replacements: {} }, men: { players: {}, replacements: {} } });
+  const [boards, setBoards] = useState<SavedBoard[]>([]);
   const [authError, setAuthError] = useState("");
 
   useEffect(() => onSnapshot(collection(db, "sabisVolleyballMatches"), (snap) => {
@@ -83,10 +94,12 @@ export default function SabisVolleyballHub() {
     setReady(true);
   }, (error) => { console.error("SABIS volleyball matches failed to load", error); setReady(true); }), []);
   useEffect(() => onSnapshot(query(collection(db, "sabisVolleyballBoards"), orderBy("updatedAt", "desc")), (snap) => {
-    setBoards(snap.docs.map((d) => ({ id: d.id, ...d.data() } as { id: string; name: string; side: "women" | "men"; tokens: BoardToken[] })));
+    setBoards(snap.docs.map((d) => ({ id: d.id, ...d.data() } as SavedBoard)));
   }, (error) => console.warn("Could not load saved strategy boards", error)), []);
 
   const visibleMatches = useMemo(() => (matches.length ? matches : MATCHES).sort((a,b) => a.date.localeCompare(b.date)), [matches]);
+  const positionPlayers = lineups[side].players;
+  const positionReplacements = lineups[side].replacements;
   const updateMatch = async (match: Match) => {
     if (!canEdit) return;
     try { await setDoc(doc(db, "sabisVolleyballMatches", match.id), { ...match, updatedAt: serverTimestamp() }, { merge: true }); }
@@ -96,7 +109,7 @@ export default function SabisVolleyballHub() {
     for (const fixture of MATCHES.filter((item) => !matches.some((match) => match.id === item.id))) await updateMatch(fixture);
   };
   const saveBoard = async () => {
-    const payload = { name: boardName.trim() || "Diagrama", side, tokens, updatedAt: serverTimestamp() };
+    const payload = { name: boardName.trim() || "Diagrama", side, tokens, players: positionPlayers, replacements: positionReplacements, updatedAt: serverTimestamp() };
     if (canEdit) {
       try { await setDoc(doc(db, "sabisVolleyballBoards", `${side}-${Date.now()}`), payload); setSavedBoard("Guardado en el hub"); }
       catch { setSavedBoard("No se pudo guardar en la nube; quedó en este dispositivo"); localStorage.setItem(STORE, JSON.stringify(tokens)); }
@@ -120,7 +133,14 @@ export default function SabisVolleyballHub() {
     <nav className="he-tabs" aria-label="Secciones">{([["partidos","Partidos"],["plantel","Plantel"],["pizarra","Pizarra"]] as const).map(([id,label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>)}</nav>
     {tab === "partidos" && <section className="he-section"><div className="he-section-title"><div><span className="he-kicker">SABIS vs AMERICAN SCHOOL</span><h2>Partidos</h2></div>{canEdit && MATCHES.some((item) => !matches.some((match) => match.id === item.id)) && <button className="he-primary" onClick={createFixtures}>Crear partidos faltantes</button>}</div>{!ready ? <p className="he-empty">Cargando partidos…</p> : <div className="he-match-list">{visibleMatches.map((m) => <MatchCard key={m.id} match={m} onChange={updateMatch} />)}</div>}<p className="he-note">Las estadísticas de este hub se guardan en colecciones independientes y no se mezclan con otros torneos.</p></section>}
     {tab === "plantel" && <section className="he-section"><div className="he-section-title"><div><span className="he-kicker">JUGADORAS Y JUGADORES</span><h2>Plantel</h2></div><div className="he-switch"><button className={side === "women" ? "active" : ""} onClick={() => setSide("women")}>Femenino</button><button className={side === "men" ? "active" : ""} onClick={() => setSide("men")}>Masculino</button></div></div><div className="he-roster-grid">{PLAYERS.filter((p) => p.side === side).map((p) => <article className="he-player" key={p.id}><span>{p.name}</span><small>{p.grade}</small></article>)}</div><p className="he-note">Los apellidos completos no se muestran. El grado ayuda a distinguir nombres repetidos.</p></section>}
-    {tab === "pizarra" && <section className="he-section"><div className="he-section-title"><div><span className="he-kicker">ESTRATEGIA</span><h2>Tablero magnético</h2></div><div className="he-switch"><button className={side === "women" ? "active" : ""} onClick={() => setSide("women")}>Femenino</button><button className={side === "men" ? "active" : ""} onClick={() => setSide("men")}>Masculino</button></div></div><div className="he-board-tools"><input value={boardName} onChange={(e) => setBoardName(e.target.value)} aria-label="Nombre del diagrama"/><button className="he-primary" onClick={saveBoard}>Guardar diagrama</button><button onClick={() => setTokens(initialTokens)}>Reiniciar</button>{savedBoard && <span>{savedBoard}</span>}</div>{boards.filter((b) => b.side === side).length > 0 && <div className="he-saved-boards"><b>Diagramas guardados</b>{boards.filter((b) => b.side === side).map((board) => <button key={board.id} onClick={() => { setTokens(board.tokens || initialTokens); setBoardName(board.name); setSavedBoard("Diagrama cargado"); }}>{board.name}</button>)}</div>}<div className="he-court"><div className="he-net"/><div className="he-center-line"/>{tokens.map((token, i) => <button key={token.id} className="he-token" style={{ left: `${token.x}%`, top: `${token.y}%` }} onPointerMove={(e) => e.buttons === 1 && moveToken(token.id,e)} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); moveToken(token.id,e); }} title="Arrastra para mover">{i + 1}</button>)}</div><p className="he-note">Arrastra los seis círculos para organizar la formación. Los diagramas se guardan como coordenadas y no requieren Firebase Storage/Blaze.</p></section>}
+    {tab === "pizarra" && <section className="he-section">
+      <div className="he-section-title"><div><span className="he-kicker">ESTRATEGIA</span><h2>Tablero magnético</h2></div><div className="he-switch"><button className={side === "women" ? "active" : ""} onClick={() => setSide("women")}>Femenino</button><button className={side === "men" ? "active" : ""} onClick={() => setSide("men")}>Masculino</button></div></div>
+      <div className="he-board-tools"><input value={boardName} onChange={(e) => setBoardName(e.target.value)} aria-label="Nombre del diagrama"/><button className="he-primary" onClick={saveBoard}>Guardar diagrama</button><button onClick={() => { setTokens(initialTokens); setSavedBoard("Formación reiniciada"); }}>Reiniciar formación</button>{savedBoard && <span>{savedBoard}</span>}</div>
+      <div className="he-board-tabs"><button className={boardView === "formation" ? "active" : ""} onClick={() => setBoardView("formation")}>Formación</button><button className={boardView === "lineup" ? "active" : ""} onClick={() => setBoardView("lineup")}>Jugadores y reemplazos</button></div>
+      {boards.filter((b) => b.side === side).length > 0 && <div className="he-saved-boards"><b>Diagramas guardados</b>{boards.filter((b) => b.side === side).map((board) => <button key={board.id} onClick={() => { setTokens(board.tokens || initialTokens); setLineups((prev) => ({ ...prev, [side]: { players: board.players || {}, replacements: board.replacements || {} } })); setBoardName(board.name); setSavedBoard("Diagrama cargado"); }}>{board.name}</button>)}</div>}
+      {boardView === "formation" ? <><div className="he-court"><div className="he-playing-surface"><div className="he-court-border"/><div className="he-attack-line he-attack-front"/><div className="he-net"/></div>{tokens.map((token) => <button key={token.id} className="he-token" style={{ left: `${token.x}%`, top: `${token.y}%` }} onPointerMove={(e) => e.buttons === 1 && moveToken(token.id,e)} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); moveToken(token.id,e); }} title={`Posición ${token.id}`}>{token.id}</button>)}</div><p className="he-note">La red marca el frente: 4–3–2 adelante y 5–6–1 detrás de la línea de ataque. Arrastra los círculos para plantear la jugada.</p></> : <div className="he-position-list">{POSITIONS.map((position) => <article className="he-position-row" key={position.id}><div className="he-position-label"><b>{position.id}</b><span>{position.role}</span></div><label><span>Titular</span><select value={positionPlayers[position.id] || ""} onChange={(e) => setLineups((prev) => ({ ...prev, [side]: { ...prev[side], players: { ...prev[side].players, [position.id]: e.target.value } } }))}><option value="">Seleccionar jugador</option>{PLAYERS.filter((p) => p.side === side).map((player) => <option key={player.id} value={player.id}>{player.name} · {player.grade}</option>)}</select></label><label><span>Reemplazo</span><select value={positionReplacements[position.id] || ""} onChange={(e) => setLineups((prev) => ({ ...prev, [side]: { ...prev[side], replacements: { ...prev[side].replacements, [position.id]: e.target.value } } }))}><option value="">Sin asignar</option>{PLAYERS.filter((p) => p.side === side).map((player) => <option key={player.id} value={player.id}>{player.name} · {player.grade}</option>)}</select></label></article>)}</div>}
+      <p className="he-note">Los diagramas guardan la formación y las asignaciones de titulares/reemplazos en datos independientes, sin subir imágenes.</p>
+    </section>}
     <footer className="he-footer">SABIS COSTA VERDE <span>·</span> HARPY EAGLES</footer>
   </main>;
 }
