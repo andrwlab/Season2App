@@ -25,6 +25,7 @@ const PilotTournament = lazy(() => import('./pages/PilotTournament'));
 const PilotPlayerProfile = lazy(() => import('./pages/PilotPlayerProfile'));
 const PilotSetup = lazy(() => import('./pages/PilotSetup'));
 const PilotAdminHome = lazy(() => import('./pages/PilotAdminHome'));
+const SabisVolleyballHub = lazy(() => import('./pages/SabisVolleyballHub'));
 
 const LegacyScorerRedirect = () => {
   const { tournamentId = '', matchId = '' } = useParams();
@@ -38,7 +39,7 @@ const LegacySetupRedirect = () => {
 
 function AppShell() {
   const location = useLocation();
-  const isPilotSurface = location.pathname.startsWith('/scorer/') || location.pathname.startsWith('/live/') || location.pathname.startsWith('/pilot');
+  const isPilotSurface = location.pathname.startsWith('/scorer/') || location.pathname.startsWith('/live/') || location.pathname.startsWith('/pilot') || location.pathname.startsWith('/volleyball');
   const isChampionsSurface = location.pathname.startsWith('/live/');
 
   useEffect(() => {
@@ -57,6 +58,7 @@ function AppShell() {
       <Suspense fallback={<div className="p-6 text-muted">Loading...</div>}>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/volleyball" element={<SabisVolleyballHub />} />
           <Route path="/teams" element={<Teams />} />
           <Route path="/teams/:id" element={<TeamDetail />} />
           <Route path="/schedule" element={<Schedule />} />
