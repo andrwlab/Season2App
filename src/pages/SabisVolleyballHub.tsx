@@ -6,6 +6,7 @@ import { useAuth } from "../AuthContext";
 import { canScoreMatches } from "../auth/roles";
 import { signInWithGoogle } from "../auth/googleSignIn";
 import { auth } from "../firebase";
+import "../styles/sabis-volleyball.css";
 
 type Player = { id: string; name: string; grade: string; side: "women" | "men" };
 type Match = {
