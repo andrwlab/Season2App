@@ -101,10 +101,10 @@
 .he-player-drag b { overflow:hidden; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
 .he-player-drag small,.he-player-drag em { color:#888; font-size:9px; font-style:normal; }
 .he-player-drag em { flex:none; }
-.he-lineup-token { display:flex; width:clamp(66px,8vw,100px); height:auto; aspect-ratio:1; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:5px; border-radius:50%; line-height:1.05; }
-.he-lineup-token b { font-size:19px; }
-.he-lineup-token span { max-width:100%; overflow:hidden; font-size:10px; font-weight:900; text-overflow:ellipsis; white-space:nowrap; }
-.he-lineup-token small { max-width:100%; overflow:hidden; color:#57280d; font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
+.he-lineup-token { display:flex; width:clamp(108px,11vw,140px); height:94px; flex-direction:column; align-items:center; justify-content:flex-start; gap:3px; overflow:visible; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; line-height:1.05; }
+.he-lineup-token b { display:grid; width:62px; height:62px; flex:none; place-items:center; border:3px solid #fff; border-radius:50%; background:var(--orange); color:#17100b; font-size:19px; box-shadow:0 4px 15px #0008; }
+.he-lineup-token span { max-width:100%; overflow:hidden; border-radius:6px; background:#111820eF; color:#fff; padding:3px 6px; font-size:10px; font-weight:900; text-overflow:ellipsis; white-space:nowrap; }
+.he-lineup-token small { max-width:100%; overflow:hidden; border-radius:5px; background:#111820eF; color:#ffc18f; padding:2px 5px; font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
 .he-lineup-token.drop-ready { outline:3px dashed #fff; outline-offset:2px; }
 .he-court { position:relative; width:100%; aspect-ratio:4/3; max-height:700px; min-height:330px; overflow:hidden; touch-action:none; border:3px solid #d4d4d4; border-radius:18px; background:repeating-linear-gradient(90deg,#25282b 0 12.5%,#1e2124 12.5% 25%); box-shadow:0 14px 36px #0008; }
 .he-playing-surface { position:absolute; inset:5%; overflow:hidden; background:repeating-linear-gradient(90deg,#25282b 0 12.5%,#1e2124 12.5% 25%); }
@@ -143,8 +143,8 @@
   .he-position-row label { grid-template-columns:90px minmax(0,1fr); align-items:center; }
   .he-lineup-workspace { grid-template-columns:1fr; }
   .he-player-drag-list { max-height:380px; grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .he-lineup-token { width:clamp(60px,16vw,78px); }
-  .he-lineup-token b { font-size:16px; }
+  .he-lineup-token { width:clamp(90px,25vw,116px); height:78px; }
+  .he-lineup-token b { width:52px; height:52px; font-size:16px; }
   .he-lineup-token span { font-size:8px; }
   .he-lineup-token small { font-size:7px; }
   .he-lineup-roles { grid-template-columns:repeat(2,minmax(0,1fr)); }
