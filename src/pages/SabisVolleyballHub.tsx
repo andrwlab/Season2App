@@ -44,9 +44,15 @@ const POSITIONS = [
 
 function MatchCard({ match, onChange }: { match: Match; onChange: (next: Match) => void }) {
   const [showSetup, setShowSetup] = useState(false);
-  const [playerId, setPlayerId] = useState(PLAYERS.find((p) => p.side === match.side)?.id || "");
+  const [playerId, setPlayerId] = useState(PLAYERS.filter((p) => p.side === match.side).sort((a, b) => a.name.localeCompare(b.name, "es"))[0]?.id || "");
+  const [subInPlayerId, setSubInPlayerId] = useState("");
   const [outPlayerId, setOutPlayerId] = useState(match.starters?.[0] || "");
-  const roster = PLAYERS.filter((p) => p.side === match.side);
+  const roster = PLAYERS.filter((p) => p.side === match.side).sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
+  const starters = match.starters || [];
+  const starterPlayers = roster.filter((p) => starters.includes(p.id));
+  const benchPlayers = roster.filter((p) => !starters.includes(p.id));
+  const selectedOutId = starterPlayers.some((p) => p.id === outPlayerId) ? outPlayerId : starterPlayers[0]?.id || "";
+  const selectedInId = benchPlayers.some((p) => p.id === subInPlayerId) ? subInPlayerId : benchPlayers[0]?.id || "";
   const selectedPlayer = roster.find((p) => p.id === playerId);
   const label = match.side === "women" ? "Harpy Eagles · Femenino" : "Harpy Eagles · Masculino";
   const stat = match.stats?.[playerId] || { attacks: 0, blocks: 0, assists: 0, aces: 0 };
@@ -56,20 +62,21 @@ function MatchCard({ match, onChange }: { match: Match; onChange: (next: Match) 
     onChange({ ...match, starters: list.includes(id) ? list.filter((v) => v !== id) : list.length < 6 ? [...list, id] : list });
   };
   const doSub = () => {
-    const old = match.starters || [];
-    const out = outPlayerId;
-    if (!out || !old.includes(out) || old.includes(playerId)) return;
-    onChange({ ...match, starters: old.map((id) => id === out ? playerId : id), substitutions: [...(match.substitutions || []), { out, in: playerId, set: 1 }] });
+    const old = starters;
+    const out = selectedOutId;
+    const incoming = selectedInId;
+    if (!out || !incoming || !old.includes(out) || old.includes(incoming)) return;
+    onChange({ ...match, starters: old.map((id) => id === out ? incoming : id), substitutions: [...(match.substitutions || []), { out, in: incoming, set: 1 }] });
   };
   return <article className="he-match">
     <div className="he-match-top"><div><span className="he-kicker">{match.side === "women" ? "FEMENINO" : "MASCULINO"}</span><h3>{label} <span>vs</span> {match.opponent}</h3><p>2 de octubre de 2026 · Horario por confirmar</p></div><span className={`he-status ${match.status}`}>{match.status === "live" ? "EN VIVO" : match.status === "finished" ? "FINAL" : "PROGRAMADO"}</span></div>
     <div className="he-score"><b>{match.setsFor}</b><span>SETS</span><b>{match.setsAgainst}</b></div>
     <div className="he-actions"><button onClick={() => setShowSetup(!showSetup)}>{showSetup ? "Ocultar control" : "Alineación y estadísticas"}</button><button onClick={() => onChange({ ...match, status: match.status === "live" ? "finished" : "live" })}>{match.status === "live" ? "Finalizar" : "Iniciar partido"}</button></div>
     {showSetup && <div className="he-editor">
-      <div className="he-lineup"><div><h4>Cuadro inicial <small>{(match.starters || []).length}/6</small></h4><p>Selecciona los seis titulares. La banca queda fuera del cuadro.</p></div><div className="he-roster">{roster.map((p) => <button key={p.id} className={(match.starters || []).includes(p.id) ? "selected" : ""} onClick={() => toggleStarter(p.id)}><span>{p.name}</span><small>{p.grade}</small></button>)}</div></div>
+      <div className="he-lineup"><div className="he-lineup-heading"><div><h4>Cuadro inicial <small>{starters.length}/6</small></h4><p>Toca los nombres para elegir o quitar titulares. Lista ordenada A–Z; máximo seis.</p></div><span className={`he-lineup-progress ${starters.length === 6 ? "complete" : ""}`}>{starters.length === 6 ? "Cuadro completo" : `Faltan ${6 - starters.length}`}</span></div><div className="he-roster">{roster.map((p) => { const index = starters.indexOf(p.id); return <button type="button" key={p.id} className={index >= 0 ? "selected" : ""} aria-pressed={index >= 0} onClick={() => toggleStarter(p.id)}><span>{p.name}</span><small>{index >= 0 ? `Titular ${index + 1}` : p.grade}</small></button>; })}</div></div>
       <div className="he-score-tools"><h4>Marcador por sets</h4><div className="he-set-controls"><button onClick={() => onChange({ ...match, setsFor: Math.max(0, match.setsFor - 1) })}>−</button><b>{match.setsFor} : {match.setsAgainst}</b><button onClick={() => onChange({ ...match, setsFor: match.setsFor + 1 })}>+ SABIS</button><button onClick={() => onChange({ ...match, setsAgainst: match.setsAgainst + 1 })}>+ Rival</button><button onClick={() => onChange({ ...match, setsAgainst: Math.max(0, match.setsAgainst - 1) })}>−</button></div></div>
-      <div className="he-score-tools"><h4>Registrar sustitución</h4><div className="he-stat-controls"><select aria-label="Jugador que sale" value={outPlayerId} onChange={(e) => setOutPlayerId(e.target.value)}><option value="">Sale…</option>{roster.filter((p) => (match.starters || []).includes(p.id)).map((p) => <option key={p.id} value={p.id}>{p.name} · {p.grade}</option>)}</select><select aria-label="Jugador que entra" value={playerId} onChange={(e) => setPlayerId(e.target.value)}>{roster.filter((p) => !(match.starters || []).includes(p.id)).map((p) => <option key={p.id} value={p.id}>{p.name} · {p.grade}</option>)}</select><button onClick={doSub}>Guardar cambio</button></div>{(match.substitutions || []).length > 0 && <ul className="he-sub-list">{match.substitutions!.map((s, i) => <li key={`${s.out}-${i}`}>Set {s.set}: Entra {PLAYERS.find((p) => p.id === s.in)?.name} por {PLAYERS.find((p) => p.id === s.out)?.name}</li>)}</ul>}</div>
-      <div className="he-score-tools"><h4>Estadísticas individuales · {selectedPlayer?.name}</h4><div className="he-stat-controls">{([["attacks","Ataques"],["blocks","Bloqueos"],["assists","Asistencias"],["aces","Aces"]] as const).map(([key,title]) => <button key={key} onClick={() => addStat(key)}>+ {title} ({stat[key]})</button>)}</div></div>
+      <div className="he-score-tools"><h4>Registrar sustitución</h4><p className="he-help">Elige quién sale de las titulares y quién entra desde la banca.</p><div className="he-stat-controls"><select aria-label="Jugador que sale" value={selectedOutId} onChange={(e) => setOutPlayerId(e.target.value)}><option value="">Sale…</option>{starterPlayers.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.grade}</option>)}</select><select aria-label="Jugador que entra" value={selectedInId} onChange={(e) => setSubInPlayerId(e.target.value)}><option value="">Entra…</option>{benchPlayers.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.grade}</option>)}</select><button disabled={!selectedOutId || !selectedInId} onClick={doSub}>Guardar cambio</button></div>{(match.substitutions || []).length > 0 && <ul className="he-sub-list">{match.substitutions!.map((s, i) => <li key={`${s.out}-${i}`}>Set {s.set}: Entra {PLAYERS.find((p) => p.id === s.in)?.name} por {PLAYERS.find((p) => p.id === s.out)?.name}</li>)}</ul>}</div>
+      <div className="he-score-tools"><div className="he-stat-heading"><div><h4>Registrar estadística</h4><p className="he-help">Selecciona cualquier jugadora o jugador del plantel, titulares o banca, y luego suma la acción.</p></div><span className="he-selected-player">{selectedPlayer?.name || "Elige un jugador"}</span></div><div className="he-stat-roster" role="list" aria-label="Plantel en orden alfabético">{roster.map((p) => <button type="button" role="listitem" key={p.id} className={playerId === p.id ? "selected" : ""} aria-pressed={playerId === p.id} onClick={() => setPlayerId(p.id)}><span>{p.name}</span><small>{starters.length === 0 ? "Plantel" : starters.includes(p.id) ? "Titular" : "Banca"}</small></button>)}</div><div className="he-stat-controls">{([["attacks","Ataques"],["blocks","Bloqueos"],["assists","Asistencias"],["aces","Aces"]] as const).map(([key,title]) => <button key={key} onClick={() => addStat(key)} disabled={!selectedPlayer}>+ {title} ({stat[key]})</button>)}</div></div>
     </div>}
   </article>;
 }
