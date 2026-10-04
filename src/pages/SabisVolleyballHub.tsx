@@ -16,7 +16,7 @@ type Match = {
   stats?: Record<string, { attacks: number; blocks: number; assists: number; aces: number }>;
 };
 type BoardToken = { id: string; x: number; y: number };
-type SavedBoard = { id: string; name: string; side: "women" | "men"; tokens: BoardToken[]; players?: Record<string, string>; replacements?: Record<string, string> };
+type SavedBoard = { id: string; name: string; side: "women" | "men"; tokens: BoardToken[]; preset?: "base" | "horizontal" | "custom"; players?: Record<string, string>; replacements?: Record<string, string> };
 
 // Public labels deliberately contain only a first name, surname initial, and grade.
 const PLAYERS: Player[] = [
@@ -89,12 +89,17 @@ export default function SabisVolleyballHub() {
   const [tab, setTab] = useState<"partidos" | "plantel" | "pizarra">("partidos");
   const [boardView, setBoardView] = useState<"formation" | "lineup">("formation");
   const [side, setSide] = useState<"women" | "men">("women");
+  const [assignmentMode, setAssignmentMode] = useState<"players" | "replacements">("players");
+  const [selectedLineupPlayer, setSelectedLineupPlayer] = useState("");
+  const [formationPreset, setFormationPreset] = useState<"base" | "horizontal" | "custom">("base");
   const [tokens, setTokens] = useState<BoardToken[]>(() => { try { return JSON.parse(localStorage.getItem(STORE) || "null") || initialTokens; } catch { return initialTokens; } });
   const [boardName, setBoardName] = useState("Rotación inicial");
   const [savedBoard, setSavedBoard] = useState("");
   const [lineups, setLineups] = useState<Record<"women" | "men", { players: Record<string, string>; replacements: Record<string, string> }>>({ women: { players: {}, replacements: {} }, men: { players: {}, replacements: {} } });
   const [boards, setBoards] = useState<SavedBoard[]>([]);
   const [authError, setAuthError] = useState("");
+
+  useEffect(() => setSelectedLineupPlayer(""), [side]);
 
   useEffect(() => onSnapshot(collection(db, "sabisVolleyballMatches"), (snap) => {
     setMatches(snap.docs.map((d) => ({ ...d.data(), id: d.id } as Match)));
@@ -107,6 +112,34 @@ export default function SabisVolleyballHub() {
   const visibleMatches = useMemo(() => (matches.length ? matches : MATCHES).sort((a,b) => a.date.localeCompare(b.date)), [matches]);
   const positionPlayers = lineups[side].players;
   const positionReplacements = lineups[side].replacements;
+  const sideRoster = useMemo(() => PLAYERS.filter((player) => player.side === side).sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" })), [side]);
+  const useFormationPreset = (preset: "base" | "horizontal") => {
+    setFormationPreset(preset);
+    setTokens(preset === "base" ? initialTokens : ["4", "3", "2", "5", "6", "1"].map((id, index) => ({ id, x: 13 + index * 14.8, y: 51 })));
+    setSavedBoard(preset === "base" ? "Formación base cargada" : "Línea horizontal cargada");
+  };
+  const assignLineupPlayer = (positionId: string, playerId: string) => {
+    if (!playerId) return;
+    setLineups((previous) => {
+      const current = previous[side];
+      if (assignmentMode === "replacements") {
+        if (Object.values(current.players).includes(playerId)) return previous;
+        const replacements = Object.fromEntries(Object.entries(current.replacements).filter(([key, value]) => key !== positionId && value !== playerId));
+        return { ...previous, [side]: { ...current, replacements: { ...replacements, [positionId]: playerId } } };
+      }
+      const players = { ...current.players };
+      const previousPosition = Object.entries(players).find(([, value]) => value === playerId)?.[0];
+      const displacedPlayer = players[positionId];
+      players[positionId] = playerId;
+      if (previousPosition && previousPosition !== positionId) {
+        if (displacedPlayer) players[previousPosition] = displacedPlayer;
+        else delete players[previousPosition];
+      }
+      const replacements = Object.fromEntries(Object.entries(current.replacements).filter(([, value]) => value !== playerId));
+      return { ...previous, [side]: { ...current, players, replacements } };
+    });
+    setSelectedLineupPlayer("");
+  };
   const updateMatch = async (match: Match) => {
     if (!canEdit) return;
     try { await setDoc(doc(db, "sabisVolleyballMatches", match.id), { ...match, updatedAt: serverTimestamp() }, { merge: true }); }
@@ -116,7 +149,7 @@ export default function SabisVolleyballHub() {
     for (const fixture of MATCHES.filter((item) => !matches.some((match) => match.id === item.id))) await updateMatch(fixture);
   };
   const saveBoard = async () => {
-    const payload = { name: boardName.trim() || "Diagrama", side, tokens, players: positionPlayers, replacements: positionReplacements, updatedAt: serverTimestamp() };
+    const payload = { name: boardName.trim() || "Diagrama", side, tokens, preset: formationPreset, players: positionPlayers, replacements: positionReplacements, updatedAt: serverTimestamp() };
     if (canEdit) {
       try { await setDoc(doc(db, "sabisVolleyballBoards", `${side}-${Date.now()}`), payload); setSavedBoard("Guardado en el hub"); }
       catch { setSavedBoard("No se pudo guardar en la nube; quedó en este dispositivo"); localStorage.setItem(STORE, JSON.stringify(tokens)); }
@@ -127,6 +160,7 @@ export default function SabisVolleyballHub() {
     const x = Math.min(94, Math.max(6, ((event.clientX - rect.left) / rect.width) * 100));
     const y = Math.min(94, Math.max(6, ((event.clientY - rect.top) / rect.height) * 100));
     setTokens((prev) => prev.map((t) => t.id === id ? { ...t, x, y } : t));
+    setFormationPreset("custom");
   };
   const login = async () => {
     setAuthError("");
@@ -142,10 +176,13 @@ export default function SabisVolleyballHub() {
     {tab === "plantel" && <section className="he-section"><div className="he-section-title"><div><span className="he-kicker">JUGADORAS Y JUGADORES</span><h2>Plantel</h2></div><div className="he-switch"><button className={side === "women" ? "active" : ""} onClick={() => setSide("women")}>Femenino</button><button className={side === "men" ? "active" : ""} onClick={() => setSide("men")}>Masculino</button></div></div><div className="he-roster-grid">{PLAYERS.filter((p) => p.side === side).map((p) => <article className="he-player" key={p.id}><span>{p.name}</span><small>{p.grade}</small></article>)}</div><p className="he-note">Los apellidos completos no se muestran. El grado ayuda a distinguir nombres repetidos.</p></section>}
     {tab === "pizarra" && <section className="he-section">
       <div className="he-section-title"><div><span className="he-kicker">ESTRATEGIA</span><h2>Tablero magnético</h2></div><div className="he-switch"><button className={side === "women" ? "active" : ""} onClick={() => setSide("women")}>Femenino</button><button className={side === "men" ? "active" : ""} onClick={() => setSide("men")}>Masculino</button></div></div>
-      <div className="he-board-tools"><input value={boardName} onChange={(e) => setBoardName(e.target.value)} aria-label="Nombre del diagrama"/><button className="he-primary" onClick={saveBoard}>Guardar diagrama</button><button onClick={() => { setTokens(initialTokens); setSavedBoard("Formación reiniciada"); }}>Reiniciar formación</button>{savedBoard && <span>{savedBoard}</span>}</div>
+      <div className="he-board-tools"><select value={formationPreset} onChange={(e) => e.target.value !== "custom" && useFormationPreset(e.target.value as "base" | "horizontal")} aria-label="Formación predeterminada"><option value="base">Base · 4–3–2 / 5–6–1</option><option value="horizontal">Línea horizontal</option><option value="custom" disabled>Personalizada</option></select><input value={boardName} onChange={(e) => setBoardName(e.target.value)} aria-label="Nombre del diagrama"/><button className="he-primary" onClick={saveBoard}>Guardar diagrama</button><button onClick={() => useFormationPreset("base")}>Reiniciar</button>{savedBoard && <span>{savedBoard}</span>}</div>
       <div className="he-board-tabs"><button className={boardView === "formation" ? "active" : ""} onClick={() => setBoardView("formation")}>Formación</button><button className={boardView === "lineup" ? "active" : ""} onClick={() => setBoardView("lineup")}>Jugadores y reemplazos</button></div>
-      {boards.filter((b) => b.side === side).length > 0 && <div className="he-saved-boards"><b>Diagramas guardados</b>{boards.filter((b) => b.side === side).map((board) => <button key={board.id} onClick={() => { setTokens(board.tokens || initialTokens); setLineups((prev) => ({ ...prev, [side]: { players: board.players || {}, replacements: board.replacements || {} } })); setBoardName(board.name); setSavedBoard("Diagrama cargado"); }}>{board.name}</button>)}</div>}
-      {boardView === "formation" ? <><div className="he-court"><div className="he-playing-surface"><div className="he-court-border"/><div className="he-attack-line he-attack-front"/><div className="he-net"/></div>{tokens.map((token) => <button key={token.id} className="he-token" style={{ left: `${token.x}%`, top: `${token.y}%` }} onPointerMove={(e) => e.buttons === 1 && moveToken(token.id,e)} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); moveToken(token.id,e); }} title={`Posición ${token.id}`}>{token.id}</button>)}</div><p className="he-note">La red marca el frente: 4–3–2 adelante y 5–6–1 detrás de la línea de ataque. Arrastra los círculos para plantear la jugada.</p></> : <div className="he-position-list">{POSITIONS.map((position) => <article className="he-position-row" key={position.id}><div className="he-position-label"><b>{position.id}</b><span>{position.role}</span></div><label><span>Titular</span><select value={positionPlayers[position.id] || ""} onChange={(e) => setLineups((prev) => ({ ...prev, [side]: { ...prev[side], players: { ...prev[side].players, [position.id]: e.target.value } } }))}><option value="">Seleccionar jugador</option>{PLAYERS.filter((p) => p.side === side).map((player) => <option key={player.id} value={player.id}>{player.name} · {player.grade}</option>)}</select></label><label><span>Reemplazo</span><select value={positionReplacements[position.id] || ""} onChange={(e) => setLineups((prev) => ({ ...prev, [side]: { ...prev[side], replacements: { ...prev[side].replacements, [position.id]: e.target.value } } }))}><option value="">Sin asignar</option>{PLAYERS.filter((p) => p.side === side).map((player) => <option key={player.id} value={player.id}>{player.name} · {player.grade}</option>)}</select></label></article>)}</div>}
+      {boards.filter((b) => b.side === side).length > 0 && <div className="he-saved-boards"><b>Diagramas guardados</b>{boards.filter((b) => b.side === side).map((board) => <button key={board.id} onClick={() => { setTokens(board.tokens || initialTokens); setFormationPreset(board.preset || "custom"); setLineups((prev) => ({ ...prev, [side]: { players: board.players || {}, replacements: board.replacements || {} } })); setBoardName(board.name); setSavedBoard("Diagrama cargado"); }}>{board.name}</button>)}</div>}
+      {boardView === "formation" ? <><div className="he-court"><div className="he-playing-surface"><div className="he-court-border"/><div className="he-attack-line he-attack-front"/><div className="he-net"/></div>{tokens.map((token) => <button key={token.id} className="he-token" style={{ left: `${token.x}%`, top: `${token.y}%` }} onPointerMove={(e) => e.buttons === 1 && moveToken(token.id,e)} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); moveToken(token.id,e); }} title={`Posición ${token.id}`}>{token.id}</button>)}</div><p className="he-note">La red marca el frente: 4–3–2 adelante y 5–6–1 detrás de la línea de ataque. Arrastra los círculos para plantear la jugada.</p></> : <div className="he-lineup-workspace">
+        <div className="he-lineup-court-wrap"><div className="he-lineup-hint">Arrastra un nombre a una posición o selecciónalo y luego toca el círculo.</div><div className="he-court"><div className="he-playing-surface"><div className="he-court-border"/><div className="he-attack-line he-attack-front"/><div className="he-net"/></div>{tokens.map((token) => { const assignedId = assignmentMode === "players" ? positionPlayers[token.id] : positionReplacements[token.id]; const assigned = sideRoster.find((player) => player.id === assignedId); const replacement = sideRoster.find((player) => player.id === positionReplacements[token.id]); const position = POSITIONS.find((item) => item.id === token.id); return <button type="button" key={token.id} className={`he-token he-lineup-token ${selectedLineupPlayer && assignmentMode === "players" ? "drop-ready" : ""}`} style={{ left: `${token.x}%`, top: `${token.y}%` }} onClick={() => selectedLineupPlayer && assignLineupPlayer(token.id, selectedLineupPlayer)} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); assignLineupPlayer(token.id, e.dataTransfer.getData("text/player-id")); }} title={`${position?.role || "Posición"} ${token.id}`}><b>{token.id}</b><span>{assigned?.name || (assignmentMode === "players" ? "Añadir" : "Reemplazo")}</span>{assignmentMode === "players" && replacement && <small>↳ {replacement.name}</small>}</button>; })}</div><div className="he-lineup-roles">{POSITIONS.map((position) => <span key={position.id}><b>{position.id}</b> {position.role}</span>)}</div></div>
+        <aside className="he-lineup-roster"><div className="he-assignment-switch"><button className={assignmentMode === "players" ? "active" : ""} onClick={() => { setAssignmentMode("players"); setSelectedLineupPlayer(""); }}>Titulares</button><button className={assignmentMode === "replacements" ? "active" : ""} onClick={() => { setAssignmentMode("replacements"); setSelectedLineupPlayer(""); }}>Reemplazos</button></div><h3>{assignmentMode === "players" ? "Plantel · titulares" : "Plantel · reemplazos"}</h3><p>{assignmentMode === "players" ? `${Object.keys(positionPlayers).length}/6 posiciones ocupadas` : "Asigna un relevo a cada posición"}</p><div className="he-player-drag-list">{sideRoster.map((player) => { const assignedPosition = Object.entries(assignmentMode === "players" ? positionPlayers : positionReplacements).find(([, id]) => id === player.id)?.[0]; const isSelected = selectedLineupPlayer === player.id; const unavailable = assignmentMode === "replacements" && Object.values(positionPlayers).includes(player.id); return <button type="button" draggable={!unavailable} disabled={unavailable} onDragStart={(e) => { e.dataTransfer.setData("text/player-id", player.id); e.dataTransfer.effectAllowed = "move"; setSelectedLineupPlayer(player.id); }} onClick={() => setSelectedLineupPlayer(isSelected ? "" : player.id)} className={`he-player-drag ${isSelected ? "selected" : ""}`} key={player.id} aria-pressed={isSelected}><span><b>{player.name}</b><small>{player.grade}</small></span><em>{unavailable ? "Ya titular" : assignedPosition ? `${assignmentMode === "players" ? "Pos." : "Relevo"} ${assignedPosition}` : "Arrastra"}</em></button>; })}</div><p className="he-note">Al soltar sobre una posición ocupada, las titulares intercambian puestos. En teléfono, toca primero a la jugadora o jugador y después el círculo.</p></aside>
+      </div>}
       <p className="he-note">Los diagramas guardan la formación y las asignaciones de titulares/reemplazos en datos independientes, sin subir imágenes.</p>
     </section>}
     <footer className="he-footer">SABIS COSTA VERDE <span>·</span> HARPY EAGLES</footer>
