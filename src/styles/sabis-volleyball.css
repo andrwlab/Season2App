@@ -71,13 +71,13 @@
 .he-position-label span,.he-position-row label>span { color:#c7c7c7; font-size:12px; font-weight:800; }
 .he-position-row label { display:grid; gap:5px; }
 .he-position-row select { width:100%; min-width:0; border:1px solid #444; border-radius:9px; background:#111317; color:#eee; padding:10px; }
-.he-court { position:relative; width:100%; aspect-ratio:4/3; max-height:700px; min-height:330px; overflow:hidden; touch-action:none; border:3px solid #dfe7e9; border-radius:18px; background:#17548d; box-shadow:0 14px 36px #0008; }
-.he-playing-surface { position:absolute; inset:5%; overflow:hidden; background:#71bdb6; }
-.he-court-border { position:absolute; inset:0; border:3px solid #f4f5f1; }
+.he-court { position:relative; width:100%; aspect-ratio:4/3; max-height:700px; min-height:330px; overflow:hidden; touch-action:none; border:3px solid #d4d4d4; border-radius:18px; background:repeating-linear-gradient(90deg,#25282b 0 12.5%,#1e2124 12.5% 25%); box-shadow:0 14px 36px #0008; }
+.he-playing-surface { position:absolute; inset:5%; overflow:hidden; background:repeating-linear-gradient(90deg,#25282b 0 12.5%,#1e2124 12.5% 25%); }
+.he-court-border { position:absolute; inset:0; border:3px solid #ffffffa0; }
 .he-attack-line { position:absolute; right:0; left:0; height:2px; background:#f4f5f1; }
 .he-attack-front { top:33.333%; }
-.he-net { position:absolute; z-index:1; top:0; right:-1%; left:-1%; height:7px; background:#f4f5f1; box-shadow:0 2px 0 2px #34444a55; }
-.he-net:before,.he-net:after { position:absolute; top:-6px; width:6px; height:19px; background:#f4f5f1; content:""; }
+.he-net { position:absolute; z-index:1; top:0; right:-1%; left:-1%; height:5px; background:var(--orange); box-shadow:0 0 0 2px #0005; }
+.he-net:before,.he-net:after { position:absolute; top:-6px; width:6px; height:19px; background:var(--orange); content:""; }
 .he-net:before { left:0; }
 .he-net:after { right:0; }
 .he-token { position:absolute; z-index:2; width:64px; height:64px; transform:translate(-50%,-50%); touch-action:none; border:3px solid white; border-radius:50%; background:var(--orange); color:#17100b; font-size:23px; font-weight:1000; box-shadow:0 4px 15px #0008; cursor:grab; }
