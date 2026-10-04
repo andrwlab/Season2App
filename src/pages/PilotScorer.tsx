@@ -890,12 +890,12 @@ const PilotScorer = () => {
           ? "The final must produce a winner: extra time, then penalties if still tied."
           : null;
   const pendingFullRoster = pendingEvent ? rosterForSide(pendingEvent.teamSide) : [];
-  const pendingCurrentIds = pendingEvent
-    ? (pendingEvent.teamSide === "HOME" ? match.currentHomePlayerIds : match.currentAwayPlayerIds) ?? []
+  const pendingStarterIds = pendingEvent
+    ? (pendingEvent.teamSide === "HOME" ? match.homeStarterIds : match.awayStarterIds) ?? []
     : [];
-  const pendingRoster = pendingCurrentIds.length > 0
-    ? pendingFullRoster.filter((player) => pendingCurrentIds.includes(player.playerId))
-    : pendingFullRoster;
+  // Keep the whole match roster available for event attribution: substitutes and
+  // players who have already left the field can still score or receive cards.
+  const pendingRoster = sortPilotPlayers(pendingFullRoster);
   const selectedPlayer = pendingRoster.find((item) => item.playerId === selectedPlayerId);
   const substitutionRoster = pendingSubstitution ? rosterForSide(pendingSubstitution.teamSide) : [];
   const substitutionCurrentIds = pendingSubstitution
@@ -909,7 +909,7 @@ const PilotScorer = () => {
     const selectedIds = side === "HOME" ? homeStarterIds : awayStarterIds;
     return (
       <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
-        <div className="mb-2 flex items-center justify-between gap-2"><p className="truncate text-sm font-black">{teamNameForSide(side)}</p><span className="text-xs font-bold text-cyan-300">{selectedIds.length} starters</span></div>
+        <div className="mb-2 flex items-center justify-between gap-2"><p className="truncate text-sm font-black">{teamNameForSide(side)}</p><span className="text-xs font-bold text-cyan-300">{selectedIds.length} titulares</span></div><p className="mb-2 text-[0.65rem] text-slate-500">Toca un nombre para incluirlo o quitarlo del cuadro inicial. Lista A–Z.</p>
         {roster.length === 0 ? <p className="text-xs text-slate-500">No roster loaded.</p> : <div className="grid grid-cols-2 gap-2">{roster.map((player) => {
           const selected = selectedIds.includes(player.playerId);
           const unavailable = player.suspended === true;
@@ -965,7 +965,7 @@ const PilotScorer = () => {
             <div className="w-full rounded-3xl border border-white/10 bg-slate-950 p-4 shadow-2xl">
               <div className="flex items-start justify-between gap-4"><div><p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-cyan-300">Record event</p><h2 className="mt-1 text-2xl font-black">{getEventLabel(pendingEvent.type)} · {teamNameForSide(pendingEvent.teamSide)}</h2><p className="mt-1 text-xs font-semibold text-cyan-200/80">Time captured at {formatClock(pendingEvent.capturedMatchClockMs)}</p>{pendingEvent.type === "GOAL" && <p className="mt-1 text-xs font-semibold text-slate-400">A goal automatically adds +1 shot.</p>}</div><button type="button" onClick={() => setPendingEvent(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl">×</button></div>
 
-              <div className="mt-5"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">Player</p>{pendingRoster.length === 0 ? <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-100">No roster loaded. You can save this as a team event, or add players from Tournament Setup before kickoff.</div> : <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto pr-1"><button type="button" onClick={() => { setSelectedPlayerId(""); setAssistPlayerId(""); }} className={`rounded-xl border px-3 py-3 text-left text-sm font-bold ${selectedPlayerId === "" ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-300"}`}>Team event / unknown</button>{pendingRoster.map((player) => <button key={player.playerId} type="button" onClick={() => { setSelectedPlayerId(player.playerId); if (assistPlayerId === player.playerId) setAssistPlayerId(""); }} className={`rounded-xl border px-3 py-3 text-left text-sm font-bold ${selectedPlayerId === player.playerId ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-200"}`}>{player.name}</button>)}</div>}</div>
+              <div className="mt-5"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">Player · all players A–Z</p>{pendingRoster.length === 0 ? <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-100">No roster loaded. You can save this as a team event, or add players from Tournament Setup before kickoff.</div> : <div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => { setSelectedPlayerId(""); setAssistPlayerId(""); }} className={`min-h-14 rounded-xl border px-3 py-3 text-left text-sm font-bold ${selectedPlayerId === "" ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-300"}`}><span className="block">Team event / unknown</span></button>{pendingRoster.map((player) => { const isStarter = pendingStarterIds.includes(player.playerId); return <button key={player.playerId} type="button" onClick={() => { setSelectedPlayerId(player.playerId); if (assistPlayerId === player.playerId) setAssistPlayerId(""); }} className={`min-h-14 rounded-xl border px-3 py-2 text-left text-sm font-bold ${selectedPlayerId === player.playerId ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-200"}`}><span className="block">{player.name}</span><span className={`mt-1 block text-[0.6rem] font-black uppercase tracking-wider ${isStarter ? "text-emerald-300/75" : "text-slate-500"}`}>{match.lineupsConfirmed ? isStarter ? "Titular" : "Suplente" : "Plantel"}</span></button>; })}</div>}</div>
 
               {pendingEvent.type === "GOAL" && pendingRoster.length > 0 && (
                 <div className="mt-5"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">Assist <span className="normal-case tracking-normal text-slate-600">(optional)</span></p><select value={assistPlayerId} onChange={(event) => setAssistPlayerId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold outline-none focus:border-cyan-300"><option value="">No assist / none recorded</option>{pendingRoster.filter((player) => player.playerId !== selectedPlayer?.playerId).map((player) => <option key={player.playerId} value={player.playerId}>{player.name}</option>)}</select></div>
