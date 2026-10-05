@@ -32,6 +32,16 @@ const MATCHES = [
   { id: "harpy-2026-10-02-men", date: "2026-10-02", side: "men" as const, opponent: "American School International", status: "scheduled" as const, setsFor: 0, setsAgainst: 0 },
 ];
 const STORE = "sabis-volleyball-board-v2";
+const SAVED_BOARDS_STORE = "sabis-volleyball-saved-boards-v1";
+const readLocalBoards = (): SavedBoard[] => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SAVED_BOARDS_STORE) || "[]") as SavedBoard[];
+    if (saved.length) return saved;
+    const legacyTokens = JSON.parse(localStorage.getItem(STORE) || "null") as BoardToken[] | null;
+    return legacyTokens ? [{ id: "women-diagrama-local", name: "Diagrama recuperado", side: "women", tokens: legacyTokens, preset: "custom" }] : [];
+  }
+  catch { return []; }
+};
 // One team's half-court formation: front row 4–3–2, back row 5–6–1.
 const initialTokens: BoardToken[] = [
   { id: "1", x: 74, y: 72 }, { id: "2", x: 74, y: 22 }, { id: "3", x: 50, y: 22 },
@@ -96,7 +106,7 @@ export default function SabisVolleyballHub() {
   const [boardName, setBoardName] = useState("Rotación inicial");
   const [savedBoard, setSavedBoard] = useState("");
   const [lineups, setLineups] = useState<Record<"women" | "men", { players: Record<string, string>; replacements: Record<string, string> }>>({ women: { players: {}, replacements: {} }, men: { players: {}, replacements: {} } });
-  const [boards, setBoards] = useState<SavedBoard[]>([]);
+  const [boards, setBoards] = useState<SavedBoard[]>(readLocalBoards);
   const [authError, setAuthError] = useState("");
 
   useEffect(() => setSelectedLineupPlayer(""), [side]);
@@ -106,7 +116,10 @@ export default function SabisVolleyballHub() {
     setReady(true);
   }, (error) => { console.error("SABIS volleyball matches failed to load", error); setReady(true); }), []);
   useEffect(() => onSnapshot(query(collection(db, "sabisVolleyballBoards"), orderBy("updatedAt", "desc")), (snap) => {
-    setBoards(snap.docs.map((d) => ({ id: d.id, ...d.data() } as SavedBoard)));
+    const cloudBoards = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SavedBoard));
+    const merged = new Map(readLocalBoards().map((board) => [board.id, board]));
+    cloudBoards.forEach((board) => merged.set(board.id, board));
+    setBoards([...merged.values()]);
   }, (error) => console.warn("Could not load saved strategy boards", error)), []);
 
   const visibleMatches = useMemo(() => (matches.length ? matches : MATCHES).sort((a,b) => a.date.localeCompare(b.date)), [matches]);
@@ -149,11 +162,19 @@ export default function SabisVolleyballHub() {
     for (const fixture of MATCHES.filter((item) => !matches.some((match) => match.id === item.id))) await updateMatch(fixture);
   };
   const saveBoard = async () => {
-    const payload = { name: boardName.trim() || "Diagrama", side, tokens, preset: formationPreset, players: positionPlayers, replacements: positionReplacements, updatedAt: serverTimestamp() };
+    const name = boardName.trim() || "Diagrama";
+    const id = `${side}-${name.toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "diagrama"}`;
+    const localBoard: SavedBoard & { updatedAt: number } = { id, name, side, tokens, preset: formationPreset, players: positionPlayers, replacements: positionReplacements, updatedAt: Date.now() };
+    const localBoards = [...readLocalBoards().filter((board) => board.id !== id), localBoard];
+    localStorage.setItem(SAVED_BOARDS_STORE, JSON.stringify(localBoards));
+    setBoards((previous) => [...previous.filter((board) => board.id !== id), localBoard]);
     if (canEdit) {
-      try { await setDoc(doc(db, "sabisVolleyballBoards", `${side}-${Date.now()}`), payload); setSavedBoard("Guardado en el hub"); }
-      catch { setSavedBoard("No se pudo guardar en la nube; quedó en este dispositivo"); localStorage.setItem(STORE, JSON.stringify(tokens)); }
-    } else { localStorage.setItem(STORE, JSON.stringify(tokens)); setSavedBoard("Guardado en este dispositivo"); }
+      try {
+        const { updatedAt: _localUpdatedAt, ...payload } = localBoard;
+        await setDoc(doc(db, "sabisVolleyballBoards", id), { ...payload, updatedAt: serverTimestamp() });
+        setSavedBoard("Guardado en el hub y en este dispositivo");
+      } catch { setSavedBoard("Guardado en este dispositivo; no se pudo sincronizar"); }
+    } else setSavedBoard("Guardado en este dispositivo");
   };
   const moveToken = (id: string, event: React.PointerEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.parentElement!.getBoundingClientRect();
