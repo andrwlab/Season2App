@@ -116,6 +116,7 @@
 .he-net:before { left:0; }
 .he-net:after { right:0; }
 .he-token { position:absolute; z-index:2; width:64px; height:64px; transform:translate(-50%,-50%); touch-action:none; border:3px solid white; border-radius:50%; background:var(--orange); color:#17100b; font-size:23px; font-weight:1000; box-shadow:0 4px 15px #0008; cursor:grab; }
+.he-token.he-lineup-token { width:clamp(108px,11vw,140px); height:94px; overflow:visible; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .he-token:active { cursor:grabbing; }
 .he-empty { padding:35px; color:#aaa; text-align:center; }
 .he-note { margin-top:16px; }
@@ -144,6 +145,7 @@
   .he-lineup-workspace { grid-template-columns:1fr; }
   .he-player-drag-list { max-height:380px; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .he-lineup-token { width:clamp(90px,25vw,116px); height:78px; }
+  .he-token.he-lineup-token { width:clamp(90px,25vw,116px); height:78px; }
   .he-lineup-token b { width:52px; height:52px; font-size:16px; }
   .he-lineup-token span { font-size:8px; }
   .he-lineup-token small { font-size:7px; }
