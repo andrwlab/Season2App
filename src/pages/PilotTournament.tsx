@@ -1,27 +1,30 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { Link, NavLink, useParams } from "react-router-dom";
 import PilotMomentsRail from "../components/PilotMomentsRail";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
+import { useAuth } from "../AuthContext";
+import { signInWithGoogle } from "../auth/googleSignIn";
 import useAudienceTracking from "../hooks/useAudienceTracking";
 import { formatPhase, PilotPhase } from "../pilot/clock";
 import { assetUrl, displayFootballPlayerName, FOOTBALL_2026_TOURNAMENT_ID, footballMatchDate, normalizeFootballMatch, normalizeFootballTeam, PilotTeam } from "../pilot/footballTournament";
 
-type TournamentSection = "home" | "matches" | "standings" | "stats" | "teams";
+type TournamentSection = "home" | "matches" | "standings" | "stats" | "teams" | "polla";
 type Match = { scheduledDate?: string | null; matchId: string; tournamentId: string; homeName: string; awayName: string; homeLogoUrl?: string; awayLogoUrl?: string; scoreHome: number; scoreAway: number; status: "READY" | "LIVE" | "FULLTIME"; phase: PilotPhase; stage?: "GROUP" | "SEMIFINAL" | "FINAL"; matchday?: number; order?: number; tieId?: "SF1" | "SF2"; leg?: 1 | 2; homeTeamId?: string | null; awayTeamId?: string | null };
 type Tournament = { tournamentId: string; name: string; sport: "football"; teams?: PilotTeam[] };
 type Standing = { team: string; played: number; won: number; drawn: number; lost: number; gf: number; ga: number; points: number };
-type FootballEvent = { eventId?: string; type: string; status?: string; revertsEventId?: string; playerId?: string | null; playerName?: string | null; assistPlayerId?: string | null; assistPlayerName?: string | null };
+type FootballEvent = { eventId?: string; pilotMatchId?: string; type: string; status?: string; revertsEventId?: string; playerId?: string | null; playerName?: string | null; assistPlayerId?: string | null; assistPlayerName?: string | null };
+type Prediction = { id: string; tournamentId: string; matchId: string; uid: string; userName: string; homeScore: number; awayScore: number; scorerPlayerId: string; assistPlayerId: string };
 type PlayerStat = { playerId: string; name: string; goals: number; assists: number; yellow: number; red: number };
 
 const sections: Array<{ key: TournamentSection; label: string; path: string }> = [
   { key: "home", label: "Inicio", path: "" }, { key: "matches", label: "Partidos", path: "matches" },
   { key: "standings", label: "Tabla", path: "standings" }, { key: "stats", label: "Stats", path: "stats" },
-  { key: "teams", label: "Equipos", path: "teams" },
+  { key: "teams", label: "Equipos", path: "teams" }, { key: "polla", label: "Polla", path: "polla" },
 ];
 const bottomNavSections = sections.filter((item) => item.key !== "matches");
 const sectionTitles: Record<TournamentSection, [string, string]> = {
-  home: ["Torneo en vivo", ""], matches: ["Calendario y resultados", "Partidos"],
+  home: ["Torneo en vivo", ""], matches: ["Calendario y resultados", "Partidos"], polla: ["Pronósticos", "Polla de resultados"],
   standings: ["Primera fase", "Tabla de posiciones"], stats: ["Rendimiento individual", "Estadísticas"],
   teams: ["Planteles del torneo", "Equipos"],
 };
@@ -46,6 +49,7 @@ const NavIcon = ({ name }: { name: TournamentSection }) => {
   if (name === "matches") return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>;
   if (name === "standings") return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/></svg>;
   if (name === "stats") return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 6H3v2a4 4 0 0 0 5 4M17 6h4v2a4 4 0 0 1-5 4"/></svg>;
+  if (name === "polla") return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="m8.5 8.5 3.5-2 3.5 2v4l-3.5 2-3.5-2zM5 10l3.5-1.5M15.5 8.5 19 10M12 14.5V21M5 14l3.5-1.5M15.5 12.5 19 14"/></svg>;
   return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
 };
 
@@ -197,6 +201,97 @@ const FeaturedMatchdayCarousel = ({ matches, tournamentId }: { matches: Match[];
   </div>;
 };
 
+const PredictionPool = ({ tournamentId, matches, events, teams }: { tournamentId: string; matches: Match[]; events: FootballEvent[]; teams: PilotTeam[] }) => {
+  const { user } = useAuth();
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [selectedMatchId, setSelectedMatchId] = useState("");
+  const [homeScore, setHomeScore] = useState(0);
+  const [awayScore, setAwayScore] = useState(0);
+  const [scorerPlayerId, setScorerPlayerId] = useState("");
+  const [assistPlayerId, setAssistPlayerId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState("");
+  const eligibleMatches = useMemo(() => [...matches].sort((a, b) => (a.matchday ?? 99) - (b.matchday ?? 99) || (a.order ?? 99) - (b.order ?? 99)), [matches]);
+  const selectedMatch = eligibleMatches.find((match) => match.matchId === selectedMatchId) ?? eligibleMatches[0];
+
+  useEffect(() => {
+    if (!user) { setPredictions([]); return; }
+    return onSnapshot(query(collection(db, "pilotPredictions"), where("tournamentId", "==", tournamentId)), (snapshot) => {
+    setPredictions(snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as Prediction)));
+    }, (error) => { console.error("Could not load prediction pool", error); setNotice("No se pudieron cargar los pronósticos."); });
+  }, [tournamentId, user?.uid]);
+
+  const currentPrediction = predictions.find((prediction) => prediction.matchId === selectedMatch?.matchId && prediction.uid === user?.uid);
+  useEffect(() => {
+    if (!selectedMatch) return;
+    setHomeScore(currentPrediction?.homeScore ?? 0);
+    setAwayScore(currentPrediction?.awayScore ?? 0);
+    setScorerPlayerId(currentPrediction?.scorerPlayerId ?? "");
+    setAssistPlayerId(currentPrediction?.assistPlayerId ?? "");
+    setNotice("");
+  }, [selectedMatch?.matchId, currentPrediction?.homeScore, currentPrediction?.awayScore, currentPrediction?.scorerPlayerId, currentPrediction?.assistPlayerId]);
+
+  const playerOptions = useMemo(() => teams.filter((team) => team.teamId === selectedMatch?.homeTeamId || team.teamId === selectedMatch?.awayTeamId).flatMap((team) => team.players).sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" })), [teams, selectedMatch?.homeTeamId, selectedMatch?.awayTeamId]);
+  const pointsFor = (prediction: Prediction) => {
+    const match = eligibleMatches.find((item) => item.matchId === prediction.matchId);
+    if (!match || (match.status !== "FULLTIME" && match.phase !== "FULLTIME")) return 0;
+    const exact = prediction.homeScore === match.scoreHome && prediction.awayScore === match.scoreAway;
+    const outcomeHit = (prediction.homeScore - prediction.awayScore) === (match.scoreHome - match.scoreAway);
+    let points = exact ? 3 : outcomeHit ? 1 : 0;
+    const matchEvents = events.filter((event) => event.pilotMatchId === `${tournamentId}__${match.matchId}`);
+    const reversed = new Set(matchEvents.filter((event) => event.type === "REVERSAL" && event.revertsEventId).map((event) => event.revertsEventId));
+    const goals = matchEvents.filter((event) => (event.type === "GOAL" || event.type === "PENALTY_GOAL") && event.status !== "REVERSED" && !reversed.has(event.eventId));
+    if (prediction.scorerPlayerId && goals.some((event) => event.playerId === prediction.scorerPlayerId)) points++;
+    if (prediction.assistPlayerId && goals.some((event) => event.type === "GOAL" && event.assistPlayerId === prediction.assistPlayerId)) points++;
+    return points;
+  };
+  const leaderboard = useMemo(() => {
+    const rows = new Map<string, { uid: string; name: string; points: number; picks: number }>();
+    predictions.forEach((prediction) => {
+      const current = rows.get(prediction.uid) || { uid: prediction.uid, name: prediction.userName || "Usuario", points: 0, picks: 0 };
+      current.name = prediction.userName || current.name;
+      current.points += pointsFor(prediction);
+      if (eligibleMatches.some((match) => match.matchId === prediction.matchId && (match.status === "FULLTIME" || match.phase === "FULLTIME"))) current.picks++;
+      rows.set(prediction.uid, current);
+    });
+    return [...rows.values()].sort((a, b) => b.points - a.points || b.picks - a.picks || a.name.localeCompare(b.name, "es"));
+  }, [predictions, eligibleMatches, events, tournamentId]);
+
+  const savePrediction = async () => {
+    if (!user || !selectedMatch) return;
+    const id = `${tournamentId}__${selectedMatch.matchId}__${user.uid}`;
+    setSaving(true);
+    setNotice("");
+    try {
+      await setDoc(doc(db, "pilotPredictions", id), {
+        tournamentId, matchId: selectedMatch.matchId, uid: user.uid,
+        userName: user.displayName?.trim() || user.email?.split("@")[0] || "Usuario",
+        homeScore, awayScore, scorerPlayerId, assistPlayerId,
+        ...(currentPrediction ? {} : { createdAt: serverTimestamp() }), updatedAt: serverTimestamp(),
+      }, { merge: true });
+      setNotice("Pronóstico guardado. Puedes cambiarlo hasta que inicie el partido.");
+    } catch (error) {
+      console.error("Could not save prediction", error);
+      setNotice("No se pudo guardar. Actualiza la página e inténtalo otra vez.");
+    } finally { setSaving(false); }
+  };
+
+  if (!selectedMatch) return <section className="champions-match-panel mt-5 rounded-3xl border border-white/[0.09] p-5"><h2 className="text-xl font-black">Polla de resultados</h2><p className="mt-2 text-sm text-white/50">Todavía no hay partidos para pronosticar.</p></section>;
+  const locked = selectedMatch.status !== "READY";
+  return <section className="mt-5 space-y-4">
+    <div className="champions-match-panel rounded-3xl border border-white/[0.09] p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-cyan-200/70">Champions League · Polla</p><h2 className="mt-1 text-xl font-black">Pronostica y suma puntos</h2><p className="mt-1 text-xs text-white/45">Marcador exacto: 3 pts · Resultado correcto: 1 pt · Goleador y asistidor: 1 pt cada uno</p></div><span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-bold text-white/55">{predictions.length} pronósticos</span></div>
+      {!user ? <div className="mt-5 rounded-2xl border border-cyan-200/15 bg-cyan-200/[0.04] p-4"><p className="text-sm font-bold">Inicia sesión para participar</p><p className="mt-1 text-xs text-white/45">Usa tu cuenta de Google. Tu nombre aparecerá en la tabla de posiciones de la polla.</p><button onClick={() => signInWithGoogle(auth).catch(() => setNotice("No se pudo iniciar sesión. Inténtalo de nuevo."))} className="mt-3 rounded-full bg-cyan-200 px-4 py-2 text-sm font-black text-[#06145f]">Registrarme / iniciar sesión</button></div> : <>
+        <label className="mt-5 block text-xs font-black uppercase tracking-wider text-white/45">Partido<select value={selectedMatch.matchId} onChange={(event) => setSelectedMatchId(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0a1435] px-3 py-3 text-sm font-bold text-white">{eligibleMatches.map((match) => <option key={match.matchId} value={match.matchId}>{match.homeName} vs {match.awayName} · {stageName(match)}</option>)}</select></label>
+        <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-end gap-3"><label className="text-center text-xs font-bold text-white/60">{shortTeamName(selectedMatch.homeName)}<input type="number" min="0" max="20" value={homeScore} disabled={locked} onChange={(event) => setHomeScore(Math.min(20, Math.max(0, Number(event.target.value))))} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0a1435] px-3 py-3 text-center text-2xl font-black tabular-nums disabled:opacity-60" /></label><span className="pb-3 text-white/35">–</span><label className="text-center text-xs font-bold text-white/60">{shortTeamName(selectedMatch.awayName)}<input type="number" min="0" max="20" value={awayScore} disabled={locked} onChange={(event) => setAwayScore(Math.min(20, Math.max(0, Number(event.target.value))))} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0a1435] px-3 py-3 text-center text-2xl font-black tabular-nums disabled:opacity-60" /></label></div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-white/55">¿Quién marcará?<select value={scorerPlayerId} disabled={locked} onChange={(event) => setScorerPlayerId(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0a1435] px-3 py-3 text-sm text-white disabled:opacity-60"><option value="">Sin predicción</option>{playerOptions.map((player) => <option key={player.playerId} value={player.playerId}>{player.name}</option>)}</select></label><label className="text-xs font-bold text-white/55">¿Quién dará una asistencia?<select value={assistPlayerId} disabled={locked} onChange={(event) => setAssistPlayerId(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0a1435] px-3 py-3 text-sm text-white disabled:opacity-60"><option value="">Sin predicción</option>{playerOptions.map((player) => <option key={player.playerId} value={player.playerId}>{player.name}</option>)}</select></label></div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">{!locked && <button disabled={saving} onClick={savePrediction} className="rounded-full bg-cyan-200 px-5 py-3 text-sm font-black text-[#06145f] disabled:opacity-50">{saving ? "Guardando…" : currentPrediction ? "Actualizar pronóstico" : "Guardar pronóstico"}</button>}<span className="text-xs text-white/40">{locked ? "Pronósticos cerrados: el partido ya comenzó." : currentPrediction ? "Ya tienes un pronóstico guardado para este partido." : "Se aceptan cambios hasta que comience el partido."}</span></div>
+      </>}{notice && <p role="status" className="mt-3 text-xs font-bold text-cyan-100">{notice}</p>}
+    </div>
+    <div className="champions-match-panel overflow-hidden rounded-3xl border border-white/[0.09]"><div className="flex items-center justify-between px-5 py-4"><div><h3 className="font-black">Tabla de la polla</h3><p className="mt-1 text-xs text-white/40">Puntos calculados con los resultados y jugadas oficiales</p></div><span className="text-xs font-black uppercase tracking-wider text-cyan-200">{leaderboard.length} usuarios</span></div>{leaderboard.length ? <div className="grid grid-cols-[2.5rem_1fr_4rem] gap-2 border-t border-white/[0.06] px-5 py-3 text-[0.58rem] font-black uppercase tracking-wider text-white/35"><span>#</span><span>Usuario</span><span className="text-right">Pts</span>{leaderboard.map((row, index) => <React.Fragment key={row.uid}><span className="font-black text-white/35">{index + 1}</span><span className="min-w-0 truncate font-bold text-white/85">{row.name}{row.uid === user?.uid ? <em className="ml-2 not-italic text-cyan-200">Tú</em> : null}</span><span className="text-right font-black tabular-nums">{row.points}</span></React.Fragment>)}</div> : <p className="border-t border-white/[0.06] px-5 py-4 text-sm text-white/40">Todavía no hay participantes. ¡Sé el primero!</p>}</div>
+  </section>;
+};
+
 const PilotTournament = () => {
   const { tournamentId = "pilot0", section: routeSection } = useParams();
   const activeSection: TournamentSection = sections.some((item) => item.key === routeSection) ? routeSection as TournamentSection : "home";
@@ -222,7 +317,7 @@ const PilotTournament = () => {
       setTournament({ ...data, teams: data.teams?.map(normalizeFootballTeam) });
     });
     const stopMatches = onSnapshot(query(collection(db, "pilotMatches"), where("tournamentId", "==", tournamentId)), (snap) => { setMatches(snap.docs.map((item) => normalizeFootballMatch(item.data() as Match)).sort((a, b) => a.matchId.localeCompare(b.matchId, undefined, { numeric: true }))); setLoading(false); }, (snapshotError) => { console.error(snapshotError); setError("Los datos del torneo no están disponibles por el momento."); setLoading(false); });
-    const stopEvents = activeSection === "stats"
+    const stopEvents = activeSection === "stats" || activeSection === "polla"
       ? onSnapshot(query(collection(db, "pilotEvents"), where("tournamentId", "==", tournamentId)), (snap) => setEvents(snap.docs.map((item) => item.data() as FootballEvent)))
       : () => {};
     return () => { stopTournament(); stopMatches(); stopEvents(); };
@@ -330,6 +425,8 @@ const PilotTournament = () => {
 
       {activeSection === "standings" && <section className="pt-5"><div className="mb-4 rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4"><p className="text-sm font-black text-cyan-100">Todos avanzan a semifinales</p><p className="mt-1 text-xs text-white/45">La posición define los cruces: 1.º vs 4.º y 2.º vs 3.º.</p></div>{standings.length ? <div className="rounded-3xl border border-white/[0.07] bg-[#101010]"><div className="sm:hidden"><div className="grid grid-cols-[2rem_1fr_2.5rem_2.5rem_3rem] gap-2 border-b border-white/[0.06] px-4 py-3 text-[0.56rem] font-black uppercase text-white/30"><span>#</span><span>Equipo</span><span className="text-center">PJ</span><span className="text-center">DG</span><span className="text-right">Pts</span></div>{standings.map((row, index) => <div key={row.team} className={`grid grid-cols-[2rem_1fr_2.5rem_2.5rem_3rem] items-center gap-2 px-4 py-4 text-sm ${index ? "border-t border-white/[0.05]" : ""}`}><span className="font-black text-white/35">{index + 1}</span><span className="flex min-w-0 items-center gap-2"><TeamBadge name={row.team} logoUrl={teamLogoByName.get(row.team)} tiny/><span className="truncate font-black">{row.team}</span></span><span className="text-center text-white/55">{row.played}</span><span className="text-center text-white/55">{row.gf - row.ga}</span><span className="text-right font-black">{row.points}</span></div>)}</div><div className="hidden overflow-x-auto sm:block"><div className="min-w-[31rem]"><div className="grid grid-cols-[2rem_1fr_repeat(7,2.2rem)] gap-1 border-b border-white/[0.06] px-4 py-3 text-[0.56rem] font-black uppercase text-white/30"><span>#</span><span>Equipo</span><span className="text-center">PJ</span><span className="text-center">G</span><span className="text-center">E</span><span className="text-center">P</span><span className="text-center">GF</span><span className="text-center">DG</span><span className="text-right">Pts</span></div>{standings.map((row, index) => <div key={row.team} className={`grid grid-cols-[2rem_1fr_repeat(7,2.2rem)] items-center gap-1 px-4 py-4 text-sm ${index ? "border-t border-white/[0.05]" : ""}`}><span className="font-black text-white/35">{index + 1}</span><span className="flex min-w-0 items-center gap-2"><TeamBadge name={row.team} logoUrl={teamLogoByName.get(row.team)} tiny/><span className="truncate font-black">{row.team}</span></span><span className="text-center text-white/55">{row.played}</span><span className="text-center text-white/55">{row.won}</span><span className="text-center text-white/55">{row.drawn}</span><span className="text-center text-white/55">{row.lost}</span><span className="text-center text-white/55">{row.gf}</span><span className="text-center text-white/55">{row.gf - row.ga}</span><span className="text-right font-black">{row.points}</span></div>)}</div></div></div> : <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">La tabla aparecerá cuando finalice el primer partido.</div>}</section>}
 
+      {activeSection === "polla" && <PredictionPool tournamentId={tournamentId} matches={matches} events={events} teams={teams} />}
+
       {activeSection === "stats" && <section className="pt-5">
         <div className="mb-4 rounded-2xl border border-white/[0.07] bg-[#101010] p-4">
           <p className="text-sm font-black">Estadísticas de fútbol</p>
@@ -345,7 +442,7 @@ const PilotTournament = () => {
     </main>
 
     <nav aria-label="Navegación del torneo" className="champions-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] px-2 pb-[max(env(safe-area-inset-bottom),0.45rem)] pt-2 backdrop-blur-xl sm:bottom-4 sm:mx-auto sm:max-w-3xl sm:rounded-2xl sm:border sm:px-3 lg:bottom-6">
-      <div className="mx-auto grid max-w-3xl grid-cols-4 gap-1 sm:gap-2">{bottomNavSections.map((item) => <NavLink key={item.key} to={item.key === "home" ? `/live/${tournamentId}` : `/live/${tournamentId}/${item.path}`} end={item.key === "home"} className={({ isActive }) => `flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[0.58rem] font-black transition-colors sm:py-2.5 sm:text-xs ${isActive ? "bg-cyan-300/[0.12] text-cyan-100" : "text-white/45 hover:bg-white/[0.04] hover:text-white/70"}`}><NavIcon name={item.key}/><span className="truncate">{item.label}</span></NavLink>)}</div>
+      <div className="mx-auto grid max-w-3xl grid-cols-5 gap-1 sm:gap-2">{bottomNavSections.map((item) => <NavLink key={item.key} to={item.key === "home" ? `/live/${tournamentId}` : `/live/${tournamentId}/${item.path}`} end={item.key === "home"} className={({ isActive }) => `flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[0.58rem] font-black transition-colors sm:py-2.5 sm:text-xs ${isActive ? "bg-cyan-300/[0.12] text-cyan-100" : "text-white/45 hover:bg-white/[0.04] hover:text-white/70"}`}><NavIcon name={item.key}/><span className="truncate">{item.label}</span></NavLink>)}</div>
     </nav>
   </div>;
 };
