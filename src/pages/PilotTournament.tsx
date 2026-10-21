@@ -297,13 +297,17 @@ const PilotTournament = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useAudienceTracking({ tournamentId, scope: "TOURNAMENT" });
-  const [showMatchdayAd, setShowMatchdayAd] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem("sabis-matchday-2-oct-21-ad-dismissed") !== "1";
-  });
+  const matchday2Matches = matches.filter((match) => match.matchday === 2);
+  const matchday2Complete = matchday2Matches.length >= 2 && matchday2Matches.every((match) => match.status === "FULLTIME" || match.phase === "FULLTIME");
+  const promoMatchday = matchday2Complete ? 3 : 2;
+  const promoDismissalKey = `sabis-matchday-${promoMatchday}-ad-dismissed`;
+  const [showMatchdayAd, setShowMatchdayAd] = useState(false);
+  useEffect(() => {
+    setShowMatchdayAd(typeof window !== "undefined" && window.sessionStorage.getItem(promoDismissalKey) !== "1");
+  }, [promoDismissalKey]);
   const dismissMatchdayAd = () => {
     setShowMatchdayAd(false);
-    window.sessionStorage.setItem("sabis-matchday-2-oct-21-ad-dismissed", "1");
+    window.sessionStorage.setItem(promoDismissalKey, "1");
   };
 
   useEffect(() => {
@@ -384,9 +388,9 @@ const PilotTournament = () => {
       </header>
 
       {activeSection === "home" && <>
-        {showMatchdayAd && <div className="champions-matchday-ad fixed inset-0 z-50 flex items-center justify-center px-4 py-8" role="dialog" aria-modal="true" aria-label="Promoción de la segunda jornada">
+        {showMatchdayAd && <div className="champions-matchday-ad fixed inset-0 z-50 flex items-center justify-center px-4 py-8" role="dialog" aria-modal="true" aria-label={`Promoción de la jornada ${promoMatchday}`}>
           <div className="champions-matchday-ad-card relative flex max-h-full max-w-[calc(100vw-2rem)] flex-col items-center">
-            <img src={assetUrl("champions-matchday-2.webp")} alt="Segunda jornada, miércoles 21 de octubre de 2026: PSG contra Real Madrid y Manchester City contra Barcelona" fetchPriority="high" className="champions-matchday-ad-image max-h-[64dvh] max-w-full rounded-[1.2rem] object-contain" />
+            <img src={assetUrl(`champions-matchday-${promoMatchday}.webp`)} alt={promoMatchday === 3 ? "Tercera jornada, viernes 23 de octubre de 2026: Real Madrid contra Manchester City y Barcelona contra PSG" : "Segunda jornada, miércoles 21 de octubre de 2026: PSG contra Real Madrid y Manchester City contra Barcelona"} fetchPriority="high" className="champions-matchday-ad-image max-h-[64dvh] max-w-full rounded-[1.2rem] object-contain" />
             <button type="button" onClick={dismissMatchdayAd} aria-label="Cerrar anuncio" className="champions-matchday-ad-close absolute -right-3 -top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#102451]/95 text-2xl font-black leading-none text-white shadow-xl transition hover:bg-[#1c3a75]">×</button>
             <button type="button" onClick={dismissMatchdayAd} className="champions-matchday-ad-more mt-3 min-w-[12rem] rounded-full bg-cyan-200 px-10 py-3 text-sm font-black text-[#06145f] shadow-xl transition hover:bg-white">Ver más</button>
           </div>
