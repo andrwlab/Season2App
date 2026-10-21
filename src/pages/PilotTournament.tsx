@@ -109,7 +109,7 @@ const FixtureGroups = ({ matches, tournamentId }: { matches: Match[]; tournament
 };
 
 const FeaturedFixture = ({ match, tournamentId }: { match: Match; tournamentId: string }) => (
-  <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`${match.homeName} contra ${match.awayName}`} className="champions-featured-fixture grid grid-cols-[4.5rem_minmax(0,1fr)_auto_minmax(0,1fr)_4.5rem] items-center gap-x-2 px-3 py-4 sm:grid-cols-[6.5rem_minmax(0,1fr)_auto_minmax(0,1fr)_6.5rem] sm:px-6 sm:py-5">
+  <Link to={`/live/${tournamentId}/match/${match.matchId}`} aria-label={`Abrir partido: ${match.homeName} contra ${match.awayName}`} title="Abrir partido" className="champions-featured-fixture grid cursor-pointer grid-cols-[4.5rem_minmax(0,1fr)_auto_minmax(0,1fr)_4.5rem] items-center gap-x-2 px-3 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-cyan-200 active:bg-cyan-200/10 sm:grid-cols-[6.5rem_minmax(0,1fr)_auto_minmax(0,1fr)_6.5rem] sm:px-6 sm:py-5">
     <TeamBadge name={match.homeName} logoUrl={match.homeLogoUrl} featured />
     <span className="min-w-0 truncate text-right text-[0.78rem] font-black text-white sm:text-base">{shortTeamName(match.homeName)}</span>
     <span className="whitespace-nowrap px-2 text-[0.68rem] font-black uppercase tracking-[0.08em] text-cyan-200/75 sm:text-xs">{match.status === "READY" ? "vs" : `${match.scoreHome}–${match.scoreAway}`}</span>
@@ -150,7 +150,6 @@ const FeaturedMatchdayCarousel = ({ matches, tournamentId }: { matches: Match[];
   const firstUpcomingKey = groups.find((group) => group.matches.some((match) => match.status === "READY"))?.key ?? groups.at(-1)?.key ?? "";
   const [activeKey, setActiveKey] = useState(firstUpcomingKey);
   const touchStart = React.useRef<{ x: number; y: number } | null>(null);
-  const touchMoved = React.useRef(false);
   const activeIndex = Math.max(0, groups.findIndex((group) => group.key === activeKey));
   const activeGroup = groups[activeIndex];
 
@@ -169,9 +168,7 @@ const FeaturedMatchdayCarousel = ({ matches, tournamentId }: { matches: Match[];
     const dx = event.changedTouches[0].clientX - start.x;
     const dy = event.changedTouches[0].clientY - start.y;
     if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
-    touchMoved.current = true;
     move(dx < 0 ? 1 : -1);
-    window.setTimeout(() => { touchMoved.current = false; }, 450);
   };
 
   if (!activeGroup) return <div className="rounded-3xl border border-white/[0.07] bg-[#101010] p-5 text-sm text-white/40">Todavía no hay jornadas confirmadas.</div>;
@@ -179,7 +176,6 @@ const FeaturedMatchdayCarousel = ({ matches, tournamentId }: { matches: Match[];
   return <div className="champions-featured-fixtures overflow-hidden rounded-[1.45rem]" aria-roledescription="carrusel de jornadas" aria-label="Próximos partidos por jornada"
     onTouchStart={(event) => { const touch = event.touches[0]; touchStart.current = { x: touch.clientX, y: touch.clientY }; }}
     onTouchEnd={handleTouchEnd}
-    onClickCapture={(event) => { if (touchMoved.current) { event.preventDefault(); event.stopPropagation(); touchMoved.current = false; } }}
     onKeyDown={(event) => { if (event.key === "ArrowLeft") move(1); if (event.key === "ArrowRight") move(-1); }}
     tabIndex={0}>
     <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-6">
