@@ -29,6 +29,7 @@ type PilotMatch = {
   homeStarterIds?: string[];
   awayStarterIds?: string[];
   lineupsConfirmed?: boolean;
+  historicalSubstitutions?: { teamSide: "HOME" | "AWAY"; playerInId?: string; playerInName: string; playerOutId?: string; playerOutName: string }[];
   tournamentId: string;
   matchId: string;
   homeName: string;
@@ -86,7 +87,8 @@ const statusFor = (phase: PilotPhase, clockStatus: PilotClockStatus) => {
   return "LIVE";
 };
 
-const lineupImageFor = (teamId?: string | null, teamName?: string) => {
+const lineupImageFor = (matchId: string, teamId?: string | null, teamName?: string) => {
+  if (matchId !== "group-01" && matchId !== "group-02") return null;
   if (teamId === "real-madrid" || teamName === "Real Madrid C.F.") return "lineups/real-madrid-j1-corrected.webp";
   if (teamId === "fc-barcelona" || teamName === "F.C. Barcelona") return "lineups/barcelona-j1-corrected.webp";
   if (teamId === "slovan-bratislava" || teamName === "Manchester City") return "lineups/manchester-city-j1-corrected.webp";
@@ -282,7 +284,8 @@ const PilotLive = () => {
             ];
             const team = lineupTeams[lineupSide];
             const teamId = lineupSide === 0 ? match.homeTeamId : match.awayTeamId;
-            const poster = lineupImageFor(teamId, team.name);
+            const poster = lineupImageFor(match.matchId, teamId, team.name);
+            const substitutions = (match.historicalSubstitutions ?? []).filter((item) => item.teamSide === (lineupSide === 0 ? "HOME" : "AWAY"));
             const playerGroups = (match.lineupsConfirmed ? ["Titulares", "Suplentes"] : ["Plantilla"]).map((group) => ({
               name: group,
               players: team.players.filter((player) => group === "Plantilla" || (group === "Titulares") === team.starters.includes(player.playerId)),
@@ -297,7 +300,8 @@ const PilotLive = () => {
                 <div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate font-black">{team.name}</p><p className="mt-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/35">{match.lineupsConfirmed ? `${team.starters.length} titulares` : "Plantilla"}</p></div><span className="shrink-0 rounded-full border border-cyan-200/15 bg-cyan-200/[0.06] px-3 py-1 text-[0.62rem] font-black uppercase tracking-wider text-cyan-100">{lineupSide === 0 ? "Local" : "Visitante"}</span></div>
                 {poster && <LineupPoster src={poster} teamName={team.name} />}
                 {team.players.length === 0 && <p className="mt-3 text-sm text-slate-300">Plantilla por confirmar.</p>}
-                {poster ? <details className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3"><summary className="cursor-pointer py-3 text-xs font-bold text-cyan-100/75">Ver lista de jugadores</summary><div className="grid gap-4 border-t border-white/[0.06] pb-3 pt-2 sm:grid-cols-2">{playerGroups.map((group) => <div key={group.name}><h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-cyan-200">{group.name}</h4><ul className="mt-1 space-y-1">{group.players.map((player) => <li key={player.playerId}><Link className={`flex min-h-9 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}</div></details> : <div className="mt-3 grid gap-4 sm:grid-cols-2">{playerGroups.map((group) => <div key={group.name}><h4 className="text-xs font-bold text-cyan-200">{group.name}</h4><ul className="mt-2 space-y-1">{group.players.map((player) => <li key={player.playerId}><Link className={`flex min-h-11 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}</div>}
+                {poster ? <details className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3"><summary className="cursor-pointer py-3 text-xs font-bold text-cyan-100/75">Ver lista de jugadores</summary><div className="grid gap-4 border-t border-white/[0.06] pb-3 pt-2 sm:grid-cols-2">{playerGroups.map((group) => <div key={group.name}><h4 className="text-[0.65rem] font-bold uppercase tracking-wider text-cyan-200">{group.name}</h4><ul className="mt-1 space-y-1">{group.players.map((player) => <li key={player.playerId}><Link className={`flex min-h-9 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.jerseyNumber != null && <span className="mr-2 text-cyan-200/65">#{player.jerseyNumber}</span>}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}</div></details> : <div className="mt-3 grid gap-4 sm:grid-cols-2">{playerGroups.map((group) => <div key={group.name}><h4 className="text-xs font-bold text-cyan-200">{group.name}</h4><ul className="mt-2 space-y-1">{group.players.map((player) => <li key={player.playerId}><Link className={`flex min-h-11 items-center rounded-lg px-2 text-sm hover:bg-white/10 ${player.suspended ? "text-red-200" : ""}`} to={`/live/${tournamentId}/player/${player.playerId}`}><span>{player.suspended ? "🟥 " : ""}{player.jerseyNumber != null && <span className="mr-2 text-cyan-200/65">#{player.jerseyNumber}</span>}{player.name}</span>{player.suspended && <span className="ml-2 text-[0.65rem] font-semibold text-red-200/70">{player.suspensionReason || "Suspensión por quizzes"}</span>}</Link></li>)}</ul></div>)}</div>}
+                {substitutions.length > 0 && <div className="mt-4 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3"><h4 className="text-xs font-black uppercase tracking-wider text-cyan-200">Cambios informados</h4><ul className="mt-2 space-y-2">{substitutions.map((substitution, index) => <li key={`${substitution.playerInId}-${substitution.playerOutId}-${index}`} className="text-sm"><span className="font-bold text-emerald-200">Entra · {substitution.playerInName}</span><span className="mx-2 text-white/35">por</span><span className="font-bold text-rose-200">{substitution.playerOutName}</span></li>)}</ul></div>}
               </div>
             </>;
           })()}
