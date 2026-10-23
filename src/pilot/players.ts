@@ -2,6 +2,7 @@ export type PilotPlayer = {
   playerId: string;
   name: string;
   jerseyNumber?: number;
+  position?: string;
   /** Set on the roster when the player cannot participate in the match. */
   suspended?: boolean;
   suspensionReason?: string;

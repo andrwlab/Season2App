@@ -17,7 +17,7 @@ type EventRecord = {
 };
 
 type HistoricalSubstitution = { teamSide: "HOME" | "AWAY"; playerIn: string; playerOut: string };
-type MatchdayLineup = { home: string[]; homeStarters: string[]; away: string[]; awayStarters: string[]; homeNumbers?: Record<string, number>; awayNumbers?: Record<string, number>; substitutions?: HistoricalSubstitution[] };
+type MatchdayLineup = { home: string[]; homeStarters: string[]; away: string[]; awayStarters: string[]; homeNumbers?: Record<string, number>; awayNumbers?: Record<string, number>; homePositions?: Record<string, string>; awayPositions?: Record<string, string>; substitutions?: HistoricalSubstitution[] };
 
 const rosterNames: Record<string, MatchdayLineup> = {
   "group-01": {
@@ -45,6 +45,8 @@ const rosterNames: Record<string, MatchdayLineup> = {
     ],
     homeNumbers: { "Douglas Dewesse": 1, "William Qiu": 4, "Edwin Chen": 5, "Ethan de León": 7, "Adriam Rodríguez": 8, "Diego Pimentel": 9 },
     awayNumbers: { "Miguel Concepción": 1, "Rafael Romero": 3, "Rocco Lockee": 7, "Wilson Chen": 9, "James De Gracia": 10, "Joel Pérez": 11, "Gabriel Chen de León": 31, "Jackson Zhu": 27, "Iann Araúz": 13 },
+    homePositions: { "Douglas Dewesse": "POR" },
+    awayPositions: { "Miguel Concepción": "POR" },
   },
   "group-04": {
     home: ["Henrique Arenas", "Dylan Rodríguez", "Johan Ching", "Eduardo Gudiño", "Adrián Fernández"],
@@ -57,7 +59,7 @@ const rosterNames: Record<string, MatchdayLineup> = {
   },
 };
 
-const asPilotRoster = (team: PilotTeam, names: string[], shirtNumbers?: Record<string, number>) => {
+const asPilotRoster = (team: PilotTeam, names: string[], shirtNumbers?: Record<string, number>, positions?: Record<string, string>) => {
   const normalized = normalizeFootballTeam(team);
   const canonicalTeam = FOOTBALL_2026_TEAMS.find((item) => item.teamId === team.teamId);
   const canonicalPlayers = canonicalTeam ? normalizeFootballTeam(canonicalTeam).players : [];
@@ -65,7 +67,7 @@ const asPilotRoster = (team: PilotTeam, names: string[], shirtNumbers?: Record<s
     const player = normalized.players.find((item) => item.fullName === fullName)
       ?? canonicalPlayers.find((item) => item.fullName === fullName);
     if (!player) throw new Error(`No se encontró ${fullName} en la plantilla de ${team.name}.`);
-    return { playerId: player.playerId, name: player.name, fullName: player.fullName, jerseyNumber: shirtNumbers?.[fullName], suspended: player.suspended ?? false, suspensionReason: player.suspensionReason ?? "" };
+    return { playerId: player.playerId, name: player.name, fullName: player.fullName, jerseyNumber: shirtNumbers?.[fullName], position: positions?.[fullName], suspended: player.suspended ?? false, suspensionReason: player.suspensionReason ?? "" };
   });
 };
 
@@ -107,8 +109,8 @@ const PilotFootballMatchdayCorrection = ({ tournamentId, matchId, pilotMatchId }
       const sourceTeams = (tournamentSnapshot.data()?.teams as PilotTeam[] | undefined) ?? FOOTBALL_2026_TEAMS;
       const homeTeam = sourceTeams.find((team) => team.teamId === homeTeamId) ?? FOOTBALL_2026_TEAMS.find((team) => team.teamId === homeTeamId)!;
       const awayTeam = sourceTeams.find((team) => team.teamId === awayTeamId) ?? FOOTBALL_2026_TEAMS.find((team) => team.teamId === awayTeamId)!;
-      const homePlayers = asPilotRoster(homeTeam, correction.home, correction.homeNumbers);
-      const awayPlayers = asPilotRoster(awayTeam, correction.away, correction.awayNumbers);
+      const homePlayers = asPilotRoster(homeTeam, correction.home, correction.homeNumbers, correction.homePositions);
+      const awayPlayers = asPilotRoster(awayTeam, correction.away, correction.awayNumbers, correction.awayPositions);
       const homeStarterIds = correction.homeStarters.map((name) => homePlayers.find((player) => player.fullName === name)!.playerId);
       const awayStarterIds = correction.awayStarters.map((name) => awayPlayers.find((player) => player.fullName === name)!.playerId);
 
