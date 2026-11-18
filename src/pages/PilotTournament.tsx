@@ -391,7 +391,45 @@ const PilotTournament = () => {
       {activeSection === "home" && <>
         {showMatchdayAd && <div className="champions-matchday-ad fixed inset-0 z-50 flex items-center justify-center px-4 py-8" role="dialog" aria-modal="true" aria-label="Promoción de semifinales de vuelta">
           <div className="champions-matchday-ad-card relative flex max-h-full max-w-[calc(100vw-2rem)] flex-col items-center">
-            <img src={assetUrl("champions-semifinals-second-leg-2026-11-20.webp")} alt="Semifinales de vuelta, 20 de noviembre de 2026: Real Madrid contra Manchester City y PSG contra Barcelona" fetchPriority="high" className="champions-matchday-ad-image max-h-[64dvh] max-w-full rounded-[1.2rem] object-contain" />
+            <div className="champions-matchday-ad-image w-[min(92vw,34rem)] overflow-hidden rounded-[1.4rem] border border-cyan-200/30 bg-[radial-gradient(circle_at_top,#174dbb_0%,#07194c_42%,#020817_100%)] p-4 text-white shadow-[0_0_60px_rgba(34,211,238,0.2)] sm:p-6">
+              <div className="text-center">
+                <img src={assetUrl("champions-league-eagle-logo-web.webp")} alt="" className="mx-auto h-20 w-20 object-contain drop-shadow-[0_0_18px_rgba(125,211,252,0.5)] sm:h-24 sm:w-24" />
+                <p className="mt-1 text-[0.58rem] font-black uppercase tracking-[0.28em] text-cyan-200">SABIS Champions League</p>
+                <h2 className="mt-1 text-2xl font-black uppercase tracking-tight sm:text-3xl">Semis de vuelta</h2>
+                <p className="mt-2 rounded-full border border-cyan-200/20 bg-white/[0.06] px-3 py-2 text-xs font-black uppercase tracking-[0.1em] text-cyan-100 sm:text-sm">Viernes 20 de noviembre de 2026</p>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <section className="rounded-2xl border border-cyan-200/15 bg-black/20 p-3">
+                  <div className="grid grid-cols-[3.5rem_1fr_auto_1fr_3.5rem] items-center gap-2">
+                    <img src={assetUrl("logos/football/real-madrid.png")} alt="Real Madrid" className="h-14 w-14 object-contain" />
+                    <span className="text-right text-sm font-black sm:text-base">Real Madrid</span>
+                    <span className="text-lg font-black text-cyan-200">VS</span>
+                    <span className="text-sm font-black sm:text-base">Man City</span>
+                    <img src={assetUrl("logos/football/manchester-city.png")} alt="Manchester City" className="h-14 w-14 object-contain" />
+                  </div>
+                  <p className="mt-2 text-center text-[0.7rem] font-bold text-white/55">Ida: Real Madrid 3–0 Man City</p>
+                  <p className="mt-1 text-center text-sm font-black italic text-white">¿REMONTADA O MÍSTICA BLANCA?</p>
+                </section>
+
+                <section className="rounded-2xl border border-cyan-200/15 bg-black/20 p-3">
+                  <div className="grid grid-cols-[3.5rem_1fr_auto_1fr_3.5rem] items-center gap-2">
+                    <img src={assetUrl("logos/football/paris-saint-germain.png")} alt="PSG" className="h-14 w-14 object-contain" />
+                    <span className="text-right text-sm font-black sm:text-base">PSG</span>
+                    <span className="text-lg font-black text-cyan-200">VS</span>
+                    <span className="text-sm font-black sm:text-base">Barcelona</span>
+                    <img src={assetUrl("logos/football/fc-barcelona.png")} alt="Barcelona" className="h-14 w-14 object-contain" />
+                  </div>
+                  <p className="mt-2 text-center text-[0.7rem] font-bold text-white/55">Ida: PSG 3–3 Barcelona</p>
+                  <p className="mt-1 text-center text-sm font-black italic text-white">BARCELONA Y PSG, TODO SIGUE ABIERTO</p>
+                </section>
+              </div>
+
+              <div className="mt-5 text-center">
+                <p className="text-lg font-black uppercase tracking-tight sm:text-xl">Todo se define en la vuelta</p>
+                <p className="mt-1 text-sm font-black text-cyan-200">¿QUIÉN LLEGARÁ A LA FINAL?</p>
+              </div>
+            </div>
             <button type="button" onClick={dismissMatchdayAd} aria-label="Cerrar anuncio" className="champions-matchday-ad-close absolute -right-3 -top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#102451]/95 text-2xl font-black leading-none text-white shadow-xl transition hover:bg-[#1c3a75]">×</button>
             <button type="button" onClick={dismissMatchdayAd} className="champions-matchday-ad-more mt-3 min-w-[12rem] rounded-full bg-cyan-200 px-10 py-3 text-sm font-black text-[#06145f] shadow-xl transition hover:bg-white">Ver más</button>
           </div>

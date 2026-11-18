@@ -87,14 +87,24 @@ export const FOOTBALL_2026_TOURNAMENT_ID = "football-2026";
 // A saved date (including null for unconfirmed) overrides the initial calendar.
 export const footballMatchDate = (match: { tournamentId: string; scheduledDate?: string | null; matchday?: number; stage?: string; leg?: number }) => {
   if (match.tournamentId === FOOTBALL_2026_TOURNAMENT_ID && match.stage === "SEMIFINAL") {
-    const revisedSemiDates: Record<number, { previous: string; current: string }> = {
-      1: { previous: "2026-10-23", current: "2026-11-06" },
-      2: { previous: "2026-11-06", current: "2026-11-13" },
+    const revisedSemiDates: Record<number, Record<string, string>> = {
+      1: {
+        "2026-10-23": "2026-11-13",
+        "2026-11-06": "2026-11-13",
+      },
+      2: {
+        "2026-11-06": "2026-11-20",
+        "2026-11-13": "2026-11-20",
+      },
     };
     const revised = revisedSemiDates[match.leg ?? 0];
-    if (revised && match.scheduledDate === revised.previous) return revised.current;
+    if (revised && match.scheduledDate && revised[match.scheduledDate]) return revised[match.scheduledDate];
   }
-  if (match.tournamentId === FOOTBALL_2026_TOURNAMENT_ID && match.stage === "FINAL" && match.scheduledDate === "2026-11-13") return "2026-11-20";
+  if (
+    match.tournamentId === FOOTBALL_2026_TOURNAMENT_ID
+    && match.stage === "FINAL"
+    && (match.scheduledDate === "2026-11-13" || match.scheduledDate === "2026-11-20")
+  ) return "2026-11-27";
   if (match.tournamentId === FOOTBALL_2026_TOURNAMENT_ID && match.stage !== "SEMIFINAL" && match.stage !== "FINAL") {
     const revisedDates: Record<number, { previous: string; current: string }> = {
       2: { previous: "2026-10-09", current: "2026-10-21" },
@@ -105,8 +115,8 @@ export const footballMatchDate = (match: { tournamentId: string; scheduledDate?:
   }
   if (match.scheduledDate !== undefined) return match.scheduledDate;
   if (match.tournamentId !== FOOTBALL_2026_TOURNAMENT_ID) return null;
-  if (match.stage === "FINAL") return "2026-11-20";
-  if (match.stage === "SEMIFINAL") return match.leg === 1 ? "2026-11-06" : match.leg === 2 ? "2026-11-13" : null;
+  if (match.stage === "FINAL") return "2026-11-27";
+  if (match.stage === "SEMIFINAL") return match.leg === 1 ? "2026-11-13" : match.leg === 2 ? "2026-11-20" : null;
   return ({ 1: "2026-09-25", 2: "2026-10-21", 3: "2026-10-23" } as Record<number, string>)[match.matchday ?? 0] ?? null;
 };
 
