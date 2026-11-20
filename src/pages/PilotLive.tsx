@@ -88,18 +88,23 @@ const statusFor = (phase: PilotPhase, clockStatus: PilotClockStatus) => {
 };
 
 const lineupImageFor = (matchId: string, teamId?: string | null, teamName?: string) => {
-  if (matchId !== "group-01" && matchId !== "group-02") return null;
-  if (teamId === "real-madrid" || teamName === "Real Madrid C.F.") return "lineups/real-madrid-j1-corrected.webp";
-  if (teamId === "fc-barcelona" || teamName === "F.C. Barcelona") return "lineups/barcelona-j1-corrected.webp";
-  if (teamId === "slovan-bratislava" || teamName === "Manchester City") return "lineups/manchester-city-j1-corrected.webp";
-  if (teamId === "paris-saint-germain" || teamName === "Paris Saint-Germain") return "lineups/psg-j1-corrected.webp";
+  const lineupRound = matchId === "group-01" || matchId === "group-02"
+    ? "j1-corrected"
+    : matchId === "group-03" || matchId === "group-04"
+      ? "j2"
+      : null;
+  if (!lineupRound) return null;
+  if (teamId === "real-madrid" || teamName === "Real Madrid C.F.") return `lineups/real-madrid-${lineupRound}.webp`;
+  if (teamId === "fc-barcelona" || teamName === "F.C. Barcelona") return `lineups/barcelona-${lineupRound}.webp`;
+  if (teamId === "slovan-bratislava" || teamName === "Manchester City") return `lineups/manchester-city-${lineupRound}.webp`;
+  if (teamId === "paris-saint-germain" || teamName === "Paris Saint-Germain") return `lineups/psg-${lineupRound}.webp`;
   return null;
 };
 
 const LineupPoster = ({ src, teamName }: { src: string; teamName: string }) => (
   <div className="relative mt-3 overflow-hidden rounded-2xl border border-cyan-200/15">
     <img src={assetUrl(src)} alt={`Alineación de ${teamName}`} loading="lazy" className="mx-auto block h-[min(68dvh,700px)] w-full object-contain" />
-    {teamName === "Real Madrid C.F." && <svg aria-hidden="true" viewBox="0 0 1122 1402" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">
+    {src === "lineups/real-madrid-j1-corrected.webp" && <svg aria-hidden="true" viewBox="0 0 1122 1402" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">
       <rect x="210" y="629" width="182" height="42" rx="9" fill="#06183d" stroke="#0878ff" strokeWidth="1" />
       <text x="301" y="658" textAnchor="middle" fill="#fff" fontFamily="Impact, 'Arial Narrow', sans-serif" fontSize="25" fontWeight="700">Iann</text>
     </svg>}
