@@ -72,7 +72,7 @@ type PilotLastSubstitution = {
 type PilotMatch = {
   tournamentId: string;
   matchId: string;
-  stage?: "GROUP" | "SEMIFINAL" | "FINAL";
+  stage?: "GROUP" | "SEMIFINAL" | "THIRD_PLACE" | "FINAL";
   tieId?: "SF1" | "SF2";
   leg?: 1 | 2;
   homeTeamId?: string | null;
@@ -265,7 +265,7 @@ const PilotScorer = () => {
   const canRecordLiveEvent = Boolean(match && clockStatus === "RUNNING" && isTimedPhase(match.phase));
   const isSecondLegSemifinal = match?.stage === "SEMIFINAL" && match.leg === 2;
   const isFirstLegSemifinal = match?.stage === "SEMIFINAL" && match.leg === 1;
-  const isFinal = match?.stage === "FINAL";
+  const isFinal = match?.stage === "FINAL" || match?.stage === "THIRD_PLACE";
   const firstLeg = isSecondLegSemifinal
     ? tournamentMatches.find((item) => item.stage === "SEMIFINAL" && item.tieId === match?.tieId && item.leg === 1)
     : null;
