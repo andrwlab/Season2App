@@ -36,7 +36,7 @@ type PilotMatchSummary = {
   scoreAway: number;
   status: "READY" | "LIVE" | "FULLTIME";
   phase: string;
-  stage?: "GROUP" | "SEMIFINAL" | "THIRD_PLACE" | "FINAL";
+  stage?: "GROUP" | "SEMIFINAL" | "FINAL";
   tieId?: "SF1" | "SF2";
   leg?: 1 | 2;
   clockStatus?: "NOT_STARTED" | "RUNNING" | "PAUSED" | "ENDED";

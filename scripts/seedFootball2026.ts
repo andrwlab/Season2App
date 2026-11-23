@@ -30,7 +30,7 @@ const cleanRoster = (teamId: string) => {
 const matchPayload = (scheduled: (typeof FOOTBALL_2026_SCHEDULE)[number], createdAt: unknown) => {
   const home = FOOTBALL_2026_TEAMS.find((team) => team.teamId === scheduled.homeTeamId);
   const away = FOOTBALL_2026_TEAMS.find((team) => team.teamId === scheduled.awayTeamId);
-  const pendingName = scheduled.stage === "FINAL" ? "Winner of semifinal" : scheduled.stage === "THIRD_PLACE" ? "Loser of semifinal" : "To be confirmed";
+  const pendingName = scheduled.stage === "FINAL" ? "Winner of semifinal" : "To be confirmed";
   return {
     tournamentId: FOOTBALL_2026_TOURNAMENT_ID, matchId: scheduled.matchId, stage: scheduled.stage,
     matchday: scheduled.matchday ?? null, order: scheduled.order, tieId: scheduled.tieId ?? null, leg: scheduled.leg ?? null,
@@ -76,20 +76,13 @@ async function mainAdmin() {
       const current = existing.data() as ReturnType<typeof matchPayload>;
       const normalized = normalizeFootballMatch(current);
       const affected = [current.homeTeamId, current.awayTeamId].some((teamId) => teamId === "slovan-bratislava" || teamId === "paris-saint-germain");
-      await matchRef.set({
-        stage: scheduled.stage,
-        matchday: scheduled.matchday ?? null,
-        order: scheduled.order,
-        tieId: scheduled.tieId ?? null,
-        leg: scheduled.leg ?? null,
-        ...(affected ? {
-          homeName: normalized.homeName,
-          awayName: normalized.awayName,
-          homeLogoUrl: normalized.homeLogoUrl,
-          awayLogoUrl: normalized.awayLogoUrl,
-          homePlayers: normalized.homePlayers,
-          awayPlayers: normalized.awayPlayers,
-        } : {}),
+      if (affected) await matchRef.set({
+        homeName: normalized.homeName,
+        awayName: normalized.awayName,
+        homeLogoUrl: normalized.homeLogoUrl,
+        awayLogoUrl: normalized.awayLogoUrl,
+        homePlayers: normalized.homePlayers,
+        awayPlayers: normalized.awayPlayers,
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       console.log(`[skip] ${scheduled.matchId} already exists`);
@@ -181,23 +174,18 @@ async function mainRest() {
       const current = fromDocument(existing) as ReturnType<typeof matchPayload>;
       const normalized = normalizeFootballMatch(current);
       const affected = [current.homeTeamId, current.awayTeamId].some((teamId) => teamId === "slovan-bratislava" || teamId === "paris-saint-germain");
-      const scheduleUpdate = {
-        stage: scheduled.stage,
-        matchday: scheduled.matchday ?? null,
-        order: scheduled.order,
-        tieId: scheduled.tieId ?? null,
-        leg: scheduled.leg ?? null,
-        ...(affected ? {
+      if (affected) {
+        const teamUpdate = {
           homeName: normalized.homeName,
           awayName: normalized.awayName,
           homeLogoUrl: normalized.homeLogoUrl,
           awayLogoUrl: normalized.awayLogoUrl,
           homePlayers: normalized.homePlayers,
           awayPlayers: normalized.awayPlayers,
-        } : {}),
-        updatedAt: now,
-      };
-      await restPut(path, scheduleUpdate, Object.keys(scheduleUpdate));
+          updatedAt: now,
+        };
+        await restPut(path, teamUpdate, Object.keys(teamUpdate));
+      }
       console.log(`[skip] ${scheduled.matchId} already exists`);
       continue;
     }

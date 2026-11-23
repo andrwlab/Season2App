@@ -97,7 +97,7 @@ const main = async () => {
   for (const scheduled of FOOTBALL_2026_SCHEDULE) {
     const home = teams.find((team) => team.teamId === scheduled.homeTeamId);
     const away = teams.find((team) => team.teamId === scheduled.awayTeamId);
-    const pendingName = scheduled.stage === "FINAL" ? "Winner of semifinal" : scheduled.stage === "THIRD_PLACE" ? "Loser of semifinal" : "To be confirmed";
+    const pendingName = scheduled.stage === "FINAL" ? "Winner of semifinal" : "To be confirmed";
     await createDocument(`pilotMatches/${targetTournamentId}__${scheduled.matchId}`, {
       tournamentId: targetTournamentId,
       matchId: scheduled.matchId,

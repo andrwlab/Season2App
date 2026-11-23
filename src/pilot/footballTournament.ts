@@ -14,7 +14,7 @@ export type PilotTeam = {
 
 export type PilotScheduledMatch = {
   matchId: string;
-  stage: "GROUP" | "SEMIFINAL" | "THIRD_PLACE" | "FINAL";
+  stage: "GROUP" | "SEMIFINAL" | "FINAL";
   matchday?: number;
   order: number;
   homeTeamId?: string;
@@ -102,10 +102,10 @@ export const footballMatchDate = (match: { tournamentId: string; scheduledDate?:
   }
   if (
     match.tournamentId === FOOTBALL_2026_TOURNAMENT_ID
-    && (match.stage === "THIRD_PLACE" || match.stage === "FINAL")
+    && match.stage === "FINAL"
     && (match.scheduledDate === "2026-11-13" || match.scheduledDate === "2026-11-20")
   ) return "2026-11-27";
-  if (match.tournamentId === FOOTBALL_2026_TOURNAMENT_ID && match.stage !== "SEMIFINAL" && match.stage !== "THIRD_PLACE" && match.stage !== "FINAL") {
+  if (match.tournamentId === FOOTBALL_2026_TOURNAMENT_ID && match.stage !== "SEMIFINAL" && match.stage !== "FINAL") {
     const revisedDates: Record<number, { previous: string; current: string }> = {
       2: { previous: "2026-10-09", current: "2026-10-21" },
       3: { previous: "2026-10-16", current: "2026-10-23" },
@@ -115,7 +115,7 @@ export const footballMatchDate = (match: { tournamentId: string; scheduledDate?:
   }
   if (match.scheduledDate !== undefined) return match.scheduledDate;
   if (match.tournamentId !== FOOTBALL_2026_TOURNAMENT_ID) return null;
-  if (match.stage === "THIRD_PLACE" || match.stage === "FINAL") return "2026-11-27";
+  if (match.stage === "FINAL") return "2026-11-27";
   if (match.stage === "SEMIFINAL") return match.leg === 1 ? "2026-11-13" : match.leg === 2 ? "2026-11-20" : null;
   return ({ 1: "2026-09-25", 2: "2026-10-21", 3: "2026-10-23" } as Record<number, string>)[match.matchday ?? 0] ?? null;
 };
@@ -213,8 +213,7 @@ export const FOOTBALL_2026_SCHEDULE: PilotScheduledMatch[] = [
   { matchId: "semi-2-leg-1", stage: "SEMIFINAL", tieId: "SF2", leg: 1, order: 2 },
   { matchId: "semi-1-leg-2", stage: "SEMIFINAL", tieId: "SF1", leg: 2, order: 3 },
   { matchId: "semi-2-leg-2", stage: "SEMIFINAL", tieId: "SF2", leg: 2, order: 4 },
-  { matchId: "third-place", stage: "THIRD_PLACE", order: 5 },
-  { matchId: "final", stage: "FINAL", order: 6 },
+  { matchId: "final", stage: "FINAL", order: 5 },
 ];
 
 export const normalizeFootballTeam = (team: PilotTeam): PilotTeam => {
