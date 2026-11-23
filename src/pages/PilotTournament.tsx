@@ -297,7 +297,7 @@ const PilotTournament = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useAudienceTracking({ tournamentId, scope: "TOURNAMENT" });
-  const promoDismissalKey = "sabis-semifinals-second-leg-2026-11-20-ad-dismissed";
+  const promoDismissalKey = "sabis-champions-final-2026-11-27-ad-dismissed";
   const [showMatchdayAd, setShowMatchdayAd] = useState(false);
   useEffect(() => {
     setShowMatchdayAd(
@@ -389,9 +389,9 @@ const PilotTournament = () => {
       </header>
 
       {activeSection === "home" && <>
-        {showMatchdayAd && <div className="champions-matchday-ad fixed inset-0 z-50 flex items-center justify-center px-4 py-8" role="dialog" aria-modal="true" aria-label="Promoción de semifinales de vuelta">
+        {showMatchdayAd && <div className="champions-matchday-ad fixed inset-0 z-50 flex items-center justify-center px-4 py-8" role="dialog" aria-modal="true" aria-label="Promoción de la final de Champions League">
           <div className="champions-matchday-ad-card relative flex max-h-full max-w-[calc(100vw-2rem)] flex-col items-center">
-            <img src={assetUrl("champions-semifinals-second-leg-2026-11-20.webp")} alt="Semifinales de vuelta, 20 de noviembre de 2026: Manchester City contra Real Madrid, global 0 a 3; Barcelona contra PSG, global 3 a 3" fetchPriority="high" className="champions-matchday-ad-image max-h-[64dvh] max-w-full rounded-[1.2rem] object-contain" />
+            <img src={assetUrl("champions-final-2026-11-27.webp")} alt="Gran final de SABIS Champions League, viernes 27 de noviembre de 2026: Real Madrid contra PSG" fetchPriority="high" className="champions-matchday-ad-image max-h-[64dvh] max-w-full rounded-[1.2rem] object-contain" />
             <button type="button" onClick={dismissMatchdayAd} aria-label="Cerrar anuncio" className="champions-matchday-ad-close absolute -right-3 -top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#102451]/95 text-2xl font-black leading-none text-white shadow-xl transition hover:bg-[#1c3a75]">×</button>
             <button type="button" onClick={dismissMatchdayAd} className="champions-matchday-ad-more mt-3 min-w-[12rem] rounded-full bg-cyan-200 px-10 py-3 text-sm font-black text-[#06145f] shadow-xl transition hover:bg-white">Ver más</button>
           </div>
